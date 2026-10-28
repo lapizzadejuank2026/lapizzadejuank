@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111111">
+  <meta name="description" content="Menú de demostración de La Pizza De Juan K. Arma una pizza y prueba el carrito; no recibe pedidos reales todavía.">
+  <title>La Pizza De Juan K | Menú de prueba</title>
+  <style>
+    :root { --bg:#0b0b0d; --surface:#171719; --card:#212124; --text:#fff; --muted:#bdbdc3; --red:#b81932; --red2:#e7324b; --gold:#e3b84a; --border:#343438; --round:19px; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif; line-height:1.5; border-top:7px solid var(--red); }
+    button,input,select,textarea { font:inherit; }
+    button { cursor:pointer; }
+    button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible { outline:3px solid var(--gold); outline-offset:3px; }
+    a { color:inherit; }
+    .wrap { width:min(1150px,calc(100% - 32px)); margin-inline:auto; }
+    .header { background:#141416; border-bottom:1px solid var(--border); }
+    .head-inner { display:flex; align-items:center; justify-content:space-between; gap:15px; min-height:82px; }
+    .brand { display:flex; align-items:center; gap:12px; text-decoration:none; }
+    .brand-symbol { display:grid; place-items:center; width:48px; height:48px; border-radius:15px; background:#312022; font-size:28px; }
+    .brand-text strong { display:block; font-size:clamp(17px,2.3vw,21px); line-height:1.15; }
+    .brand-text small { display:block; color:var(--gold); font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+    .head-actions { display:flex; gap:10px; align-items:center; }
+    .outline-btn,.primary-btn,.subtle-btn { border:1px solid transparent; border-radius:12px; padding:11px 15px; font-weight:800; transition:transform .15s,background .15s; }
+    .primary-btn { color:white; background:var(--red); }
+    .primary-btn:hover { background:#d32642; }
+    .primary-btn:disabled { background:#5b333b; cursor:not-allowed; color:#c2abb0; }
+    .outline-btn { background:transparent; color:white; border-color:#57575b; }
+    .outline-btn:hover { background:#272729; }
+    .subtle-btn { background:#29292c; color:#fff; }
+    .subtle-btn:hover { background:#3a3a3d; }
+    button:active { transform:translateY(1px); }
+    .cart-pill { white-space:nowrap; }
+    .cart-pill span { background:#fff; color:#171719; font-size:12px; border-radius:20px; padding:1px 7px; margin-left:4px; }
+    .hero { padding:46px 0 39px; background:radial-gradient(ellipse at 84% 30%, #4e1b1d 0, transparent 42%),linear-gradient(120deg,#101013,#1f1214); border-bottom:1px solid #333; }
+    .hero-inner { display:flex; align-items:center; justify-content:space-between; gap:30px; }
+    .eyebrow { display:inline-block; text-transform:uppercase; font-size:12px; letter-spacing:.14em; color:var(--gold); font-weight:900; }
+    .hero h1 { font-size:clamp(34px,5.3vw,62px); max-width:670px; letter-spacing:-.055em; line-height:1.05; margin:15px 0; }
+    .hero p { max-width:580px; color:#e0dcdb; margin:0; font-size:17px; }
+    .hero-pizza { flex:0 0 auto; display:grid; place-items:center; width:220px; height:220px; border-radius:50%; background:radial-gradient(circle,#6d351c,#2c1717 65%,transparent 66%); box-shadow:0 0 90px #b8193233; font-size:124px; transform:rotate(-15deg); user-select:none; }
+    .notice { margin-top:22px; padding:13px 15px; border:1px solid #745b35; border-radius:12px; background:#292114; color:#f7ddb0; font-size:14px; max-width:720px; }
+    .main-layout { display:grid; grid-template-columns:minmax(0,1fr) 345px; align-items:start; gap:24px; padding-top:32px; padding-bottom:64px; }
+    .section-heading { display:flex; align-items:end; justify-content:space-between; gap:12px; margin-bottom:17px; }
+    h2 { font-size:25px; letter-spacing:-.025em; margin:0; }
+    .hint { color:var(--muted); font-size:14px; margin:6px 0 0; }
+    .tabs { display:flex; flex-wrap:wrap; gap:9px; margin:18px 0 24px; }
+    .tab { background:#222225; color:#eee; border:1px solid var(--border); border-radius:999px; padding:9px 15px; font-weight:700; }
+    .tab.active { background:var(--red); border-color:var(--red); }
+    .tab:disabled { color:#888; cursor:not-allowed; }
+    .products { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:17px; }
+    .product { display:flex; flex-direction:column; border:1px solid var(--border); background:var(--surface); border-radius:var(--round); overflow:hidden; }
+    .product-art { display:grid; place-items:center; min-height:124px; background:radial-gradient(circle at 65% 60%,#50331e,#2a181a 60%,#1a1518 100%); font-size:77px; }
+    .product-body { padding:18px; flex:1; display:flex; flex-direction:column; }
+    .product-title { display:flex; justify-content:space-between; gap:7px; align-items:baseline; }
+    .product h3 { margin:0; font-size:19px; }
+    .price { color:var(--gold); font-size:19px; font-weight:900; white-space:nowrap; }
+    .product p { color:var(--muted); font-size:14px; margin:8px 0 17px; flex:1; }
+    .product button { width:100%; }
+    .cart-panel { position:sticky; top:20px; border:1px solid var(--border); background:var(--surface); border-radius:var(--round); overflow:hidden; }
+    .cart-title { padding:20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); }
+    .cart-title h2 { font-size:21px; }
+    .muted { color:var(--muted); }
+    .cart-body { padding:18px 20px; }
+    .empty { color:var(--muted); text-align:center; padding:25px 6px; }
+    .empty-icon { font-size:40px; display:block; margin-bottom:8px; }
+    .line-item { padding:14px 0; border-bottom:1px solid var(--border); }
+    .line-item:first-child { padding-top:0; }
+    .item-row { display:flex; justify-content:space-between; gap:8px; align-items:start; }
+    .item-row strong { font-size:14px; }
+    .item-flavors { font-size:13px; color:var(--muted); margin:4px 0 9px; }
+    .qty { display:flex; align-items:center; gap:10px; }
+    .qty button { width:30px; height:30px; border-radius:9px; border:1px solid #555; background:#29292c; color:white; font-weight:900; }
+    .qty button:hover { background:#444; }
+    .item-price { font-weight:800; color:var(--gold); font-size:14px; white-space:nowrap; }
+    .cart-bottom { padding:19px 20px; border-top:1px solid var(--border); background:#1e1e21; }
+    .subtotal { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:4px; }
+    .subtotal strong { font-size:22px; color:var(--gold); }
+    .delivery-note { font-size:12px; color:var(--muted); margin:0 0 15px; }
+    .cart-bottom .primary-btn { width:100%; }
+    .clear-btn { background:none; border:none; color:#eda4af; text-decoration:underline; padding:9px 0 0; font-size:13px; }
+    .service-area { background:#161619; border:1px solid #393437; border-radius:17px; padding:18px 20px; margin-top:24px; }
+    .service-area h3 { margin:0 0 8px; color:var(--gold); }
+    .service-area p { color:var(--muted); margin:0; font-size:14px; }
+    footer { border-top:1px solid #333; color:var(--muted); text-align:center; font-size:13px; padding:25px 16px 38px; }
+    dialog { border:1px solid #555; border-radius:20px; padding:0; background:var(--surface); color:white; width:min(560px,calc(100% - 25px)); max-height:min(90vh,840px); box-shadow:0 20px 90px #000a; }
+    dialog::backdrop { background:rgba(0,0,0,.76); }
+    .dialog-head { padding:20px 22px 13px; display:flex; align-items:start; justify-content:space-between; gap:12px; border-bottom:1px solid var(--border); }
+    .dialog-head h2 { font-size:23px; }
+    .icon-btn { color:white; background:#303034; border:1px solid #4a4a4a; border-radius:50%; font-size:23px; width:34px; height:34px; display:grid; place-items:center; line-height:1; }
+    .dialog-body { padding:20px 22px; overflow:auto; max-height:62vh; }
+    .dialog-footer { padding:14px 22px 20px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .flavor-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:14px; }
+    .flavor { display:flex; align-items:center; gap:8px; background:#27272b; border:1px solid #444; border-radius:11px; padding:11px; font-size:14px; cursor:pointer; }
+    .flavor:has(input:checked) { border-color:var(--gold); background:#41361f; }
+    input[type=checkbox],input[type=radio] { accent-color:var(--red2); }
+    .flavor:has(input:disabled) { opacity:.48; cursor:not-allowed; }
+    .flavor-counter { margin-top:14px; color:var(--gold); font-weight:750; font-size:14px; }
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
+    label.field { display:flex; flex-direction:column; gap:5px; font-weight:700; font-size:14px; }
+    .field.full { grid-column:1/-1; }
+    .field input,.field select,.field textarea { background:#2c2c30; border:1px solid #505057; color:white; border-radius:10px; padding:11px; width:100%; min-height:44px; }
+    .field textarea { resize:vertical; min-height:80px; }
+    .radio-group { display:flex; flex-wrap:wrap; gap:16px; margin:3px 0 18px; }
+    .radio-group label { cursor:pointer; }
+    .summary-box { white-space:pre-wrap; background:#29292c; border:1px solid #46464c; padding:14px; border-radius:12px; font-size:14px; margin-top:10px; max-height:42vh; overflow:auto; }
+    .warning { color:#f4c47d; font-size:13px; margin-top:14px; }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    @media(max-width:850px) { .main-layout { grid-template-columns:1fr; } .cart-panel { position:static; } .hero-pizza { width:160px; height:160px; font-size:98px; } }
+    @media(max-width:560px) { .head-inner { min-height:74px; } .brand-symbol { width:41px; height:41px; } .head-actions .outline-btn { display:none; } .hero { padding:30px 0; } .hero-inner { gap:5px; } .hero-pizza { width:105px; height:105px; font-size:64px; } .hero h1 { font-size:34px; } .hero p { font-size:14px; } .products { grid-template-columns:1fr; } .product-art { min-height:105px; } .product-body { padding:16px; } .flavor-grid { grid-template-columns:1fr; } .form-grid { grid-template-columns:1fr; } .field.full { grid-column:auto; } .dialog-footer { flex-wrap:wrap; } .dialog-footer .primary-btn { flex:1; } }
+    @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } * { transition:none!important; } }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="wrap head-inner">
+      <a href="#inicio" class="brand" aria-label="La Pizza De Juan K, inicio">
+        <span class="brand-symbol" aria-hidden="true">👨‍🍳</span>
+        <span class="brand-text"><strong>LA PIZZA DE JUAN K</strong><small>Desde 2013 · Sabor de la casa</small></span>
+      </a>
+      <div class="head-actions">
+        <a class="outline-btn" href="#cobertura">Cobertura</a>
+        <a class="primary-btn cart-pill" href="#carrito">🛒 Carrito <span id="cartCount">0</span></a>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero" id="inicio">
+    <div class="wrap hero-inner">
+      <div>
+        <span class="eyebrow">Ingredientes deliciosos · Mucho sabor</span>
+        <h1>La Pizza<br>De Juan K 🍕</h1>
+        <p>Bienvenidos a nuestra pizzería. Elige tu tamaño, combina tus sabores favoritos y arma tu pedido.</p>
+        <div class="notice"><strong>VERSIÓN DE PRUEBA:</strong> Puedes usar el carrito, pero todavía <strong>no se envían ni cobran pedidos reales</strong>.</div>
+      </div>
+      <div class="hero-pizza" aria-hidden="true">🍕</div>
+    </div>
+  </section>
+
+  <main class="wrap main-layout">
+    <div>
+      <section aria-labelledby="menuTitle" id="menu">
+        <div class="section-heading"><div><h2 id="menuTitle">Nuestro menú</h2><p class="hint">Escoge el tamaño de tu pizza y los sabores que más te gusten.</p></div></div>
+        <div class="tabs" aria-label="Categorías del menú"><button class="tab active" aria-current="true">🍕 Pizzas</button><button class="tab" disabled title="Próximamente">Hamburguesas · Próximamente</button><button class="tab" disabled title="Próximamente">Otros · Próximamente</button></div>
+        <div class="products" id="products"></div>
+      </section>
+      <section class="service-area" id="cobertura"><h3>🛵 Domicilios y cobertura</h3><p>Atendemos <strong>Gachancipá</strong> y <strong>todo el municipio de Tocancipá</strong>. El domicilio se cotizará y confirmará cuando habilitemos los pedidos reales.</p></section>
+    </div>
+    <aside class="cart-panel" id="carrito" aria-labelledby="cartHeading">
+      <div class="cart-title"><h2 id="cartHeading">🛒 Tu carrito</h2><span class="muted" id="cartItemsLabel">0 productos</span></div>
+      <div class="cart-body" id="cartItems" aria-live="polite"></div>
+      <div class="cart-bottom"><div class="subtotal"><span>Subtotal</span><strong id="subtotal">$0</strong></div><p class="delivery-note">El valor del domicilio no está incluido.</p><button class="primary-btn" id="previewButton" type="button" disabled>Ver resumen de prueba</button><button class="clear-btn" id="clearButton" type="button" hidden>Vaciar carrito</button></div>
+    </aside>
+  </main>
+  <footer>© La Pizza De Juan K · Menú de demostración · No recibe pedidos reales todavía.</footer>
+
+  <dialog id="pizzaDialog" aria-labelledby="pizzaDialogTitle">
+    <div class="dialog-head"><div><span class="eyebrow">Personaliza tu pizza</span><h2 id="pizzaDialogTitle">Elige tus sabores</h2></div><button class="icon-btn" data-close="pizzaDialog" aria-label="Cerrar">×</button></div>
+    <div class="dialog-body"><p class="hint" id="pizzaInstructions"></p><div class="flavor-grid" id="flavorGrid"></div><div class="flavor-counter" id="flavorCounter" role="status"></div></div>
+    <div class="dialog-footer"><span class="price" id="pizzaPrice"></span><button class="primary-btn" id="addPizzaButton" type="button" disabled>Agregar al carrito</button></div>
+  </dialog>
+
+  <dialog id="orderDialog" aria-labelledby="orderDialogTitle">
+    <div class="dialog-head"><div><span class="eyebrow">Simulación, sin envío</span><h2 id="orderDialogTitle">Datos para la prueba</h2></div><button class="icon-btn" data-close="orderDialog" aria-label="Cerrar">×</button></div>
+    <form id="orderForm">
+      <div class="dialog-body">
+        <p class="hint">Este formulario solo muestra cómo quedaría el pedido. No se envía a la pizzería.</p>
+        <fieldset style="border:0;padding:0;margin:15px 0 10px"><legend style="font-weight:800;margin-bottom:8px">¿Cómo recibirías tu pedido?</legend><div class="radio-group"><label><input type="radio" name="delivery" value="domicilio" checked> Domicilio</label><label><input type="radio" name="delivery" value="recoger"> Recoger en el local</label></div></fieldset>
+        <div class="form-grid">
+          <label class="field">Nombre de prueba<input name="customer" maxlength="60" placeholder="Tu nombre" required autocomplete="off"></label>
+          <label class="field">Teléfono de prueba<input name="phone" inputmode="tel" maxlength="20" placeholder="Tu celular" required autocomplete="off"></label>
+          <label class="field delivery-field">Municipio<select name="city"><option value="Gachancipá">Gachancipá</option><option value="Tocancipá">Tocancipá (todo el municipio)</option></select></label>
+          <label class="field delivery-field">Dirección de prueba<input name="address" maxlength="150" placeholder="Dirección y referencia" required autocomplete="off"></label>
+          <label class="field full">Observaciones (opcional)<textarea name="notes" maxlength="350" placeholder="Indicaciones de la pizza o del domicilio"></textarea></label>
+        </div>
+        <p class="warning">No escribas datos sensibles. Esta versión no guarda ni envía los datos personales; solo genera un resumen en tu pantalla.</p>
+      </div>
+      <div class="dialog-footer"><button class="outline-btn" type="button" data-close="orderDialog">Volver</button><button class="primary-btn" type="submit">Generar resumen</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="summaryDialog" aria-labelledby="summaryDialogTitle">
+    <div class="dialog-head"><div><span class="eyebrow">Solo demostración</span><h2 id="summaryDialogTitle">Resumen del pedido</h2></div><button class="icon-btn" data-close="summaryDialog" aria-label="Cerrar">×</button></div>
+    <div class="dialog-body"><p class="warning"><strong>ATENCIÓN:</strong> Este pedido NO fue enviado a la pizzería. No se ha realizado ningún cobro.</p><div class="summary-box" id="summaryText"></div></div>
+    <div class="dialog-footer"><button class="outline-btn" data-close="summaryDialog">Cerrar</button><button class="primary-btn" type="button" id="closeSummaryButton">Entendido</button></div>
+  </dialog>
+
+  <script>
+    'use strict';
+    // Los productos y precios se pueden ampliar más adelante desde un panel de administración.
+    const pizzas = [
+      {id:'personal',name:'Pizza personal',price:20000,max:2,description:'Hasta 2 sabores · perfecta para ti.'},
+      {id:'small',name:'Pizza small',price:35000,max:2,description:'Hasta 2 sabores · para compartir.'},
+      {id:'mediana',name:'Pizza mediana',price:45000,max:3,description:'Hasta 3 sabores · más variedad.'},
+      {id:'familiar',name:'Pizza familiar',price:62000,max:3,description:'Hasta 3 sabores · para toda la familia.'}
+    ];
+    const flavors = ['Hawaiana','Carnes','Pollo champiñón','Mi Tierrita','Mexicana','Venezolana','De la Casa','Ranchera','Campesina','Pepperoni'];
+    const money = value => new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(value);
+    const byId = id => document.getElementById(id);
+    const storageKey = 'juanK-carrito-demo-v1';
+    let cart = [];
+    let selectedPizza = null;
+    let chosen = [];
+    try {
+      const raw = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      if(Array.isArray(raw)) cart = raw.filter(item => pizzas.some(p=>p.id===item.id) && Array.isArray(item.flavors) && item.flavors.length>=1 && item.flavors.length<=3 && item.flavors.every(f=>flavors.includes(f)) && Number.isInteger(item.qty) && item.qty>=1 && item.qty<=99).map(item=>({id:item.id,flavors:item.flavors,qty:item.qty}));
+    } catch(error) { cart = []; }
+    function persist(){try{localStorage.setItem(storageKey,JSON.stringify(cart));}catch(error){/* Puede estar deshabilitado en el navegador */}}
+    function escText(tag,text,cls) { const e=document.createElement(tag); e.textContent=text; if(cls)e.className=cls; return e; }
+    function renderProducts(){
+      const holder=byId('products'); holder.replaceChildren();
+      for(const p of pizzas){
+        const card=escText('article','','product');
+        const art=escText('div','🍕','product-art'); art.setAttribute('aria-hidden','true');
+        const body=escText('div','','product-body'); const row=escText('div','','product-title');
+        row.append(escText('h3',p.name),escText('strong',money(p.price),'price'));
+        const desc=escText('p',p.description);
+        const btn=escText('button','Elegir sabores','primary-btn'); btn.type='button'; btn.addEventListener('click',()=>openPizza(p));
+        body.append(row,desc,btn);card.append(art,body);holder.append(card);
+      }
+    }
+    function openPizza(p){ selectedPizza=p;chosen=[];byId('pizzaDialogTitle').textContent=p.name;byId('pizzaInstructions').textContent=`Elige entre 1 y ${p.max} sabores. Todos están incluidos en el precio de este tamaño.`;byId('pizzaPrice').textContent=money(p.price);renderFlavors();byId('pizzaDialog').showModal(); }
+    function renderFlavors(){
+      const grid=byId('flavorGrid'); grid.replaceChildren();
+      for(const f of flavors){
+        const label=escText('label','','flavor');const box=document.createElement('input');box.type='checkbox';box.checked=chosen.includes(f);box.disabled=!box.checked && chosen.length>=selectedPizza.max;
+        box.addEventListener('change',()=>{ if(box.checked && chosen.length<selectedPizza.max)chosen.push(f);else chosen=chosen.filter(x=>x!==f);renderFlavors(); });
+        label.append(box,escText('span',f));grid.append(label);
+      }
+      byId('flavorCounter').textContent=`${chosen.length} de ${selectedPizza.max} sabores seleccionados (mínimo 1).`;
+      byId('addPizzaButton').disabled=chosen.length===0;
+    }
+    function addPizza(){
+      if(!selectedPizza || chosen.length<1 || chosen.length>selectedPizza.max)return;
+      const item=cart.find(it=>it.id===selectedPizza.id && it.flavors.slice().sort().join('|')===chosen.slice().sort().join('|'));
+      if(item)item.qty=Math.min(99,item.qty+1);
+      else cart.push({id:selectedPizza.id,flavors:[...chosen],qty:1});
+      persist();renderCart();byId('pizzaDialog').close();
+      byId('carrito').scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+    function updateQty(index,delta){
+      if(!cart[index])return;
+      cart[index].qty+=delta;
+      if(cart[index].qty<=0)cart.splice(index,1);
+      else cart[index].qty=Math.min(99,cart[index].qty);
+      persist();renderCart();
+    }
+    function renderCart(){
+      const holder=byId('cartItems');holder.replaceChildren();
+      const count=cart.reduce((a,b)=>a+b.qty,0);
+      byId('cartCount').textContent=String(count);
+      byId('cartItemsLabel').textContent=`${count} ${count===1?'producto':'productos'}`;
+      byId('previewButton').disabled=count===0;
+      byId('clearButton').hidden=count===0;
+      let total=0;
+      if(!cart.length){const empty=escText('div','','empty');empty.append(escText('span','🍕','empty-icon'),escText('p','Aún no has agregado pizzas. ¡Elige tu favorita!'));holder.append(empty);}
+      cart.forEach((item,index)=>{
+        const p=pizzas.find(x=>x.id===item.id);if(!p)return;
+        total+=p.price*item.qty;
+        const div=escText('div','','line-item');const row=escText('div','','item-row');
+        row.append(escText('strong',p.name),escText('span',money(p.price*item.qty),'item-price'));
+        const details=escText('p',item.flavors.join(' · '),'item-flavors');
+        const qty=escText('div','','qty');
+        const minus=escText('button','−');minus.type='button';minus.setAttribute('aria-label',`Quitar una ${p.name}`);minus.addEventListener('click',()=>updateQty(index,-1));
+        const plus=escText('button','+');plus.type='button';plus.setAttribute('aria-label',`Agregar una ${p.name}`);plus.disabled=item.qty>=99;plus.addEventListener('click',()=>updateQty(index,1));
+        qty.append(minus,escText('span',String(item.qty)),plus);div.append(row,details,qty);holder.append(div);
+      });
+      byId('subtotal').textContent=money(total);
+    }
+    function deliveryFields(){
+      const delivery=byId('orderForm').elements.delivery.value==='domicilio';
+      document.querySelectorAll('.delivery-field').forEach(label=>{label.hidden=!delivery;label.querySelector('input,select').required=delivery;});
+    }
+    function showSummary(event){
+      event.preventDefault();
+      if(!cart.length)return;
+      const f=new FormData(byId('orderForm'));
+      const delivery=f.get('delivery')==='domicilio';
+      const lines=['LA PIZZA DE JUAN K','RESUMEN DE PRUEBA — NO ENVIADO',''];
+      for(const item of cart){const p=pizzas.find(x=>x.id===item.id);if(p)lines.push(`${item.qty} × ${p.name} — ${money(p.price*item.qty)}\n  Sabores: ${item.flavors.join(', ')}`);}
+      lines.push('',`SUBTOTAL: ${money(cart.reduce((sum,it)=>sum+(pizzas.find(p=>p.id===it.id)?.price||0)*it.qty,0))}`,'DOMICILIO: precio por confirmar','','DATOS DE PRUEBA:',`Nombre: ${String(f.get('customer')||'').trim()}`,`Teléfono: ${String(f.get('phone')||'').trim()}`,`Modalidad: ${delivery?'Domicilio':'Recoger en el local'}`);
+      if(delivery)lines.push(`Municipio: ${f.get('city')}`,`Dirección: ${String(f.get('address')||'').trim()}`);
+      if(String(f.get('notes')||'').trim())lines.push(`Observaciones: ${String(f.get('notes')).trim()}`);
+      lines.push('','IMPORTANTE: Este resumen no se ha enviado. No se han cobrado productos.');
+      byId('summaryText').textContent=lines.join('\n');
+      byId('orderDialog').close();byId('summaryDialog').showModal();
+      byId('orderForm').reset();deliveryFields();
+    }
+    document.querySelectorAll('[data-close]').forEach(btn=>btn.addEventListener('click',()=>byId(btn.dataset.close).close()));
+    for(const dialog of document.querySelectorAll('dialog')) dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close();});
+    byId('addPizzaButton').addEventListener('click',addPizza);
+    byId('clearButton').addEventListener('click',()=>{if(confirm('¿Quieres vaciar tu carrito de prueba?')){cart=[];persist();renderCart();}});
+    byId('previewButton').addEventListener('click',()=>{deliveryFields();byId('orderDialog').showModal();});
+    document.querySelectorAll('input[name="delivery"]').forEach(el=>el.addEventListener('change',deliveryFields));
+    byId('orderForm').addEventListener('submit',showSummary);
+    byId('closeSummaryButton').addEventListener('click',()=>byId('summaryDialog').close());
+    renderProducts();renderCart();deliveryFields();
+  </script>
+</body>
+</html>
