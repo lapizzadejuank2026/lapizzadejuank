@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f20707">
+  <title>La Pizza de Juan K | Bienvenidos</title>
+  <style>
+    :root { --rojo:#f20707; --amarillo:#ffe600; --negro:#080808; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#fff; color:#13131a; font-family:Arial,Helvetica,sans-serif; }
+    .barra { height:12px; background:var(--rojo); }
+    header { background:var(--negro); display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 18px; }
+    .chef { width:76px; height:86px; flex:none; background:white; border-radius:12px; display:grid; place-items:center; overflow:hidden; }
+    .chef img { width:100%; height:100%; object-fit:contain; }
+    .chef span { font-size:37px; }
+    .acciones { display:flex; align-items:center; gap:10px; }
+    .estado { background:white; border-radius:7px; padding:11px 12px; font-size:16px; font-weight:700; white-space:nowrap; }
+    .punto { display:inline-block; width:13px; height:13px; border:3px solid #37a85e; border-radius:50%; margin-right:5px; vertical-align:middle; }
+    .punto.cerrado { border-color:#d04444; }
+    .pedir { background:var(--rojo); color:var(--amarillo); text-decoration:none; border-radius:7px; font-weight:900; padding:12px 17px; font-size:18px; }
+    main { min-height:65vh; padding:24px 22px 85px; max-width:720px; margin:auto; text-align:center; }
+    h1 { font-family:Georgia,serif; font-size:clamp(36px,8vw,56px); line-height:1.08; margin:6px 0 24px; font-weight:900; }
+    .eslogan { font-size:clamp(18px,4vw,25px); margin-bottom:28px; }
+    .servicios { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-bottom:24px; }
+    .servicio { border:2px solid transparent; background:white; padding:9px 2px 12px; border-radius:10px; cursor:pointer; color:#141414; font-size:clamp(13px,3.8vw,21px); }
+    .servicio .icono { display:block; font-size:33px; color:var(--rojo); margin-bottom:10px; }
+    .servicio[aria-pressed="true"] { border-color:var(--rojo); background:#fff1f1; }
+    .direccion { display:flex; align-items:center; justify-content:center; gap:12px; font-size:clamp(15px,3.5vw,20px); line-height:1.4; margin:22px 0 34px; }
+    .pin { font-size:27px; color:var(--rojo); }
+    .boton-grande { display:block; width:100%; border:3px solid #080808; background:var(--rojo); color:var(--amarillo); text-decoration:none; border-radius:12px; box-shadow:9px 10px 0 #000; font-family:Georgia,serif; font-size:clamp(24px,6vw,35px); font-weight:900; padding:14px 15px; margin:0 auto 35px; cursor:pointer; }
+    .boton-grande:active { transform:translate(3px,3px); box-shadow:6px 7px 0 #000; }
+    footer { background:#000; color:white; text-align:center; padding:34px 24px 45px; }
+    footer div { padding:18px 0; border-bottom:1px solid #333; }
+    footer div:last-child { border-bottom:0; }
+    .modal-fondo { position:fixed; inset:0; background:rgba(0,0,0,.66); z-index:10; display:none; align-items:center; justify-content:center; padding:20px; }
+    .modal-fondo.visible { display:flex; }
+    .modal { background:#fff; border-radius:16px; width:min(100%,420px); padding:26px 22px; text-align:center; box-shadow:0 12px 50px #0007; }
+    .modal h2 { margin:0 0 16px; font-size:28px; }
+    .modal p { line-height:1.5; }
+    .cerrar { border:0; padding:12px 22px; border-radius:9px; font-weight:700; background:var(--rojo); color:#fff; font-size:16px; cursor:pointer; }
+    @media(max-width:390px) { header{padding:12px 10px;gap:6px}.chef{width:60px;height:72px}.estado{font-size:13px;padding:10px 7px}.pedir{font-size:16px;padding:10px 11px}main{padding:22px 15px 75px} }
+  </style>
+</head>
+<body>
+  <div class="barra"></div>
+  <header>
+    <div class="chef">
+      <!-- Sube la imagen de tu chef a GitHub con el nombre chef.png -->
+      <img src="chef.png" alt="Chef de La Pizza de Juan K" onerror="this.hidden=true;this.nextElementSibling.hidden=false;">
+      <span hidden aria-label="Chef pizzero">👨‍🍳🍕</span>
+    </div>
+    <div class="acciones">
+      <span class="estado" id="estado"><span class="punto"></span> Abierto</span>
+      <a class="pedir" href="menu.html" id="pedir">Pedir</a>
+    </div>
+  </header>
+
+  <main>
+    <h1>Bienvenid@s</h1>
+    <p class="eslogan">Más delicioso pa' dónde 🍕</p>
+
+    <div class="servicios" aria-label="Modalidad del pedido">
+      <button class="servicio" type="button" data-tipo="local" aria-pressed="false"><span class="icono">🍽️</span>En el local</button>
+      <button class="servicio" type="button" data-tipo="llevar" aria-pressed="false"><span class="icono">🛍️</span>Para llevar</button>
+      <button class="servicio" type="button" data-tipo="domicilio" aria-pressed="false"><span class="icono">🛵</span>A domicilio</button>
+    </div>
+
+    <p class="direccion"><span class="pin">📍</span><span>Cl. 3 #4-2, Gachancipá,<br>Cundinamarca, Colombia</span></p>
+
+    <a href="menu.html" class="boton-grande" id="menu">Menú</a>
+    <button class="boton-grande" type="button" id="wifi">WiFi</button>
+  </main>
+
+  <footer>
+    <div>Menú digital de La Pizza de Juan K</div>
+    <div>Servicio en el local, para llevar y a domicilio</div>
+    <div>Horario habitual: 3:00 p. m. a 11:00 p. m.</div>
+  </footer>
+
+  <div class="modal-fondo" id="wifi-modal" role="dialog" aria-modal="true" aria-labelledby="wifi-titulo">
+    <div class="modal">
+      <h2 id="wifi-titulo">📶 WiFi para clientes</h2>
+      <p>Pide en caja el nombre y la contraseña de nuestra red WiFi.</p>
+      <p>Al conectarte, vuelve aquí para consultar el menú y hacer tu pedido.</p>
+      <button class="cerrar" type="button" id="cerrar-wifi">Entendido</button>
+    </div>
+  </div>
+
+  <script>
+    // Guarda la modalidad elegida para conectarla después al formulario de pedidos.
+    document.querySelectorAll('.servicio').forEach(boton => {
+      boton.addEventListener('click', () => {
+        document.querySelectorAll('.servicio').forEach(b => b.setAttribute('aria-pressed', 'false'));
+        boton.setAttribute('aria-pressed', 'true');
+        sessionStorage.setItem('tipoPedidoJuank', boton.dataset.tipo);
+      });
+    });
+
+    // Estado visual según hora local de Colombia; horario habitual 15:00-23:00.
+    function actualizarEstado() {
+      const hora = Number(new Intl.DateTimeFormat('en-GB', { timeZone:'America/Bogota', hour:'2-digit', hourCycle:'h23' }).format(new Date()));
+      const abierto = hora >= 15 && hora < 23;
+      document.getElementById('estado').innerHTML = `<span class="punto ${abierto ? '' : 'cerrado'}"></span> ${abierto ? 'Abierto' : 'Cerrado'}`;
+    }
+    actualizarEstado();
+    setInterval(actualizarEstado, 60000);
+
+    const modal = document.getElementById('wifi-modal');
+    const botonWifi = document.getElementById('wifi');
+    const botonCerrar = document.getElementById('cerrar-wifi');
+    botonWifi.addEventListener('click', () => { modal.classList.add('visible'); botonCerrar.focus(); });
+    botonCerrar.addEventListener('click', () => { modal.classList.remove('visible'); botonWifi.focus(); });
+    modal.addEventListener('click', e => { if(e.target === modal) modal.classList.remove('visible'); });
+    document.addEventListener('keydown', e => { if(e.key === 'Escape') modal.classList.remove('visible'); });
+  </script>
+</body>
+</html>
