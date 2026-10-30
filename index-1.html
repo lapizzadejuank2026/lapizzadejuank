@@ -272,11 +272,28 @@
       const delivery=byId('orderForm').elements.delivery.value==='domicilio';
       document.querySelectorAll('.delivery-field').forEach(label=>{label.hidden=!delivery;label.querySelector('input,select').required=delivery;});
     }
-    function showSummary(event){
+    async function showSummary(event){
       event.preventDefault();
       if(!cart.length)return;
       const f=new FormData(byId('orderForm'));
       const delivery=f.get('delivery')==='domicilio';
+      const pedido = {
+  cliente: {
+    nombre: String(f.get('customer') || '').trim(),
+    telefono: String(f.get('phone') || '').trim()
+  },
+  modalidad: delivery ? 'domicilio' : 'recoger',
+  municipio: delivery ? String(f.get('city') || '') : '',
+  direccion: delivery ? String(f.get('address') || '').trim() : '',
+  observaciones: String(f.get('notes') || '').trim(),
+  productos: cart.map(item => ({
+    pizza: pizzas.find(p => p.id === item.id)?.name || item.id,
+    sabores: item.flavors,
+    cantidad: item.qty
+  })),
+  total: cart.reduce((sum, item) =>
+    sum + (pizzas.find(p => p.id === item.id)?.price || 0) * item.qty, 0)
+};
       const lines=['LA PIZZA DE JUAN K','RESUMEN DE PRUEBA — NO ENVIADO',''];
       for(const item of cart){const p=pizzas.find(x=>x.id===item.id);if(p)lines.push(`${item.qty} × ${p.name} — ${money(p.price*item.qty)}\n  Sabores: ${item.flavors.join(', ')}`);}
       lines.push('',`SUBTOTAL: ${money(cart.reduce((sum,it)=>sum+(pizzas.find(p=>p.id===it.id)?.price||0)*it.qty,0))}`,'DOMICILIO: precio por confirmar','','DATOS DE PRUEBA:',`Nombre: ${String(f.get('customer')||'').trim()}`,`Teléfono: ${String(f.get('phone')||'').trim()}`,`Modalidad: ${delivery?'Domicilio':'Recoger en el local'}`);
@@ -299,7 +316,7 @@
   </script>
   <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
-  import { getFirestore } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA",
@@ -312,6 +329,12 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+  window.enviarPedidoFirebase = (pedido) =>
+  addDoc(collection(db, 'pedidos'), {
+    ...pedido,
+    estado: 'nuevo',
+    creadoEn: serverTimestamp()
+  });
   </script>
 </body>
 </html>
