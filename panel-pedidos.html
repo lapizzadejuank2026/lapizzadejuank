@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel de pedidos | La Pizza de Juan K</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, sans-serif; background: #121212; color: #fff; }
+    header { padding: 22px 16px; background: #a71919; text-align: center; }
+    h1 { margin: 0; font-size: 25px; }
+    main { max-width: 850px; padding: 20px 16px; margin: auto; }
+    .caja, .pedido { background: #252525; border-radius: 14px; padding: 19px; margin: 14px 0; }
+    input, button { width: 100%; padding: 13px; margin: 7px 0; border: 0; border-radius: 9px; font-size: 16px; }
+    input { background: white; color: #111; }
+    button { background: #f6bd42; color: #171717; font-weight: bold; cursor: pointer; }
+    button.secundario { background: #eee; }
+    .alerta { color: #ffd16b; font-weight: bold; }
+    .dato { margin: 8px 0; overflow-wrap: anywhere; }
+    .productos { white-space: pre-wrap; overflow-wrap: anywhere; background: #181818; padding: 12px; border-radius: 8px; }
+    .nuevo { border: 2px solid #f6bd42; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+<header><h1>🍕 La Pizza de Juan K</h1><div>Recepción de pedidos</div></header>
+<main>
+  <section id="acceso" class="caja">
+    <h2>Acceso del negocio</h2>
+    <form id="formulario">
+      <input id="correo" type="email" placeholder="Correo del administrador" autocomplete="username" required>
+      <input id="clave" type="password" placeholder="Contraseña" autocomplete="current-password" required>
+      <button type="submit">Entrar al panel</button>
+    </form>
+    <p id="errorAcceso" class="alerta" role="alert"></p>
+  </section>
+
+  <section id="panel" hidden>
+    <div class="caja">
+      <p id="usuario"></p>
+      <button id="activar">🔔 Activar alarma sonora</button>
+      <button id="salir" class="secundario">Cerrar sesión</button>
+      <p id="estado" class="alerta" role="status">Conectando con Firestore...</p>
+      <p id="contador"></p>
+    </div>
+    <div id="lista"></div>
+  </section>
+</main>
+
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
+  import { getFirestore, collection, onSnapshot, doc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+
+  const firebaseConfig = {
+    apiKey: 'AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA',
+    authDomain: 'pizzadejuank.firebaseapp.com',
+    projectId: 'pizzadejuank',
+    storageBucket: 'pizzadejuank.appspot.com',
+    messagingSenderId: '856650093973',
+    appId: '1:856650093973:web:a4cd3ad8e863617706d29c'
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+    const acceso = document.getElementById('acceso');
+  const panel = document.getElementById('panel');
+  const estado = document.getElementById('estado');
+  const lista = document.getElementById('lista');
+  let detenerEscucha = () => {};
+  let alarmaActiva = false;
+  let hayNuevos = false;
+  let audio;
+
+  document.getElementById('formulario').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    document.getElementById('errorAcceso').textContent = '';
+    try {
+      await signInWithEmailAndPassword(auth,
+        document.getElementById('correo').value.trim(),
+        document.getElementById('clave').value);
+      document.getElementById('clave').value = '';
+    } catch (error) {
+      document.getElementById('errorAcceso').textContent =
+        'No se pudo ingresar. Revisa el correo y la contraseña.';
+    }
+  });
+
+  document.getElementById('salir').addEventListener('click', () => signOut(auth));
+
+  document.getElementById('activar').addEventListener('click', async () => {
+    try {
+      audio ??= new (window.AudioContext || window.webkitAudioContext)();
+      await audio.resume();
+      alarmaActiva = true;
+      document.getElementById('activar').textContent = '🔔 Alarma activada';
+      if (hayNuevos) sonar();
+    } catch (error) {
+      estado.textContent = 'No se pudo activar el sonido.';
+    }
+  });
+
+  function sonar() {
+    if (!alarmaActiva || !audio || audio.state !== 'running') return;
+    const inicio = audio.currentTime;
+    for (let i = 0; i < 3; i++) {
+      const tono = audio.createOscillator();
+      const volumen = audio.createGain();
+      tono.type = 'square';
+      tono.frequency.value = i === 1 ? 740 : 950;
+      volumen.gain.setValueAtTime(0, inicio + i * 0.3);
+      volumen.gain.linearRampToValueAtTime(0.2, inicio + i * 0.3 + 0.02);
+      volumen.gain.linearRampToValueAtTime(0, inicio + i * 0.3 + 0.24);
+      tono.connect(volumen).connect(audio.destination);
+      tono.start(inicio + i * 0.3);
+      tono.stop(inicio + i * 0.3 + 0.25);
+    }
+  }
+
+  setInterval(() => {
+    if (hayNuevos) sonar();
+  }, 3500);
+
+  function linea(texto) {
+    const p = document.createElement('p');
+    p.className = 'dato';
+    p.textContent = texto;
+    return p;
+  }
+
+  function pintar(documentos) {
+    lista.replaceChildren();
+
+    const pedidos = documentos.filter(
+      x => String(x.d.estado || '').toLowerCase() !== 'prueba'
+    );
+
+    pedidos.sort((a, b) =>
+      (b.d.creadoEn?.seconds || 0) - (a.d.creadoEn?.seconds || 0)
+    );
+
+    hayNuevos = pedidos.some(
+      x => String(x.d.estado || 'nuevo').toLowerCase() === 'nuevo'
+    );
+
+    document.getElementById('contador').textContent =
+      `${pedidos.length} pedido(s) · ${
+        pedidos.filter(x =>
+          String(x.d.estado || 'nuevo').toLowerCase() === 'nuevo'
+        ).length
+      } nuevo(s)`;
+
+    estado.textContent = hayNuevos
+      ? '🔔 Hay pedidos pendientes de confirmar'
+      : 'Sin pedidos nuevos';
+
+    if (!pedidos.length) {
+      lista.append(linea('Todavía no hay pedidos reales.'));
+    }
+
+    for (const { id, d } of pedidos) {
+      const nuevo =
+        String(d.estado || 'nuevo').toLowerCase() === 'nuevo';
+
+      const tarjeta = document.createElement('article');
+      tarjeta.className = 'pedido' + (nuevo ? ' nuevo' : '');
+
+      const titulo = document.createElement('h2');
+      titulo.textContent =
+        `Pedido ${id.slice(0, 8)} · ${
+          nuevo ? 'NUEVO' : d.estado || 'Pendiente'
+        }`;
+      tarjeta.append(titulo);
+
+      const cliente =
+        typeof d.cliente === 'object' && d.cliente !== null
+          ? d.cliente
+          : {};
+
+      tarjeta.append(linea(
+        'Cliente: ' +
+        (cliente.nombre || d.nombre || d.clienteNombre || 'Sin nombre')
+      ));
+
+      tarjeta.append(linea(
+        'Teléfono: ' + (cliente.telefono || d.telefono || 'Sin teléfono')
+      ));
+
+      tarjeta.append(linea(
+        'Entrega: ' + (d.modalidad || d.tipoEntrega || 'Sin especificar')
+      ));
+
+      tarjeta.append(linea(
+        'Dirección: ' + (d.direccion || cliente.direccion || 'No indicada')
+      ));
+
+      tarjeta.append(linea(
+        'Municipio: ' + (d.municipio || cliente.municipio || 'No indicado')
+      ));
+
+      const detalle = document.createElement('div');
+      detalle.className = 'productos';
+      detalle.textContent =
+        'Productos: ' +
+        JSON.stringify(d.productos || d.items || d.pizza || [], null, 2);
+      tarjeta.append(detalle);
+
+      tarjeta.append(linea(
+        'Total: ' +
+        (d.total == null
+          ? 'Por confirmar'
+          : '$' + Number(d.total).toLocaleString('es-CO'))
+      ));
+
+      if (nuevo) {
+        const boton = document.createElement('button');
+        boton.textContent = '✅ Confirmar recepción';
+
+        boton.addEventListener('click', async () => {
+          boton.disabled = true;
+          try {
+            await updateDoc(doc(db, 'pedidos', id), {
+              estado: 'recibido',
+              recibidoEn: serverTimestamp()
+            });
+          } catch (e) {
+            estado.textContent =
+              'No se pudo confirmar: revisa los permisos de Firestore.';
+            boton.disabled = false;
+          }
+        });
+
+        tarjeta.append(boton);
+      }
+
+      lista.append(tarjeta);
+    }
+
+    if (hayNuevos) sonar();
+  }
+
+  onAuthStateChanged(auth, (user) => {
+    detenerEscucha();
+
+    acceso.hidden = !!user;
+    panel.hidden = !user;
+
+    if (!user) {
+      alarmaActiva = false;
+      hayNuevos = false;
+      document.getElementById('activar').textContent =
+        '🔔 Activar alarma sonora';
+      return;
+    }
+
+    document.getElementById('usuario').textContent =
+      'Sesión: ' + user.email;
+
+    estado.textContent = 'Conectando con Firestore...';
+
+    detenerEscucha = onSnapshot(
+      collection(db, 'pedidos'),
+      (snapshot) => pintar(
+        snapshot.docs.map(x => ({
+          id: x.id,
+          d: x.data()
+        }))
+      ),
+      () => {
+        hayNuevos = false;
+        estado.textContent =
+          'Acceso a pedidos bloqueado. Falta configurar reglas de Firestore para tu usuario administrador.';
+      }
+    );
+  });
+</script>
+</body>
+</html>
