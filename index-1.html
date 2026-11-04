@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+w<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -183,7 +183,8 @@
   <dialog id="summaryDialog" aria-labelledby="summaryDialogTitle">
     <div class="dialog-head"><div><span class="eyebrow">Solo demostración</span><h2 id="summaryDialogTitle">Resumen del pedido</h2></div><button class="icon-btn" data-close="summaryDialog" aria-label="Cerrar">×</button></div>
     <div class="dialog-body"><p class="warning"><strong>ATENCIÓN:</strong> Este pedido NO fue enviado a la pizzería. No se ha realizado ningún cobro.</p><div class="summary-box" id="summaryText"></div></div>
-    <div class="dialog-footer"><button class="outline-btn" data-close="summaryDialog">Cerrar</button><button class="primary-btn" type="button" id="closeSummaryButton">Entendido</button></div>
+    <div class="dialog-footer"><button class="outline-btn" data-close="summaryDialog">Cerrar</button><button class="primary-btn" type="button" id="closeSummaryButton">Entendido</button>
+  <button class="primary-btn" type="button" id="sendOrderButton" disabled>Confirmar y enviar pedido</button>  </div>
   </dialog>
 
   <script>
@@ -200,6 +201,7 @@
     const byId = id => document.getElementById(id);
     const storageKey = 'juanK-carrito-demo-v1';
     let cart = [];
+    let pedidoPendiente = null;
     let selectedPizza = null;
     let chosen = [];
     try {
@@ -294,6 +296,8 @@
   total: cart.reduce((sum, item) =>
     sum + (pizzas.find(p => p.id === item.id)?.price || 0) * item.qty, 0)
 };
+     pedidoPendiente = pedido;
+      byId('sendOrderButton').disabled = false;
       const lines=['LA PIZZA DE JUAN K','RESUMEN DE PRUEBA — NO ENVIADO',''];
       for(const item of cart){const p=pizzas.find(x=>x.id===item.id);if(p)lines.push(`${item.qty} × ${p.name} — ${money(p.price*item.qty)}\n  Sabores: ${item.flavors.join(', ')}`);}
       lines.push('',`SUBTOTAL: ${money(cart.reduce((sum,it)=>sum+(pizzas.find(p=>p.id===it.id)?.price||0)*it.qty,0))}`,'DOMICILIO: precio por confirmar','','DATOS DE PRUEBA:',`Nombre: ${String(f.get('customer')||'').trim()}`,`Teléfono: ${String(f.get('phone')||'').trim()}`,`Modalidad: ${delivery?'Domicilio':'Recoger en el local'}`);
@@ -312,12 +316,39 @@
     document.querySelectorAll('input[name="delivery"]').forEach(el=>el.addEventListener('change',deliveryFields));
     byId('orderForm').addEventListener('submit',showSummary);
     byId('closeSummaryButton').addEventListener('click',()=>byId('summaryDialog').close());
+    byId('sendOrderButton').addEventListener('click', async () => {
+  if (!pedidoPendiente) return;
+
+const boton = byId('sendOrderButton');
+boton.disabled = true;
+
+try {
+  if (typeof window.enviarPedidoFirebase !== 'function') {
+    throw new Error('Firebase no está listo');
+  }
+
+  await window.enviarPedidoFirebase(pedidoPendiente);
+
+  alert('Pedido de prueba guardado en Firebase');
+  pedidoPendiente = null;
+  cart = [];
+  persist();
+  renderCart();
+  byId('summaryDialog').close();
+
+} catch (error) {
+  console.error('Error al enviar pedido:', error);
+  alert('No se pudo enviar el pedido. Inténtalo nuevamente.');
+  boton.disabled = false;
+}
+});
     renderProducts();renderCart();deliveryFields();
   </script>
   <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
   import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
     import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app-check.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA",
@@ -333,13 +364,20 @@
   provider: new ReCaptchaEnterpriseProvider("6LePJQ8uAAAAAI0QV2VRfwHdOl-_EuMxM6zLNmuE"),
   isTokenAutoRefreshEnabled: true
 });
+    const auth = getAuth(app);
   const db = getFirestore(app);
   window.enviarPedidoFirebase = (pedido) =>
   addDoc(collection(db, 'pedidos'), {
     ...pedido,
-    estado: 'nuevo',
+    estado: 'prueba',
     creadoEn: serverTimestamp()
   });
+    const guardarPedidoOriginal = window.enviarPedidoFirebase;
+
+window.enviarPedidoFirebase = async (pedido) => {
+  await signInAnonymously(auth);
+  return guardarPedidoOriginal(pedido);
+};
   </script>
 </body>
 </html>
