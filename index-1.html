@@ -329,7 +329,7 @@ try {
 
   await window.enviarPedidoFirebase(pedidoPendiente);
 
-  alert('Pedido de prueba guardado en Firebase');
+  alert('Pedido guardado en Firebase');
   pedidoPendiente = null;
   cart = [];
   persist();
@@ -369,7 +369,7 @@ try {
   window.enviarPedidoFirebase = (pedido) =>
   addDoc(collection(db, 'pedidos'), {
     ...pedido,
-    estado: 'prueba',
+    estado: 'nuevo',
     creadoEn: serverTimestamp()
   });
     const guardarPedidoOriginal = window.enviarPedidoFirebase;
