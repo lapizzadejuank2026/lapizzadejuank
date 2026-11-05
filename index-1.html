@@ -132,7 +132,7 @@ w<!DOCTYPE html>
         <span class="eyebrow">Ingredientes deliciosos · Mucho sabor</span>
         <h1>La Pizza<br>De Juan K 🍕</h1>
         <p>Bienvenidos a nuestra pizzería. Elige tu tamaño, combina tus sabores favoritos y arma tu pedido.</p>
-        <div class="notice"><strong>VERSIÓN DE PRUEBA:</strong> Puedes usar el carrito, pero todavía <strong>no se envían ni cobran pedidos reales</strong>.</div>
+        <div class="notice"><strong>MENÚ DE PEDIDOS:</strong> Puedes usar el carrito para hacer tu pedido. <strong>Tus pedidos serán enviados a La Pizza de Juanca. El valor del domicilio y el método de pago se confirmarán con el restaurante. No se realizan cobros automáticos</strong>.</div>
       </div>
       <div class="hero-pizza" aria-hidden="true">🍕</div>
     </div>
@@ -145,12 +145,12 @@ w<!DOCTYPE html>
         <div class="tabs" aria-label="Categorías del menú"><button class="tab active" aria-current="true">🍕 Pizzas</button><button class="tab" disabled title="Próximamente">Hamburguesas · Próximamente</button><button class="tab" disabled title="Próximamente">Otros · Próximamente</button></div>
         <div class="products" id="products"></div>
       </section>
-      <section class="service-area" id="cobertura"><h3>🛵 Domicilios y cobertura</h3><p>Atendemos <strong>Gachancipá</strong> y <strong>todo el municipio de Tocancipá</strong>. El domicilio se cotizará y confirmará cuando habilitemos los pedidos reales.</p></section>
+      <section class="service-area" id="cobertura"><h3>🛵 Domicilios y cobertura</h3><p>Atendemos <strong>Gachancipá</strong> y <strong>todo el municipio de Tocancipá</strong>. El domicilio se cotizará y confirmará con el restaurante.</p></section>
     </div>
     <aside class="cart-panel" id="carrito" aria-labelledby="cartHeading">
       <div class="cart-title"><h2 id="cartHeading">🛒 Tu carrito</h2><span class="muted" id="cartItemsLabel">0 productos</span></div>
       <div class="cart-body" id="cartItems" aria-live="polite"></div>
-      <div class="cart-bottom"><div class="subtotal"><span>Subtotal</span><strong id="subtotal">$0</strong></div><p class="delivery-note">El valor del domicilio no está incluido.</p><button class="primary-btn" id="previewButton" type="button" disabled>Ver resumen de prueba</button><button class="clear-btn" id="clearButton" type="button" hidden>Vaciar carrito</button></div>
+      <div class="cart-bottom"><div class="subtotal"><span>Subtotal</span><strong id="subtotal">$0</strong></div><p class="delivery-note">El valor del domicilio no está incluido.</p><button class="primary-btn" id="previewButton" type="button" disabled>Ver resumen de tu pedido</button><button class="clear-btn" id="clearButton" type="button" hidden>Vaciar carrito</button></div>
     </aside>
   </main>
   <footer>© La Pizza De Juan K · Menú de demostración · No recibe pedidos reales todavía.</footer>
@@ -162,10 +162,10 @@ w<!DOCTYPE html>
   </dialog>
 
   <dialog id="orderDialog" aria-labelledby="orderDialogTitle">
-    <div class="dialog-head"><div><span class="eyebrow">Simulación, sin envío</span><h2 id="orderDialogTitle">Datos para la prueba</h2></div><button class="icon-btn" data-close="orderDialog" aria-label="Cerrar">×</button></div>
+    <div class="dialog-head"><div><span class="eyebrow">Simulación, sin envío</span><h2 id="orderDialogTitle">Datos del pedido</h2></div><button class="icon-btn" data-close="orderDialog" aria-label="Cerrar">×</button></div>
     <form id="orderForm">
       <div class="dialog-body">
-        <p class="hint">Este formulario solo muestra cómo quedaría el pedido. No se envía a la pizzería.</p>
+        <p class="hint">completa tus datos para enviar el pedido a la pizza de juan k. No se realiza ningun conro automático.</p>
         <fieldset style="border:0;padding:0;margin:15px 0 10px"><legend style="font-weight:800;margin-bottom:8px">¿Cómo recibirías tu pedido?</legend><div class="radio-group"><label><input type="radio" name="delivery" value="domicilio" checked> Domicilio</label><label><input type="radio" name="delivery" value="recoger"> Recoger en el local</label></div></fieldset>
         <div class="form-grid">
           <label class="field">Nombre de prueba<input name="customer" maxlength="60" placeholder="Tu nombre" required autocomplete="off"></label>
@@ -174,7 +174,7 @@ w<!DOCTYPE html>
           <label class="field delivery-field">Dirección de prueba<input name="address" maxlength="150" placeholder="Dirección y referencia" required autocomplete="off"></label>
           <label class="field full">Observaciones (opcional)<textarea name="notes" maxlength="350" placeholder="Indicaciones de la pizza o del domicilio"></textarea></label>
         </div>
-        <p class="warning">No escribas datos sensibles. Esta versión no guarda ni envía los datos personales; solo genera un resumen en tu pantalla.</p>
+        <p class="warning">tu datos se guardaran para gestionar tu pedido. no vompartas contraseña ni datos bancarios.</p>
       </div>
       <div class="dialog-footer"><button class="outline-btn" type="button" data-close="orderDialog">Volver</button><button class="primary-btn" type="submit">Generar resumen</button></div>
     </form>
