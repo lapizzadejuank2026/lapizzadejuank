@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administrar productos | La Pizza de Juan K</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#111;color:#fff;font-family:Arial,sans-serif}
+    header{background:#a71919;padding:18px;text-align:center}
+    h1{font-size:23px;margin:0 0 6px}
+    main{max-width:850px;margin:auto;padding:15px}
+    .caja,.producto{background:#242424;border-radius:13px;padding:17px;margin:14px 0}
+    input,textarea,button{width:100%;font:inherit;padding:12px;border:0;border-radius:9px;margin:6px 0}
+    input,textarea{background:#fff;color:#111}
+    textarea{min-height:80px}
+    button{background:#f4bd45;color:#151515;font-weight:bold;cursor:pointer}
+    button:disabled{opacity:.5;cursor:wait}
+    .secundario{background:#e8e8e8}
+    .fila{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    label{display:block;margin-top:10px;font-weight:bold}
+    label small,.ayuda{font-weight:normal;color:#c9c9c9;font-size:13px}
+    .check{display:flex;align-items:center;gap:10px}
+    .check input{width:22px;height:22px}
+    .acciones{display:flex;gap:8px}
+    .acciones button{flex:1}
+    .producto img{max-width:110px;max-height:110px;object-fit:cover;border-radius:10px;float:right;margin-left:10px}
+    .producto h3{margin:0 0 6px}
+    .producto p{overflow-wrap:anywhere}
+    #mensaje,#errorLogin{color:#ffd575;font-weight:bold;white-space:pre-wrap}
+    a{color:#ffe09b}
+    [hidden]{display:none!important}
+    @media(max-width:520px){.fila{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header><h1>🍕 La Pizza de Juan K</h1><div>Administración de productos</div></header>
+  <main>
+    <section class="caja" id="acceso">
+      <h2>Ingreso del administrador</h2>
+      <form id="login">
+        <input id="correo" type="email" placeholder="Correo del negocio" autocomplete="username" required>
+        <input id="clave" type="password" placeholder="Contraseña" autocomplete="current-password" required>
+        <button>Entrar</button>
+      </form>
+      <p id="errorLogin" role="alert"></p>
+    </section>
+
+    <section id="panel" hidden>
+      <div class="caja">
+        <p id="usuario"></p>
+        <a href="panel-pedidos.html">← Volver a recepción de pedidos</a>
+        <button id="salir" class="secundario" type="button">Cerrar sesión</button>
+        <p class="ayuda">Esta primera versión administra productos en Firebase. El menú público todavía no usa estos datos.</p>
+      </div>
+
+      <section class="caja">
+        <h2 id="tituloForm">Agregar producto</h2>
+        <form id="formProducto">
+          <input id="idProducto" type="hidden">
+          <label>Nombre del producto
+            <input id="nombre" maxlength="100" placeholder="Ej.: Hamburguesa Jalisco" required>
+          </label>
+          <label>Descripción
+            <textarea id="descripcion" maxlength="600" placeholder="Ingredientes y detalles"></textarea>
+          </label>
+          <div class="fila">
+            <label>Precio en pesos colombianos
+              <input id="precio" type="number" min="0" max="99999999" step="1" placeholder="20000" required>
+            </label>
+            <label>Categoría
+              <input id="categoria" list="sugerencias" maxlength="70" placeholder="Ej.: Pizzas" required>
+              <datalist id="sugerencias">
+                <option value="Pizzas"><option value="Hamburguesas"><option value="Bebidas"><option value="Comida mexicana">
+              </datalist>
+            </label>
+          </div>
+          <div class="fila">
+            <label>Orden de categoría <small>(1 aparece primero)</small>
+              <input id="ordenCategoria" type="number" min="0" max="9999" step="1" value="10" required>
+            </label>
+            <label>Orden del producto <small>(1 aparece primero)</small>
+              <input id="orden" type="number" min="0" max="9999" step="1" value="10" required>
+            </label>
+          </div>
+          <label>Foto desde el celular <small>(JPG, PNG o WEBP, máximo 5 MB)</small>
+            <input id="archivoFoto" type="file" accept="image/jpeg,image/png,image/webp">
+          </label>
+          <label>O enlace de fotografía <small>(opcional)</small>
+            <input id="fotoURL" type="url" placeholder="https://...">
+          </label>
+          <label class="check"><input id="activo" type="checkbox" checked> Visible en el menú cuando lo conectemos</label>
+          <button id="guardar" type="submit">💾 Guardar producto</button>
+          <button id="cancelar" class="secundario" type="button">Limpiar / cancelar edición</button>
+        </form>
+        <p id="mensaje" role="status"></p>
+      </section>
+      <section class="caja">
+        <h2>Productos guardados</h2>
+        <p class="ayuda">Edita un producto o usa Mostrar/Ocultar sin eliminarlo.</p>
+        <div id="lista">Cargando productos...</div>
+      </section>
+    </section>
+  </main>
+  <script type="module">
+    import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
+    import {getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
+    import {getFirestore,collection,addDoc,doc,updateDoc,onSnapshot,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+    import {getStorage,ref,uploadBytes,getDownloadURL} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-storage.js';
+
+    const firebaseConfig={
+      apiKey:'AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA',
+      authDomain:'pizzadejuank.firebaseapp.com',
+      projectId:'pizzadejuank',
+      storageBucket:'pizzadejuank.appspot.com',
+      messagingSenderId:'856650093973',
+      appId:'1:856650093973:web:a4cd3ad8e863617706d29c'
+    };
+    const app=initializeApp(firebaseConfig);
+    const auth=getAuth(app);
+    const db=getFirestore(app);
+    const storage=getStorage(app);
+    const $=id=>document.getElementById(id);
+    let productos=[];
+    let dejarDeEscuchar=()=>{};
+    const mensaje=texto=>$('mensaje').textContent=texto;
+    const pesos=n=>'$'+Number(n||0).toLocaleString('es-CO');
+
+    $('login').addEventListener('submit',async e=>{
+      e.preventDefault();
+      $('errorLogin').textContent='';
+      try{
+        await signInWithEmailAndPassword(auth,$('correo').value.trim(),$('clave').value);
+        $('clave').value='';
+      }catch(error){$('errorLogin').textContent='No se pudo ingresar. Revisa tu correo y contraseña.';}
+    });
+    $('salir').addEventListener('click',()=>signOut(auth));
+
+    onAuthStateChanged(auth,user=>{
+      dejarDeEscuchar();
+      $('acceso').hidden=!!user;
+      $('panel').hidden=!user;
+      if(!user){productos=[];return;}
+      $('usuario').textContent='Sesión: '+user.email;
+      $('lista').textContent='Cargando productos...';
+      dejarDeEscuchar=onSnapshot(collection(db,'productos'),snapshot=>{
+        productos=snapshot.docs.map(x=>({id:x.id,...x.data()}));
+        pintar();
+      },error=>{
+        $('lista').textContent='No hay acceso a la colección productos. Antes de guardar hay que configurar las reglas de Firestore para el administrador.';
+        console.error(error);
+      });
+    });
+
+    function limpiar(){
+      $('formProducto').reset();
+      $('idProducto').value='';
+      $('tituloForm').textContent='Agregar producto';
+      $('activo').checked=true;
+      $('orden').value=10;
+      $('ordenCategoria').value=10;
+    }
+    $('cancelar').addEventListener('click',()=>{limpiar();mensaje('Edición cancelada.');});
+
+    function editar(p){
+      $('idProducto').value=p.id;
+      $('nombre').value=p.nombre||'';
+      $('descripcion').value=p.descripcion||'';
+      $('precio').value=p.precio??0;
+      $('categoria').value=p.categoria||'';
+      $('ordenCategoria').value=p.ordenCategoria??10;
+      $('orden').value=p.orden??10;
+      $('fotoURL').value=p.fotoURL||'';
+      $('archivoFoto').value='';
+      $('activo').checked=p.activo!==false;
+      $('tituloForm').textContent='Editar: '+p.nombre;
+      mensaje('Editando producto. Pulsa Guardar para aplicar cambios.');
+      $('tituloForm').scrollIntoView({behavior:'smooth'});
+    }
+
+    function pintar(){
+      const lista=$('lista');
+      lista.replaceChildren();
+      if(!productos.length){lista.textContent='Todavía no hay productos registrados.';return;}
+      const ordenados=[...productos].sort((a,b)=>
+        (Number(a.ordenCategoria??10)-Number(b.ordenCategoria??10))||
+        String(a.categoria||'').localeCompare(String(b.categoria||''),'es')||
+        (Number(a.orden??10)-Number(b.orden??10))||
+        String(a.nombre||'').localeCompare(String(b.nombre||''),'es'));
+      for(const p of ordenados){
+        const tarjeta=document.createElement('article');
+        tarjeta.className='producto';
+        if(p.fotoURL && /^https:\/\//i.test(p.fotoURL)){
+          const img=document.createElement('img');
+          img.src=p.fotoURL;
+          img.alt='Foto del producto';
+          img.loading='lazy';
+          tarjeta.append(img);
+        }
+        const h=document.createElement('h3');h.textContent=p.nombre||'Sin nombre';
+        const datos=document.createElement('p');
+        datos.textContent=`${p.categoria||'Sin categoría'} · ${pesos(p.precio)} · ${p.activo===false?'Oculto':'Visible'}`;
+        const descripcion=document.createElement('p');descripcion.textContent=p.descripcion||'';
+        const acciones=document.createElement('div');acciones.className='acciones';
+        const bEditar=document.createElement('button');bEditar.textContent='✏️ Editar';
+        bEditar.addEventListener('click',()=>editar(p));
+        const bVisibilidad=document.createElement('button');
+        bVisibilidad.textContent=p.activo===false?'👁 Mostrar':'🙈 Ocultar';
+        bVisibilidad.addEventListener('click',async()=>{
+          bVisibilidad.disabled=true;
+          try{
+            await updateDoc(doc(db,'productos',p.id),{activo:p.activo===false,actualizadoEn:serverTimestamp()});
+            mensaje('Visibilidad actualizada en Firebase.');
+          }catch(error){mensaje('No se pudo cambiar: revisa los permisos de Firestore.');bVisibilidad.disabled=false;}
+        });
+        acciones.append(bEditar,bVisibilidad);
+        tarjeta.append(h,datos,descripcion,acciones);
+        lista.append(tarjeta);
+      }
+    }
+
+    $('formProducto').addEventListener('submit',async e=>{
+      e.preventDefault();
+      const boton=$('guardar');
+      boton.disabled=true;
+      mensaje('Guardando producto...');
+      try{
+        if(!auth.currentUser)throw new Error('Debes iniciar sesión.');
+        const nombre=$('nombre').value.trim();
+        const categoria=$('categoria').value.trim();
+        const precio=Number($('precio').value);
+        if(!nombre||!categoria||!Number.isInteger(precio)||precio<0)throw new Error('Revisa nombre, categoría y precio.');
+        let fotoURL=$('fotoURL').value.trim();
+        if(fotoURL && !/^https:\/\//i.test(fotoURL))throw new Error('El enlace de foto debe comenzar por https://');
+        const archivo=$('archivoFoto').files[0];
+        if(archivo){
+          if(!['image/jpeg','image/png','image/webp'].includes(archivo.type)||archivo.size>5*1024*1024)
+            throw new Error('Selecciona una imagen JPG, PNG o WEBP de máximo 5 MB.');
+          mensaje('Subiendo foto a Firebase Storage...');
+          const extension=archivo.type==='image/png'?'png':archivo.type==='image/webp'?'webp':'jpg';
+          const ruta=`productos/${auth.currentUser.uid}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+          const archivoRef=ref(storage,ruta);
+          await uploadBytes(archivoRef,archivo,{contentType:archivo.type});
+          fotoURL=await getDownloadURL(archivoRef);
+        }
+        const datos={
+          nombre,descripcion:$('descripcion').value.trim(),precio,categoria,
+          orden:Number($('orden').value),ordenCategoria:Number($('ordenCategoria').value),
+          activo:$('activo').checked,fotoURL,actualizadoEn:serverTimestamp()
+        };
+        const id=$('idProducto').value;
+        if(id){await updateDoc(doc(db,'productos',id),datos);}
+        else{await addDoc(collection(db,'productos'),{...datos,creadoEn:serverTimestamp()});}
+        limpiar();
+        mensaje('✅ Producto guardado correctamente en Firebase.');
+      }catch(error){
+        console.error(error);
+        mensaje('No se pudo guardar: '+(error.code==='permission-denied'?'faltan permisos de Firebase.':error.message||'revisa Firebase Storage y las reglas.'));
+      }finally{boton.disabled=false;}
+    });
+  </script>
+</body>
+</html>
