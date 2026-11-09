@@ -71,6 +71,28 @@
   </section>
 </main>
 
+<script>
+  // Protege el formulario si los módulos remotos no cargan en el navegador.
+  // Sin este control, el envío HTML recarga la página y borra los campos.
+  window.__pizzaLoginReady = false;
+  const formularioSeguro = document.getElementById('formulario');
+  const estadoAccesoSeguro = document.getElementById('errorAcceso');
+  formularioSeguro.addEventListener('submit', (evento) => {
+    evento.preventDefault();
+    if (!window.__pizzaLoginReady) {
+      estadoAccesoSeguro.textContent =
+        'El sistema de acceso aún no cargó. Comprueba la conexión a Internet y actualiza la página. (carga de Firebase)';
+    }
+  }, true);
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      if (!window.__pizzaLoginReady && !document.getElementById('acceso').hidden) {
+        estadoAccesoSeguro.textContent =
+          'No se pudo cargar Firebase en este navegador. Abre el enlace directamente en Chrome y revisa tu conexión.';
+      }
+    }, 3500);
+  });
+</script>
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
@@ -143,17 +165,38 @@
 
   document.getElementById('formulario').addEventListener('submit', async (e) => {
     e.preventDefault();
-    document.getElementById('errorAcceso').textContent = '';
+    const indicador = document.getElementById('errorAcceso');
+    const boton = document.querySelector('#formulario button[type="submit"]');
+    indicador.textContent = 'Verificando acceso con Firebase...';
+    boton.disabled = true;
     try {
       await signInWithEmailAndPassword(auth,
         document.getElementById('correo').value.trim(),
         document.getElementById('clave').value);
       document.getElementById('clave').value = '';
+      indicador.textContent = '';
     } catch (error) {
-      document.getElementById('errorAcceso').textContent =
-        'No se pudo ingresar. Revisa el correo y la contraseña.';
+      const codigo = String(error?.code || 'error-desconocido');
+      const mensajes = {
+        'auth/invalid-credential': 'Firebase no acepta este correo y contraseña. Revisa la cuenta del administrador.',
+        'auth/wrong-password': 'La contraseña no coincide con el administrador.',
+        'auth/user-not-found': 'No existe ese usuario en Firebase Authentication.',
+        'auth/invalid-email': 'El correo no tiene un formato válido.',
+        'auth/network-request-failed': 'No hay conexión con Firebase. Revisa Internet.',
+        'auth/too-many-requests': 'Firebase bloqueó temporalmente los intentos. No sigas probando la contraseña por ahora.',
+        'auth/user-disabled': 'El usuario administrador está deshabilitado en Firebase.',
+        'auth/operation-not-allowed': 'El inicio con correo y contraseña está deshabilitado en Firebase.',
+        'auth/unauthorized-domain': 'El dominio de la página no está autorizado en Firebase.',
+        'auth/invalid-api-key': 'La configuración de Firebase requiere revisión.',
+        'auth/web-storage-unsupported': 'El navegador está bloqueando el almacenamiento de la sesión.'
+      };
+      indicador.textContent = (mensajes[codigo] || 'Firebase no pudo completar el inicio de sesión.') + ' Código: ' + codigo;
+      console.warn('Error de acceso Firebase:', codigo);
+    } finally {
+      boton.disabled = false;
     }
   });
+  window.__pizzaLoginReady = true;
 
   document.getElementById('salir').addEventListener('click', () => signOut(auth));
 
