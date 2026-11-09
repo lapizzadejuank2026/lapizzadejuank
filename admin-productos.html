@@ -65,20 +65,14 @@
 
       <section class="caja">
         <h2>🍕 Nombres y precios de pizzas por tamaño</h2>
-        <p class="ayuda">Cambia el nombre, el precio y la foto de presentación de cada tamaño; también decide qué tamaños se muestran. La selección de sabores se mantiene igual. El cambio se verá en el menú de clientes.</p>
-        <form id="formPizzas">
-          <div id="listaTamanos"></div>
-          <button type="submit" id="guardarPizzas">💾 Guardar nombres, precios y tamaños</button>
-        </form>
+        <p class="ayuda">Pulsa Editar en cada pizza y después Guardar cambios. Cada tamaño se guarda por separado, sin modificar los demás.</p>
+        <div id="listaTamanos"></div>
         <p id="mensajePizzas" role="status"></p>
       </section>
       <section class="caja">
         <h2>🧀 Sabores de pizza que ya tenemos</h2>
-        <p class="ayuda">Aquí están los sabores del menú original. Puedes cambiar sus nombres o mostrar y ocultar cada sabor. El precio de la pizza depende del tamaño elegido arriba.</p>
-        <form id="formSabores">
-          <div id="listaSabores"></div>
-          <button id="guardarSabores" type="submit">💾 Guardar sabores de pizza</button>
-        </form>
+        <p class="ayuda">Cada sabor se edita y guarda de manera independiente. El precio depende del tamaño de la pizza.</p>
+        <div id="listaSabores"></div>
         <p id="mensajeSabores" role="status"></p>
       </section>
       <section class="caja">
@@ -206,158 +200,126 @@
       {id:'campesina',nombre:'Campesina'},
       {id:'pepperoni',nombre:'Pepperoni'}
     ];
-    let sincronizandoTamanos=false;
-    let sincronizandoSabores=false;
-    function pintarSabores(){
-      if(sincronizandoSabores) return;
-      const lista=$('listaSabores');
-      lista.replaceChildren();
-      for (const sabor of saboresBase){
-        const dato=productos.find(p=>p.id==='pizza-sabor-'+sabor.id && p.tipo==='pizza-sabor')||{};
-        const contenedor=document.createElement('div');contenedor.className='tamano';
-        const fila=document.createElement('div');fila.className='fila';
-        const label=document.createElement('label');label.textContent='Sabor de pizza';
-        const nombre=document.createElement('input');
-        nombre.type='text';nombre.required=true;nombre.maxLength=100;
-        nombre.dataset.nombreSabor=sabor.id;
-        nombre.setAttribute('aria-label','Nombre del sabor '+sabor.nombre);
-        nombre.value=dato.nombre||sabor.nombre;
-        label.append(nombre);
-        const visible=document.createElement('label');visible.className='check';
-        const activo=document.createElement('input');activo.type='checkbox';
-        activo.dataset.visibleSabor=sabor.id;
-        activo.checked=dato.activo!==false;
-        visible.append(activo,document.createTextNode('Disponible'));
-        fila.append(label,visible);
-        contenedor.append(fila);
-        lista.append(contenedor);
-      }
-    }
-    $('formSabores').addEventListener('submit',async e=>{
-      e.preventDefault();
-      if(!auth.currentUser){
-        $('mensajeSabores').textContent='Inicia sesión para guardar.';
-        return;
-      }
-      const cambios=saboresBase.map((sabor,idx)=>{
-        const nombre=$('listaSabores').querySelector('[data-nombre-sabor="'+sabor.id+'"]').value.trim();
-        const activo=$('listaSabores').querySelector('[data-visible-sabor="'+sabor.id+'"]').checked;
-        if(!nombre) throw new Error('Revisa el nombre del sabor '+sabor.nombre);
-        return {id:'pizza-sabor-'+sabor.id,nombre,activo,orden:idx+1,tipo:'pizza-sabor',categoria:'Pizzas',actualizadoEn:serverTimestamp()};
+
+    // Un botón de edición y uno de guardado para cada tarjeta.
+    function botonesIndividuales(card,campos,guardarDatos){
+      card.dataset.editando='no';
+      const acciones=document.createElement('div');acciones.className='acciones';
+      const editar=document.createElement('button');editar.type='button';editar.textContent='✏️ Editar';
+      const guardar=document.createElement('button');guardar.type='button';guardar.textContent='💾 Guardar cambios';
+      const aviso=document.createElement('p');aviso.className='ayuda';aviso.setAttribute('role','status');
+      const bloquear=valor=>campos.forEach(x=>x.disabled=valor);
+      bloquear(true);guardar.disabled=true;
+      editar.addEventListener('click',()=>{
+        card.dataset.editando='si';bloquear(false);editar.disabled=true;guardar.disabled=false;
+        aviso.textContent='Puedes modificar este producto y guardar solo sus cambios.';
+        campos[0].focus();
       });
-      const boton=$('guardarSabores');
-      boton.disabled=true;
-      sincronizandoSabores=true;
-      $('mensajeSabores').textContent='Guardando sabores...';
-      try{
-        for(const {id,...datos} of cambios){
-          await setDoc(doc(db,'productos',id),datos,{merge:true});
+      guardar.addEventListener('click',async()=>{
+        guardar.disabled=true;aviso.textContent='Guardando cambios...';
+        try{
+          await guardarDatos(aviso);
+          card.dataset.editando='no';bloquear(true);editar.disabled=false;
+          aviso.textContent='✅ Cambios guardados.';
+        }catch(e){
+          console.error(e);
+          aviso.textContent='❌ '+(e.code==='permission-denied'?'No tienes permiso para guardar en Firestore.':
+            String(e.code||'').startsWith('storage/')?'Firebase Storage no guardó la foto ('+e.code+'). Prueba con un enlace HTTPS.':
+            e.message||'No se pudo guardar.');
+          guardar.disabled=false;
         }
-        $('mensajeSabores').textContent='✅ Sabores actualizados en Firebase.';
-      }catch(error){
-        console.error(error);
-        $('mensajeSabores').textContent='No se pudieron guardar todos los sabores: '+(error.code==='permission-denied'?'Revisa las reglas de Firebase.':error.message||'Revisa tu conexión.');
-      }finally{
-        sincronizandoSabores=false;
-        boton.disabled=false;
-        pintarSabores();
-      }
-    });
-    function pintarTamanos(){
-      if(sincronizandoTamanos)return;
-      const lista=$('listaTamanos');
-      lista.replaceChildren();
-      for(const pizza of pizzasBase){
-        const d=productos.find(x=>x.id==='pizza-tamano-'+pizza.id && x.tipo==='pizza-tamano')||{};
-        const card=document.createElement('div'); card.className='tamano';
-        const fila=document.createElement('div');fila.className='fila';
-        const nombre=document.createElement('label');
-        nombre.textContent='Nombre ('+pizza.max+' sabores)';
-        const nombreInput=document.createElement('input');
-        nombreInput.type='text';nombreInput.required=true;nombreInput.maxLength=100;
-        nombreInput.value=d.nombre||pizza.nombre;nombreInput.dataset.nombreTamano=pizza.id;
-        nombreInput.setAttribute('aria-label','Nombre de '+pizza.nombre);
-        nombre.append(nombreInput);
-        const precioLabel=document.createElement('label');
-        precioLabel.textContent='Precio en pesos colombianos';
-        const precio=document.createElement('input');
-        precio.type='number';precio.required=true;precio.min='0';precio.max='99999999';precio.step='1';
-        precio.value=d.precio??pizza.precio;precio.dataset.tamano=pizza.id;precio.setAttribute('aria-label','Precio de '+pizza.nombre);
-        precioLabel.append(precio);
-        const visible=document.createElement('label');visible.className='check';
+      });
+      acciones.append(editar,guardar);card.append(acciones,aviso);
+    }
+
+    function pintarSabores(){
+      const lista=$('listaSabores');
+      for(const sabor of saboresBase){
+        const actual=lista.querySelector('[data-sabor-id="'+sabor.id+'"]');
+        if(actual?.dataset.editando==='si')continue;
+        const d=productos.find(p=>p.id==='pizza-sabor-'+sabor.id && p.tipo==='pizza-sabor')||{};
+        const card=document.createElement('div');card.className='tamano';card.dataset.saborId=sabor.id;
+        const titulo=document.createElement('h3');titulo.textContent=d.nombre||sabor.nombre;
+        const label=document.createElement('label');label.textContent='Nombre del sabor';
+        const nombre=document.createElement('input');nombre.type='text';nombre.maxLength=100;nombre.value=d.nombre||sabor.nombre;
+        label.append(nombre);
+        const disponible=document.createElement('label');disponible.className='check';
         const activo=document.createElement('input');activo.type='checkbox';activo.checked=d.activo!==false;
-        activo.dataset.visibleTamano=pizza.id;
-        visible.append(activo,document.createTextNode('Visible en el menú'));
-        const fotoLabel=document.createElement('label');
-        fotoLabel.textContent='Foto de presentación desde el celular (JPG, PNG o WEBP, máximo 5 MB)';
-        const fotoInput=document.createElement('input');
-        fotoInput.type='file';fotoInput.accept='image/jpeg,image/png,image/webp';
-        fotoInput.dataset.fotoTamano=pizza.id;
-        fotoLabel.append(fotoInput);
-        const enlaceLabel=document.createElement('label');
-        enlaceLabel.textContent='O enlace de fotografía (HTTPS)';
-        const enlace=document.createElement('input');
-        enlace.type='url';enlace.placeholder='https://...';
-        enlace.value=d.fotoURL||'';
-        enlace.dataset.fotourlTamano=pizza.id;
-        enlaceLabel.append(enlace);
-        fila.append(nombre,precioLabel);
-        card.append(fila,visible,fotoLabel,enlaceLabel);
-        if(d.fotoURL && /^https:\/\//i.test(d.fotoURL)){
-          const preview=document.createElement('img');
-          preview.src=d.fotoURL;preview.alt='Foto actual de '+(d.nombre||pizza.nombre);
-          preview.loading='lazy';preview.style.cssText='display:block;float:none;max-width:140px;max-height:115px;margin:10px 0;border-radius:10px;object-fit:cover';
-          card.append(preview);
-        }
-        lista.append(card);
+        disponible.append(activo,document.createTextNode('Disponible'));
+        card.append(titulo,label,disponible);
+        botonesIndividuales(card,[nombre,activo],async()=>{
+          if(!auth.currentUser)throw new Error('Inicia sesión para guardar.');
+          const valor=nombre.value.trim();if(!valor)throw new Error('Escribe el nombre del sabor.');
+          await setDoc(doc(db,'productos','pizza-sabor-'+sabor.id),{
+            nombre:valor,activo:activo.checked,orden:saboresBase.indexOf(sabor)+1,
+            tipo:'pizza-sabor',categoria:'Pizzas',actualizadoEn:serverTimestamp()
+          },{merge:true});
+          titulo.textContent=valor;
+          $('mensajeSabores').textContent='✅ '+valor+' guardado.';
+        });
+        if(actual)actual.replaceWith(card);else lista.append(card);
       }
     }
-    $('formPizzas').addEventListener('submit',async e=>{
-      e.preventDefault();
-      const boton=$('guardarPizzas');
-      boton.disabled=true;
-      sincronizandoTamanos=true;
-      $('mensajePizzas').textContent='Guardando nombres y precios...';
-      try{
-        if(!auth.currentUser)throw new Error('Inicia sesión para guardar.');
-        const cambios=pizzasBase.map((pizza,idx)=>{
-          const campo=$('listaTamanos').querySelector('[data-tamano="'+pizza.id+'"]');
-          const nombreCampo=$('listaTamanos').querySelector('[data-nombre-tamano="'+pizza.id+'"]');
-          const nombre=nombreCampo.value.trim();
-          if(!nombre) throw new Error('Escribe el nombre para '+pizza.nombre);
-          const visible=$('listaTamanos').querySelector('[data-visible-tamano="'+pizza.id+'"]');
-          const precio=Number(campo.value);
-          if(!Number.isInteger(precio)||precio<0||precio>99999999) throw new Error('Revisa el precio de '+pizza.nombre);
-          const campoURL=$('listaTamanos').querySelector('[data-fotourl-tamano="'+pizza.id+'"]');
-          const fotoURL=campoURL.value.trim();
-          if(fotoURL && !/^https:\/\//i.test(fotoURL)) throw new Error('La foto de '+pizza.nombre+' necesita un enlace HTTPS.');
-          const archivo=$('listaTamanos').querySelector('[data-foto-tamano="'+pizza.id+'"]').files[0]||null;
+
+    function pintarTamanos(){
+      const lista=$('listaTamanos');
+      for(const pizza of pizzasBase){
+        const actual=lista.querySelector('[data-pizza-id="'+pizza.id+'"]');
+        if(actual?.dataset.editando==='si')continue;
+        const d=productos.find(x=>x.id==='pizza-tamano-'+pizza.id && x.tipo==='pizza-tamano')||{};
+        const card=document.createElement('div');card.className='tamano';card.dataset.pizzaId=pizza.id;
+        const titulo=document.createElement('h3');titulo.textContent=d.nombre||pizza.nombre;
+        const fila=document.createElement('div');fila.className='fila';
+        const nombreLabel=document.createElement('label');nombreLabel.textContent='Nombre ('+pizza.max+' sabores)';
+        const nombre=document.createElement('input');nombre.type='text';nombre.maxLength=100;nombre.value=d.nombre||pizza.nombre;
+        nombreLabel.append(nombre);
+        const precioLabel=document.createElement('label');precioLabel.textContent='Precio en pesos colombianos';
+        const precio=document.createElement('input');precio.type='number';precio.min='0';precio.max='99999999';precio.step='1';precio.value=d.precio??pizza.precio;
+        precioLabel.append(precio);fila.append(nombreLabel,precioLabel);
+        const disponible=document.createElement('label');disponible.className='check';
+        const activo=document.createElement('input');activo.type='checkbox';activo.checked=d.activo!==false;
+        disponible.append(activo,document.createTextNode('Visible en el menú'));
+        const fotoLabel=document.createElement('label');fotoLabel.textContent='Foto desde el celular (JPG, PNG o WEBP, máximo 5 MB)';
+        const foto=document.createElement('input');foto.type='file';foto.accept='image/jpeg,image/png,image/webp';fotoLabel.append(foto);
+        const enlaceLabel=document.createElement('label');enlaceLabel.textContent='O enlace de fotografía (HTTPS)';
+        const enlace=document.createElement('input');enlace.type='url';enlace.placeholder='https://...';enlace.value=d.fotoURL||'';enlaceLabel.append(enlace);
+        enlace.addEventListener('input',()=>{if(enlace.value.trim())foto.value='';});
+        foto.addEventListener('change',()=>{if(foto.files.length)enlace.value='';});
+        card.append(titulo,fila,disponible,fotoLabel,enlaceLabel);
+        if(d.fotoURL && d.fotoURL.startsWith('https://')){
+          const img=document.createElement('img');img.src=d.fotoURL;img.alt='Foto actual de '+(d.nombre||pizza.nombre);
+          img.loading='lazy';img.style.cssText='display:block;float:none;max-width:140px;max-height:115px;margin:10px 0;border-radius:10px;object-fit:cover';
+          card.append(img);
+        }
+        botonesIndividuales(card,[nombre,precio,activo,foto,enlace],async aviso=>{
+          if(!auth.currentUser)throw new Error('Inicia sesión para guardar.');
+          const n=nombre.value.trim(),p=Number(precio.value),url=enlace.value.trim(),archivo=foto.files[0]||null;
+          if(!n)throw new Error('Escribe el nombre de la pizza.');
+          if(precio.value.trim()===''||!Number.isInteger(p)||p<0||p>99999999)throw new Error('El precio no es válido.');
+          if(url && !url.startsWith('https://'))throw new Error('El enlace debe comenzar por https://');
           if(archivo && (!['image/jpeg','image/png','image/webp'].includes(archivo.type)||archivo.size>5*1024*1024))
-            throw new Error('La foto de '+pizza.nombre+' debe ser JPG, PNG o WEBP, máximo 5 MB.');
-          return {id:'pizza-tamano-'+pizza.id,nombre,precio,categoria:'Pizzas',tipo:'pizza-tamano',
-                  max:pizza.max,activo:visible.checked,ordenCategoria:1,orden:idx+1,fotoURL,archivo,actualizadoEn:serverTimestamp()};
-        });
-        for(const cambio of cambios){
-          const {id,archivo,...datos}=cambio;
+            throw new Error('La foto debe ser JPG, PNG o WEBP de máximo 5 MB.');
+          const datos={nombre:n,precio:p,categoria:'Pizzas',tipo:'pizza-tamano',
+            max:pizza.max,activo:activo.checked,ordenCategoria:1,orden:pizzasBase.indexOf(pizza)+1,
+            fotoURL:url,actualizadoEn:serverTimestamp()};
           if(archivo){
             const extension=archivo.type==='image/png'?'png':archivo.type==='image/webp'?'webp':'jpg';
-            const ruta='productos/'+auth.currentUser.uid+'/pizzas/'+id+'-'+Date.now()+'.'+extension;
-            datos.fotoURL=await subirFotoConProgreso(ruta,archivo,'foto de '+datos.nombre);
+            const ruta='productos/'+auth.currentUser.uid+'/pizzas/pizza-tamano-'+pizza.id+'-'+Date.now()+'.'+extension;
+            datos.fotoURL=await subirFotoConProgreso(ruta,archivo,'foto de '+n,texto=>aviso.textContent=texto);
           }
-          await setDoc(doc(db,'productos',id),datos,{merge:true});
-        }
-        $('mensajePizzas').textContent='✅ Nombres, precios y disponibilidad actualizados en Firebase.';
-      }catch(error){
-        console.error(error);
-        $('mensajePizzas').textContent='No se pudieron guardar todos los cambios: '+(error.code==='permission-denied'?'revisa las reglas de Firebase.':error.message||'intenta de nuevo.');
-      }finally{sincronizandoTamanos=false;boton.disabled=false;pintarTamanos();}
-    });
+          await setDoc(doc(db,'productos','pizza-tamano-'+pizza.id),datos,{merge:true});
+          titulo.textContent=n;enlace.value=datos.fotoURL||'';foto.value='';
+          $('mensajePizzas').textContent='✅ '+n+': cambios guardados.';
+        });
+        if(actual)actual.replaceWith(card);else lista.append(card);
+      }
+    }
     const mensaje=texto=>$('mensaje').textContent=texto;
     const pesos=n=>'$'+Number(n||0).toLocaleString('es-CO');
 
 
     // Cargar Storage solo cuando realmente se necesite subir una fotografía.
-    async function subirFotoConProgreso(ruta, archivo, etiqueta='foto'){
+    async function subirFotoConProgreso(ruta, archivo, etiqueta='foto', notificar=mensaje){
       const {storage,ref,uploadBytesResumable,getDownloadURL}=await obtenerAlmacenamiento();
       return new Promise((resolve,reject)=>{
         const tarea=uploadBytesResumable(ref(storage,ruta),archivo,{contentType:archivo.type});
@@ -372,7 +334,7 @@
           datos=>{
             if(terminada)return;
             const porcentaje=Math.round(100*datos.bytesTransferred/Math.max(1,datos.totalBytes));
-            mensaje('Subiendo '+etiqueta+': '+porcentaje+' %');
+            notificar('Subiendo '+etiqueta+': '+porcentaje+' %');
           },
           error=>{
             if(terminada)return;
@@ -424,6 +386,7 @@
       $('formProducto').reset();
       $('idProducto').value='';
       $('tituloForm').textContent='Agregar producto';
+      $('guardar').textContent='💾 Guardar producto';
       $('activo').checked=true;
       $('orden').value=10;
       $('ordenCategoria').value=10;
@@ -442,6 +405,7 @@
       $('archivoFoto').value='';
       $('activo').checked=p.activo!==false;
       $('tituloForm').textContent='Editar: '+p.nombre;
+      $('guardar').textContent='💾 Guardar cambios de '+(p.nombre||'producto');
       mensaje('Editando producto. Pulsa Guardar para aplicar cambios.');
       $('tituloForm').scrollIntoView({behavior:'smooth'});
     }
