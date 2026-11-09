@@ -27,7 +27,11 @@
     .producto img{max-width:110px;max-height:110px;object-fit:cover;border-radius:10px;float:right;margin-left:10px}
     .producto h3{margin:0 0 6px}
     .producto p{overflow-wrap:anywhere}
-    #mensaje,#errorLogin{color:#ffd575;font-weight:bold;white-space:pre-wrap}
+    #mensaje,#errorLogin,#mensajePizzas{color:#ffd575;font-weight:bold;white-space:pre-wrap}
+    .tamano{background:#1b1b1b;border:1px solid #454545;border-radius:11px;padding:12px;margin:10px 0}
+    .tamano .fila{align-items:center}
+    .tamano .check{margin-top:14px}
+    .tamano .check input{margin:0}
     a{color:#ffe09b}
     [hidden]{display:none!important}
     .integrado header,.integrado #panel > .caja:first-child{display:none!important}
@@ -54,9 +58,18 @@
         <p id="usuario"></p>
         <a href="panel-pedidos.html">← Volver a recepción de pedidos</a>
         <button id="salir" class="secundario" type="button">Cerrar sesión</button>
-        <p class="ayuda">Esta primera versión administra productos en Firebase. El menú público todavía no usa estos datos.</p>
+        <p class="ayuda">Los cambios se reflejan en el menú de clientes cuando Firebase permita su consulta.</p>
       </div>
 
+      <section class="caja">
+        <h2>🍕 Precios de pizzas por tamaño</h2>
+        <p class="ayuda">Actualiza los precios y decide qué tamaños se muestran. La selección de sabores se mantiene igual. El cambio se verá en el menú de clientes.</p>
+        <form id="formPizzas">
+          <div id="listaTamanos"></div>
+          <button type="submit" id="guardarPizzas">💾 Guardar precios y tamaños</button>
+        </form>
+        <p id="mensajePizzas" role="status"></p>
+      </section>
       <section class="caja">
         <h2 id="tituloForm">Agregar producto</h2>
         <form id="formProducto">
@@ -92,7 +105,7 @@
           <label>O enlace de fotografía <small>(opcional)</small>
             <input id="fotoURL" type="url" placeholder="https://...">
           </label>
-          <label class="check"><input id="activo" type="checkbox" checked> Visible en el menú cuando lo conectemos</label>
+          <label class="check"><input id="activo" type="checkbox" checked> Visible en el menú de clientes</label>
           <button id="guardar" type="submit">💾 Guardar producto</button>
           <button id="cancelar" class="secundario" type="button">Limpiar / cancelar edición</button>
         </form>
@@ -108,7 +121,7 @@
   <script type="module">
     import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
     import {getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-    import {getFirestore,collection,addDoc,doc,updateDoc,onSnapshot,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+    import {getFirestore,collection,addDoc,doc,updateDoc,setDoc,onSnapshot,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
     import {getStorage,ref,uploadBytes,getDownloadURL} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-storage.js';
 
     const firebaseConfig={
@@ -130,6 +143,62 @@
     }
     let productos=[];
     let dejarDeEscuchar=()=>{};
+    const pizzasBase=[
+      {id:'personal',nombre:'Pizza personal',precio:20000,max:2},
+      {id:'small',nombre:'Pizza small',precio:35000,max:2},
+      {id:'mediana',nombre:'Pizza mediana',precio:45000,max:3},
+      {id:'familiar',nombre:'Pizza familiar',precio:62000,max:3}
+    ];
+    let sincronizandoTamanos=false;
+    function pintarTamanos(){
+      if(sincronizandoTamanos)return;
+      const lista=$('listaTamanos');
+      lista.replaceChildren();
+      for(const pizza of pizzasBase){
+        const d=productos.find(x=>x.id==='pizza-tamano-'+pizza.id && x.tipo==='pizza-tamano')||{};
+        const card=document.createElement('div'); card.className='tamano';
+        const fila=document.createElement('div');fila.className='fila';
+        const nombre=document.createElement('label');
+        nombre.textContent=pizza.nombre+' ('+pizza.max+' sabores)';
+        const precio=document.createElement('input');
+        precio.type='number';precio.required=true;precio.min='0';precio.max='99999999';precio.step='1';
+        precio.value=d.precio??pizza.precio;precio.dataset.tamano=pizza.id;precio.setAttribute('aria-label','Precio de '+pizza.nombre);
+        nombre.append(precio);
+        const visible=document.createElement('label');visible.className='check';
+        const activo=document.createElement('input');activo.type='checkbox';activo.checked=d.activo!==false;
+        activo.dataset.visibleTamano=pizza.id;
+        visible.append(activo,document.createTextNode('Visible en el menú'));
+        fila.append(nombre,visible);
+        card.append(fila);
+        lista.append(card);
+      }
+    }
+    $('formPizzas').addEventListener('submit',async e=>{
+      e.preventDefault();
+      const boton=$('guardarPizzas');
+      boton.disabled=true;
+      sincronizandoTamanos=true;
+      $('mensajePizzas').textContent='Guardando precios...';
+      try{
+        if(!auth.currentUser)throw new Error('Inicia sesión para guardar.');
+        const cambios=pizzasBase.map((pizza,idx)=>{
+          const campo=$('listaTamanos').querySelector('[data-tamano="'+pizza.id+'"]');
+          const visible=$('listaTamanos').querySelector('[data-visible-tamano="'+pizza.id+'"]');
+          const precio=Number(campo.value);
+          if(!Number.isInteger(precio)||precio<0||precio>99999999) throw new Error('Revisa el precio de '+pizza.nombre);
+          return {id:'pizza-tamano-'+pizza.id,nombre:pizza.nombre,precio,categoria:'Pizzas',tipo:'pizza-tamano',
+                  max:pizza.max,activo:visible.checked,ordenCategoria:1,orden:idx+1,actualizadoEn:serverTimestamp()};
+        });
+        for(const cambio of cambios){
+          const {id,...datos}=cambio;
+          await setDoc(doc(db,'productos',id),datos,{merge:true});
+        }
+        $('mensajePizzas').textContent='✅ Precios y disponibilidad actualizados en Firebase.';
+      }catch(error){
+        console.error(error);
+        $('mensajePizzas').textContent='No se pudieron guardar todos los precios: '+(error.code==='permission-denied'?'revisa las reglas de Firebase.':error.message||'intenta de nuevo.');
+      }finally{sincronizandoTamanos=false;boton.disabled=false;pintarTamanos();}
+    });
     const mensaje=texto=>$('mensaje').textContent=texto;
     const pesos=n=>'$'+Number(n||0).toLocaleString('es-CO');
 
@@ -153,6 +222,7 @@
       dejarDeEscuchar=onSnapshot(collection(db,'productos'),snapshot=>{
         productos=snapshot.docs.map(x=>({id:x.id,...x.data()}));
         pintar();
+        pintarTamanos();
       },error=>{
         $('lista').textContent='No hay acceso a la colección productos. Antes de guardar hay que configurar las reglas de Firestore para el administrador.';
         console.error(error);
@@ -188,8 +258,9 @@
     function pintar(){
       const lista=$('lista');
       lista.replaceChildren();
-      if(!productos.length){lista.textContent='Todavía no hay productos registrados.';return;}
-      const ordenados=[...productos].sort((a,b)=>
+      const productosComunes=productos.filter(x=>x.tipo!=='pizza-tamano');
+      if(!productosComunes.length){lista.textContent='Todavía no hay productos adicionales registrados.';return;}
+      const ordenados=[...productosComunes].sort((a,b)=>
         (Number(a.ordenCategoria??10)-Number(b.ordenCategoria??10))||
         String(a.categoria||'').localeCompare(String(b.categoria||''),'es')||
         (Number(a.orden??10)-Number(b.orden??10))||
