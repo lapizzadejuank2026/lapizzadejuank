@@ -1,11 +1,11 @@
-íw<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#111111">
-  <meta name="description" content="Menú de demostración de La Pizza De Juan K. Arma una pizza y prueba el carrito; no recibe pedidos reales todavía.">
-  <title>La Pizza De Juan K | Menú de prueba</title>
+  <meta name="description" content="Menú digital de La Pizza de Juan K. Pizzas, hamburguesas y más opciones. Haz tu pedido en línea.">
+  <title>La Pizza De Juan K | Menú digital</title>
   <style>
     :root { --bg:#0b0b0d; --surface:#171719; --card:#212124; --text:#fff; --muted:#bdbdc3; --red:#b81932; --red2:#e7324b; --gold:#e3b84a; --border:#343438; --round:19px; }
     * { box-sizing:border-box; }
@@ -52,6 +52,8 @@
     .products { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:17px; }
     .product { display:flex; flex-direction:column; border:1px solid var(--border); background:var(--surface); border-radius:var(--round); overflow:hidden; }
     .product-art { display:grid; place-items:center; min-height:124px; background:radial-gradient(circle at 65% 60%,#50331e,#2a181a 60%,#1a1518 100%); font-size:77px; }
+    .product-art img { width:100%; height:170px; object-fit:cover; display:block; }
+    .product-art:has(img) { min-height:0; }
     .product-body { padding:18px; flex:1; display:flex; flex-direction:column; }
     .product-title { display:flex; justify-content:space-between; gap:7px; align-items:baseline; }
     .product h3 { margin:0; font-size:19px; }
@@ -141,8 +143,9 @@
   <main class="wrap main-layout">
     <div>
       <section aria-labelledby="menuTitle" id="menu">
-        <div class="section-heading"><div><h2 id="menuTitle">Nuestro menú</h2><p class="hint">Escoge el tamaño de tu pizza y los sabores que más te gusten.</p></div></div>
-        <div class="tabs" aria-label="Categorías del menú"><button class="tab active" aria-current="true">🍕 Pizzas</button><button class="tab" disabled title="Próximamente">Hamburguesas · Próximamente</button><button class="tab" disabled title="Próximamente">Otros · Próximamente</button></div>
+        <div class="section-heading"><div><h2 id="menuTitle">Nuestro menú</h2><p class="hint">Escoge tus favoritos, personaliza tu pizza y agrégalos al carrito.</p></div></div>
+        <div id="catalogStatus" class="hint" role="status">Cargando catálogo actualizado...</div>
+        <div class="tabs" id="categoryTabs" aria-label="Categorías del menú"></div>
         <div class="products" id="products"></div>
       </section>
       <section class="service-area" id="cobertura"><h3>🛵 Domicilios y cobertura</h3><p>Atendemos <strong>Gachancipá</strong> y <strong>todo el municipio de Tocancipá</strong>. El domicilio se cotizará y confirmará con el restaurante.</p></section>
@@ -153,7 +156,7 @@
       <div class="cart-bottom"><div class="subtotal"><span>Subtotal</span><strong id="subtotal">$0</strong></div><p class="delivery-note">El valor del domicilio no está incluido.</p><button class="primary-btn" id="previewButton" type="button" disabled>Ver resumen de tu pedido</button><button class="clear-btn" id="clearButton" type="button" hidden>Vaciar carrito</button></div>
     </aside>
   </main>
-  <footer>© La Pizza De Juan K · Menú de demostración · No recibe pedidos reales todavía.</footer>
+  <footer>© La Pizza De Juan K · Pedidos por nuestro menú digital.</footer>
 
   <dialog id="pizzaDialog" aria-labelledby="pizzaDialogTitle">
     <div class="dialog-head"><div><span class="eyebrow">Personaliza tu pizza</span><h2 id="pizzaDialogTitle">Elige tus sabores</h2></div><button class="icon-btn" data-close="pizzaDialog" aria-label="Cerrar">×</button></div>
@@ -165,16 +168,16 @@
     <div class="dialog-head"><div><span class="eyebrow">Pedido pendiente de envio</span><h2 id="orderDialogTitle">Datos del pedido</h2></div><button class="icon-btn" data-close="orderDialog" aria-label="Cerrar">×</button></div>
     <form id="orderForm">
       <div class="dialog-body">
-        <p class="hint">completa tus datos para enviar el pedido a la pizza de juan k. No se realiza ningun cobro automático.</p>
+        <p class="hint">Completa tus datos para enviar el pedido a La Pizza de Juan K. No se realiza ningún cobro automático.</p>
         <fieldset style="border:0;padding:0;margin:15px 0 10px"><legend style="font-weight:800;margin-bottom:8px">¿Cómo recibirías tu pedido?</legend><div class="radio-group"><label><input type="radio" name="delivery" value="domicilio" checked> Domicilio</label><label><input type="radio" name="delivery" value="recoger"> Recoger en el local</label></div></fieldset>
         <div class="form-grid">
-          <label class="field">Nombre de prueba<input name="customer" maxlength="60" placeholder="Tu nombre" required autocomplete="off"></label>
-          <label class="field">Teléfono de prueba<input name="phone" inputmode="tel" maxlength="20" placeholder="Tu celular" required autocomplete="off"></label>
+          <label class="field">Nombre<input name="customer" maxlength="60" placeholder="Tu nombre" required autocomplete="off"></label>
+          <label class="field">Teléfono<input name="phone" inputmode="tel" maxlength="20" placeholder="Tu celular" required autocomplete="off"></label>
           <label class="field delivery-field">Municipio<select name="city"><option value="Gachancipá">Gachancipá</option><option value="Tocancipá">Tocancipá (todo el municipio)</option></select></label>
-          <label class="field delivery-field">Dirección de prueba<input name="address" maxlength="150" placeholder="Dirección y referencia" required autocomplete="off"></label>
+          <label class="field delivery-field">Dirección<input name="address" maxlength="150" placeholder="Dirección y referencia" required autocomplete="off"></label>
           <label class="field full">Observaciones (opcional)<textarea name="notes" maxlength="350" placeholder="Indicaciones de la pizza o del domicilio"></textarea></label>
         </div>
-        <p class="warning">tu datos se guardaran para gestionar tu pedido. no compartas contraseña ni datos bancarios.</p>
+        <p class="warning">Tus datos se guardarán para gestionar tu pedido. no compartas contraseña ni datos bancarios.</p>
       </div>
       <div class="dialog-footer"><button class="outline-btn" type="button" data-close="orderDialog">Volver</button><button class="primary-btn" type="submit">Generar resumen</button></div>
     </form>
@@ -182,20 +185,22 @@
 
   <dialog id="summaryDialog" aria-labelledby="summaryDialogTitle">
     <div class="dialog-head"><div><span class="eyebrow">Resumen del pedido</span><h2 id="summaryDialogTitle">Resumen del pedido</h2></div><button class="icon-btn" data-close="summaryDialog" aria-label="Cerrar">×</button></div>
-    <div class="dialog-body"><p class="warning"><strong>ATENCIÓN:</strong> Este pedido NO fue enviado a la pizzería. No se ha realizado ningún cobro.</p><div class="summary-box" id="summaryText"></div></div>
-    <div class="dialog-footer"><button class="outline-btn" data-close="summaryDialog">Cerrar</button><button class="primary-btn" type="button" id="closeSummaryButton">Entendido</button>
+    <div class="dialog-body"><p class="warning"><strong>Antes de confirmar:</strong> revisa tu pedido. No se ha enviado todavía ni se ha realizado ningún cobro.</p><div class="summary-box" id="summaryText"></div></div>
+    <div class="dialog-footer"><button class="outline-btn" data-close="summaryDialog">Cerrar</button><button class="primary-btn" type="button" id="closeSummaryButton">Seguir revisando</button>
   <button class="primary-btn" type="button" id="sendOrderButton" disabled>Confirmar y enviar pedido</button>  </div>
   </dialog>
 
   <script>
-    'use strict';
-    // Los productos y precios se pueden ampliar más adelante desde un panel de administración.
-    const pizzas = [
-      {id:'personal',name:'Pizza personal',price:20000,max:2,description:'Hasta 2 sabores · perfecta para ti.'},
-      {id:'small',name:'Pizza small',price:35000,max:2,description:'Hasta 2 sabores · para compartir.'},
-      {id:'mediana',name:'Pizza mediana',price:45000,max:3,description:'Hasta 3 sabores · más variedad.'},
-      {id:'familiar',name:'Pizza familiar',price:62000,max:3,description:'Hasta 3 sabores · para toda la familia.'}
+'use strict';
+    const pizzaBase = [
+      {id:'personal',name:'Pizza personal',price:20000,max:2,description:'Hasta 2 sabores · perfecta para ti.',activo:true},
+      {id:'small',name:'Pizza small',price:35000,max:2,description:'Hasta 2 sabores · para compartir.',activo:true},
+      {id:'mediana',name:'Pizza mediana',price:45000,max:3,description:'Hasta 3 sabores · más variedad.',activo:true},
+      {id:'familiar',name:'Pizza familiar',price:62000,max:3,description:'Hasta 3 sabores · para toda la familia.',activo:true}
     ];
+    let pizzas = pizzaBase.map(p=>({...p}));
+    let productosAdmin = [];
+    let categoriaActual = 'Pizzas';
     const flavors = ['Hawaiana','Carnes','Pollo champiñón','Mi Tierrita','Mexicana','Venezolana','De la Casa','Ranchera','Campesina','Pepperoni'];
     const money = value => new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(value);
     const byId = id => document.getElementById(id);
@@ -204,151 +209,344 @@
     let pedidoPendiente = null;
     let selectedPizza = null;
     let chosen = [];
+
     try {
       const raw = JSON.parse(localStorage.getItem(storageKey) || '[]');
-      if(Array.isArray(raw)) cart = raw.filter(item => pizzas.some(p=>p.id===item.id) && Array.isArray(item.flavors) && item.flavors.length>=1 && item.flavors.length<=3 && item.flavors.every(f=>flavors.includes(f)) && Number.isInteger(item.qty) && item.qty>=1 && item.qty<=99).map(item=>({id:item.id,flavors:item.flavors,qty:item.qty}));
-    } catch(error) { cart = []; }
-    function persist(){try{localStorage.setItem(storageKey,JSON.stringify(cart));}catch(error){/* Puede estar deshabilitado en el navegador */}}
-    function escText(tag,text,cls) { const e=document.createElement(tag); e.textContent=text; if(cls)e.className=cls; return e; }
-    function renderProducts(){
-      const holder=byId('products'); holder.replaceChildren();
-      for(const p of pizzas){
-        const card=escText('article','','product');
-        const art=escText('div','🍕','product-art'); art.setAttribute('aria-hidden','true');
-        const body=escText('div','','product-body'); const row=escText('div','','product-title');
-        row.append(escText('h3',p.name),escText('strong',money(p.price),'price'));
-        const desc=escText('p',p.description);
-        const btn=escText('button','Elegir sabores','primary-btn'); btn.type='button'; btn.addEventListener('click',()=>openPizza(p));
-        body.append(row,desc,btn);card.append(art,body);holder.append(card);
+      if(Array.isArray(raw)) cart = raw.filter(item =>
+        typeof item.id === 'string' && Number.isInteger(item.qty) && item.qty >= 1 && item.qty <= 99 &&
+        (item.id.startsWith('catalogo:') || (pizzas.some(p=>p.id===item.id) &&
+          Array.isArray(item.flavors) && item.flavors.length>=1 && item.flavors.length<=3 &&
+          item.flavors.every(f=>flavors.includes(f))))
+      ).map(item=>({id:item.id,flavors:Array.isArray(item.flavors)?item.flavors:[],qty:item.qty}));
+    } catch(error) { cart=[]; }
+
+    function persist() {
+      try { localStorage.setItem(storageKey,JSON.stringify(cart)); } catch(error) {}
+    }
+    function el(tag,text,cls) {
+      const e=document.createElement(tag);
+      e.textContent=text;
+      if(cls) e.className=cls;
+      return e;
+    }
+    function lookup(item) {
+      if(item.id.startsWith('catalogo:')) return productosAdmin.find(p=>p.id==='catalogo:'+item.id.slice(9));
+      return pizzas.find(p=>p.id===item.id && p.activo!==false);
+    }
+    function sincronizarCarrito() {
+      cart=cart.filter(item=>{
+        const p=lookup(item);
+        return !!p && Number.isInteger(item.qty) && item.qty>0 && item.qty<=99 &&
+          (item.id.startsWith('catalogo:') ||
+           (Array.isArray(item.flavors) && item.flavors.length>=1 && item.flavors.length<=p.max && item.flavors.every(f=>flavors.includes(f))));
+      });
+      persist();
+    }
+    function categoria(p) {
+      return (p.categoria || 'Otros').trim() || 'Otros';
+    }
+    function ordenar(a,b) {
+      return Number(a.ordenCategoria||10)-Number(b.ordenCategoria||10) ||
+        Number(a.orden||10)-Number(b.orden||10) ||
+        String(a.name).localeCompare(String(b.name),'es');
+    }
+    function renderCategorias() {
+      const holder=byId('categoryTabs');
+      const grupos=new Map([['Pizzas',0]]);
+      for(const p of productosAdmin) {
+        const cat=categoria(p);
+        const order=Number(p.ordenCategoria||10);
+        grupos.set(cat,Math.min(grupos.get(cat)??Infinity,order));
+      }
+      const categorias=[...grupos.keys()].sort((a,b)=>a==='Pizzas'?-1:b==='Pizzas'?1:
+        grupos.get(a)-grupos.get(b) || a.localeCompare(b,'es'));
+      if(!categorias.includes(categoriaActual)) categoriaActual='Pizzas';
+      holder.replaceChildren();
+      for(const cat of categorias) {
+        const boton=el('button',(cat==='Pizzas'?'🍕 ':'')+cat,'tab'+(cat===categoriaActual?' active':''));
+        boton.type='button';
+        boton.setAttribute('aria-current',String(cat===categoriaActual));
+        boton.addEventListener('click',()=>{categoriaActual=cat;renderCategorias();renderProducts();});
+        holder.append(boton);
       }
     }
-    function openPizza(p){ selectedPizza=p;chosen=[];byId('pizzaDialogTitle').textContent=p.name;byId('pizzaInstructions').textContent=`Elige entre 1 y ${p.max} sabores. Todos están incluidos en el precio de este tamaño.`;byId('pizzaPrice').textContent=money(p.price);renderFlavors();byId('pizzaDialog').showModal(); }
-    function renderFlavors(){
-      const grid=byId('flavorGrid'); grid.replaceChildren();
-      for(const f of flavors){
-        const label=escText('label','','flavor');const box=document.createElement('input');box.type='checkbox';box.checked=chosen.includes(f);box.disabled=!box.checked && chosen.length>=selectedPizza.max;
-        box.addEventListener('change',()=>{ if(box.checked && chosen.length<selectedPizza.max)chosen.push(f);else chosen=chosen.filter(x=>x!==f);renderFlavors(); });
-        label.append(box,escText('span',f));grid.append(label);
+    function renderProducts() {
+      const holder=byId('products');
+      holder.replaceChildren();
+      if(categoriaActual==='Pizzas') {
+        for(const p of pizzas.filter(p=>p.activo!==false)) {
+          const card=el('article','','product');
+          const art=el('div','🍕','product-art');
+          art.setAttribute('aria-hidden','true');
+          const body=el('div','','product-body');
+          const row=el('div','','product-title');
+          row.append(el('h3',p.name),el('strong',money(p.price),'price'));
+          const desc=el('p',p.description);
+          const btn=el('button','Elegir sabores','primary-btn');
+          btn.type='button';
+          btn.addEventListener('click',()=>openPizza(p));
+          body.append(row,desc,btn);
+          card.append(art,body);
+          holder.append(card);
+        }
+      }
+      for(const p of productosAdmin.filter(p=>categoria(p)===categoriaActual).sort(ordenar)) {
+        const card=el('article','','product');
+        const art=el('div','','product-art');
+        if(p.fotoURL && /^https:\/\//i.test(p.fotoURL)) {
+          const img=document.createElement('img');
+          img.src=p.fotoURL;
+          img.alt='Foto de '+p.name;
+          img.loading='lazy';
+          img.referrerPolicy='no-referrer';
+          img.onerror=()=>{art.replaceChildren(el('span','🍽️'));};
+          art.append(img);
+        } else {
+          art.textContent=categoriaActual==='Hamburguesas'?'🍔':categoriaActual==='Bebidas'?'🥤':categoriaActual.toLowerCase().includes('mexic')?'🌮':'🍽️';
+        }
+        const body=el('div','','product-body');
+        const row=el('div','','product-title');
+        row.append(el('h3',p.name),el('strong',money(p.price),'price'));
+        const desc=el('p',p.description||'Preparado con el sabor de La Pizza de Juan K.');
+        const btn=el('button','Agregar al carrito','primary-btn');
+        btn.type='button';
+        btn.addEventListener('click',()=>agregarProducto(p));
+        body.append(row,desc,btn);
+        card.append(art,body);
+        holder.append(card);
+      }
+      if(!holder.children.length) holder.append(el('p','No hay productos visibles en esta categoría por ahora.','hint'));
+    }
+    function agregarProducto(p) {
+      const item=cart.find(x=>x.id===p.id && x.flavors.length===0);
+      if(item) item.qty=Math.min(99,item.qty+1);
+      else cart.push({id:p.id,flavors:[],qty:1});
+      persist();
+      renderCart();
+      byId('carrito').scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+    function openPizza(p) {
+      selectedPizza=p;chosen=[];
+      byId('pizzaDialogTitle').textContent=p.name;
+      byId('pizzaInstructions').textContent=`Elige entre 1 y ${p.max} sabores. Todos están incluidos en el precio de este tamaño.`;
+      byId('pizzaPrice').textContent=money(p.price);
+      renderFlavors();
+      byId('pizzaDialog').showModal();
+    }
+    function renderFlavors() {
+      const grid=byId('flavorGrid');
+      grid.replaceChildren();
+      for(const f of flavors) {
+        const label=el('label','','flavor');
+        const box=document.createElement('input');
+        box.type='checkbox';
+        box.checked=chosen.includes(f);
+        box.disabled=!box.checked && chosen.length>=selectedPizza.max;
+        box.addEventListener('change',()=>{
+          if(box.checked && chosen.length<selectedPizza.max) chosen.push(f);
+          else chosen=chosen.filter(x=>x!==f);
+          renderFlavors();
+        });
+        label.append(box,el('span',f));
+        grid.append(label);
       }
       byId('flavorCounter').textContent=`${chosen.length} de ${selectedPizza.max} sabores seleccionados (mínimo 1).`;
       byId('addPizzaButton').disabled=chosen.length===0;
     }
-    function addPizza(){
-      if(!selectedPizza || chosen.length<1 || chosen.length>selectedPizza.max)return;
-      const item=cart.find(it=>it.id===selectedPizza.id && it.flavors.slice().sort().join('|')===chosen.slice().sort().join('|'));
-      if(item)item.qty=Math.min(99,item.qty+1);
+    function addPizza() {
+      if(!selectedPizza || selectedPizza.activo===false || chosen.length<1 || chosen.length>selectedPizza.max) return;
+      const item=cart.find(x=>x.id===selectedPizza.id && x.flavors.slice().sort().join('|')===chosen.slice().sort().join('|'));
+      if(item) item.qty=Math.min(99,item.qty+1);
       else cart.push({id:selectedPizza.id,flavors:[...chosen],qty:1});
-      persist();renderCart();byId('pizzaDialog').close();
+      persist();
+      renderCart();
+      byId('pizzaDialog').close();
       byId('carrito').scrollIntoView({behavior:'smooth',block:'nearest'});
     }
-    function updateQty(index,delta){
-      if(!cart[index])return;
+    function updateQty(index,delta) {
+      if(!cart[index]) return;
       cart[index].qty+=delta;
-      if(cart[index].qty<=0)cart.splice(index,1);
+      if(cart[index].qty<=0) cart.splice(index,1);
       else cart[index].qty=Math.min(99,cart[index].qty);
       persist();renderCart();
     }
-    function renderCart(){
-      const holder=byId('cartItems');holder.replaceChildren();
+    function renderCart() {
+      sincronizarCarrito();
+      const holder=byId('cartItems');
+      holder.replaceChildren();
       const count=cart.reduce((a,b)=>a+b.qty,0);
       byId('cartCount').textContent=String(count);
       byId('cartItemsLabel').textContent=`${count} ${count===1?'producto':'productos'}`;
       byId('previewButton').disabled=count===0;
       byId('clearButton').hidden=count===0;
       let total=0;
-      if(!cart.length){const empty=escText('div','','empty');empty.append(escText('span','🍕','empty-icon'),escText('p','Aún no has agregado pizzas. ¡Elige tu favorita!'));holder.append(empty);}
+      if(!cart.length) {
+        const empty=el('div','','empty');
+        empty.append(el('span','🍕','empty-icon'),el('p','Tu carrito está vacío. ¡Elige algo delicioso!'));
+        holder.append(empty);
+      }
       cart.forEach((item,index)=>{
-        const p=pizzas.find(x=>x.id===item.id);if(!p)return;
+        const p=lookup(item);
+        if(!p) return;
         total+=p.price*item.qty;
-        const div=escText('div','','line-item');const row=escText('div','','item-row');
-        row.append(escText('strong',p.name),escText('span',money(p.price*item.qty),'item-price'));
-        const details=escText('p',item.flavors.join(' · '),'item-flavors');
-        const qty=escText('div','','qty');
-        const minus=escText('button','−');minus.type='button';minus.setAttribute('aria-label',`Quitar una ${p.name}`);minus.addEventListener('click',()=>updateQty(index,-1));
-        const plus=escText('button','+');plus.type='button';plus.setAttribute('aria-label',`Agregar una ${p.name}`);plus.disabled=item.qty>=99;plus.addEventListener('click',()=>updateQty(index,1));
-        qty.append(minus,escText('span',String(item.qty)),plus);div.append(row,details,qty);holder.append(div);
+        const div=el('div','','line-item');
+        const row=el('div','','item-row');
+        row.append(el('strong',p.name),el('span',money(p.price*item.qty),'item-price'));
+        const details=el('p',item.flavors.length?item.flavors.join(' · '):'Producto del menú','item-flavors');
+        const qty=el('div','','qty');
+        const minus=el('button','−');
+        minus.type='button';
+        minus.setAttribute('aria-label',`Quitar una unidad de ${p.name}`);
+        minus.addEventListener('click',()=>updateQty(index,-1));
+        const plus=el('button','+');
+        plus.type='button';
+        plus.setAttribute('aria-label',`Agregar una unidad de ${p.name}`);
+        plus.disabled=item.qty>=99;
+        plus.addEventListener('click',()=>updateQty(index,1));
+        qty.append(minus,el('span',String(item.qty)),plus);
+        div.append(row,details,qty);
+        holder.append(div);
       });
       byId('subtotal').textContent=money(total);
     }
-    function deliveryFields(){
+    function deliveryFields() {
       const delivery=byId('orderForm').elements.delivery.value==='domicilio';
-      document.querySelectorAll('.delivery-field').forEach(label=>{label.hidden=!delivery;label.querySelector('input,select').required=delivery;});
+      document.querySelectorAll('.delivery-field').forEach(label=>{
+        label.hidden=!delivery;
+        label.querySelector('input,select').required=delivery;
+      });
     }
-    async function showSummary(event){
+    function showSummary(event) {
       event.preventDefault();
-      if(!cart.length)return;
+      sincronizarCarrito();
+      if(!cart.length) { renderCart();return; }
       const f=new FormData(byId('orderForm'));
       const delivery=f.get('delivery')==='domicilio';
-      const pedido = {
-  cliente: {
-    nombre: String(f.get('customer') || '').trim(),
-    telefono: String(f.get('phone') || '').trim()
-  },
-  modalidad: delivery ? 'domicilio' : 'recoger',
-  municipio: delivery ? String(f.get('city') || '') : '',
-  direccion: delivery ? String(f.get('address') || '').trim() : '',
-  observaciones: String(f.get('notes') || '').trim(),
-  productos: cart.map(item => ({
-    pizza: pizzas.find(p => p.id === item.id)?.name || item.id,
-    sabores: item.flavors,
-    cantidad: item.qty
-  })),
-  total: cart.reduce((sum, item) =>
-    sum + (pizzas.find(p => p.id === item.id)?.price || 0) * item.qty, 0)
-};
-     pedidoPendiente = pedido;
-      byId('sendOrderButton').disabled = false;
-      const lines=['LA PIZZA DE JUAN K','RESUMEN DE PRUEBA — NO ENVIADO',''];
-      for(const item of cart){const p=pizzas.find(x=>x.id===item.id);if(p)lines.push(`${item.qty} × ${p.name} — ${money(p.price*item.qty)}\n  Sabores: ${item.flavors.join(', ')}`);}
-      lines.push('',`SUBTOTAL: ${money(cart.reduce((sum,it)=>sum+(pizzas.find(p=>p.id===it.id)?.price||0)*it.qty,0))}`,'DOMICILIO: precio por confirmar','','DATOS DE PRUEBA:',`Nombre: ${String(f.get('customer')||'').trim()}`,`Teléfono: ${String(f.get('phone')||'').trim()}`,`Modalidad: ${delivery?'Domicilio':'Recoger en el local'}`);
-      if(delivery)lines.push(`Municipio: ${f.get('city')}`,`Dirección: ${String(f.get('address')||'').trim()}`);
-      if(String(f.get('notes')||'').trim())lines.push(`Observaciones: ${String(f.get('notes')).trim()}`);
-      lines.push('','IMPORTANTE: Este resumen no se ha enviado. No se han cobrado productos.');
+      const productos=cart.map(item=>{
+        const p=lookup(item);
+        return {
+          producto:p.name,
+          ...(item.flavors.length?{pizza:p.name,sabores:item.flavors}:{}),
+          cantidad:item.qty,
+          precioUnitario:p.price,
+          subtotal:p.price*item.qty
+        };
+      });
+      const pedido={
+        cliente:{nombre:String(f.get('customer')||'').trim(),telefono:String(f.get('phone')||'').trim()},
+        modalidad:delivery?'domicilio':'recoger',
+        municipio:delivery?String(f.get('city')||''):'',
+        direccion:delivery?String(f.get('address')||'').trim():'',
+        observaciones:String(f.get('notes')||'').trim(),
+        productos,
+        total:productos.reduce((sum,p)=>sum+p.subtotal,0)
+      };
+      pedidoPendiente=pedido;
+      byId('sendOrderButton').disabled=false;
+      const lines=['LA PIZZA DE JUAN K','RESUMEN DEL PEDIDO — AÚN NO ENVIADO',''];
+      for(const p of productos) {
+        lines.push(`${p.cantidad} × ${p.producto} — ${money(p.subtotal)}`);
+        if(p.sabores) lines.push('  Sabores: '+p.sabores.join(', '));
+      }
+      lines.push('',`SUBTOTAL: ${money(pedido.total)}`,'DOMICILIO: precio por confirmar','',`Nombre: ${pedido.cliente.nombre}`,`Teléfono: ${pedido.cliente.telefono}`,`Modalidad: ${delivery?'Domicilio':'Recoger en el local'}`);
+      if(delivery) lines.push(`Municipio: ${pedido.municipio}`,`Dirección: ${pedido.direccion}`);
+      if(pedido.observaciones) lines.push(`Observaciones: ${pedido.observaciones}`);
+      lines.push('','Este pedido solo se envía al confirmar. No se realiza ningún cobro automático.');
       byId('summaryText').textContent=lines.join('\n');
-      byId('orderDialog').close();byId('summaryDialog').showModal();
-      byId('orderForm').reset();deliveryFields();
+      byId('orderDialog').close();
+      byId('summaryDialog').showModal();
     }
+
+    window.actualizarCatalogoFirebase=(documentos)=>{
+      const nuevos=[];
+      const overrides=new Map();
+      for(const item of documentos) {
+        const d=item.d||{};
+        const precio=Number(d.precio);
+        if(d.tipo==='pizza-tamano' && item.id.startsWith('pizza-tamano-')) {
+          overrides.set(item.id.slice(13),d);
+          continue;
+        }
+        if(d.activo===false || !String(d.nombre||'').trim() || !String(d.categoria||'').trim() ||
+           !Number.isInteger(precio) || precio<0) continue;
+        nuevos.push({
+          id:'catalogo:'+item.id,
+          name:String(d.nombre).trim(),
+          description:String(d.descripcion||''),
+          price:precio,
+          categoria:String(d.categoria).trim(),
+          fotoURL:String(d.fotoURL||''),
+          orden:Number(d.orden??10),
+          ordenCategoria:Number(d.ordenCategoria??10),
+          activo:true
+        });
+      }
+      pizzas=pizzaBase.map(p=>{
+        const d=overrides.get(p.id);
+        const nuevoPrecio=Number(d?.precio);
+        return {...p,
+          name:d && String(d.nombre||'').trim()?String(d.nombre).trim():p.name,
+          price:d && Number.isInteger(nuevoPrecio) && nuevoPrecio>=0?nuevoPrecio:p.price,
+          activo:d?d.activo!==false:true
+        };
+      });
+      productosAdmin=nuevos;
+      sincronizarCarrito();
+      if(selectedPizza && byId('pizzaDialog').open) byId('pizzaDialog').close();
+      if(pedidoPendiente) {
+        pedidoPendiente=null;
+        byId('sendOrderButton').disabled=true;
+        byId('summaryText').textContent='El catálogo cambió. Cierra este resumen y genera uno nuevo para verificar los precios y la disponibilidad.';
+      }
+      byId('catalogStatus').textContent='Catálogo actualizado desde administración.';
+      renderCategorias();renderProducts();renderCart();
+    };
+    window.errorCatalogoFirebase=(error)=>{
+      console.error('No se pudo cargar catálogo:',error);
+      byId('catalogStatus').textContent='No se pudo cargar el catálogo actualizado. Las pizzas habituales siguen disponibles. Intenta actualizar la página.';
+    };
+
     document.querySelectorAll('[data-close]').forEach(btn=>btn.addEventListener('click',()=>byId(btn.dataset.close).close()));
-    for(const dialog of document.querySelectorAll('dialog')) dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close();});
+    for(const dialog of document.querySelectorAll('dialog')) dialog.addEventListener('click',event=>{
+      if(event.target===dialog) dialog.close();
+    });
     byId('addPizzaButton').addEventListener('click',addPizza);
-    byId('clearButton').addEventListener('click',()=>{if(confirm('¿Quieres vaciar tu carrito de prueba?')){cart=[];persist();renderCart();}});
-    byId('previewButton').addEventListener('click',()=>{deliveryFields();byId('orderDialog').showModal();});
-    document.querySelectorAll('input[name="delivery"]').forEach(el=>el.addEventListener('change',deliveryFields));
+    byId('clearButton').addEventListener('click',()=>{
+      if(confirm('¿Quieres vaciar tu carrito?')) {cart=[];persist();renderCart();}
+    });
+    byId('previewButton').addEventListener('click',()=>{
+      deliveryFields();
+      byId('orderDialog').showModal();
+    });
+    document.querySelectorAll('input[name="delivery"]').forEach(e=>e.addEventListener('change',deliveryFields));
     byId('orderForm').addEventListener('submit',showSummary);
     byId('closeSummaryButton').addEventListener('click',()=>byId('summaryDialog').close());
-    byId('sendOrderButton').addEventListener('click', async () => {
-  if (!pedidoPendiente) return;
-
-const boton = byId('sendOrderButton');
-boton.disabled = true;
-
-try {
-  if (typeof window.enviarPedidoFirebase !== 'function') {
-    throw new Error('Firebase no está listo');
-  }
-
-  await window.enviarPedidoFirebase(pedidoPendiente);
-
-  alert('Pedido guardado en Firebase');
-  pedidoPendiente = null;
-  cart = [];
-  persist();
-  renderCart();
-  byId('summaryDialog').close();
-
-} catch (error) {
-  console.error('Error al enviar pedido:', error);
-  alert('No se pudo enviar el pedido. Inténtalo nuevamente.');
-  boton.disabled = false;
-}
-});
-    renderProducts();renderCart();deliveryFields();
+    byId('sendOrderButton').addEventListener('click',async()=>{
+      if(!pedidoPendiente) return;
+      const boton=byId('sendOrderButton');
+      boton.disabled=true;
+      try {
+        if(typeof window.enviarPedidoFirebase!=='function') throw new Error('Firebase no está listo');
+        await window.enviarPedidoFirebase(pedidoPendiente);
+        alert('Tu pedido fue enviado a La Pizza de Juan K.');
+        pedidoPendiente=null;
+        cart=[];
+        persist();
+        renderCart();
+        byId('summaryDialog').close();
+      } catch(error) {
+        console.error('Error al enviar pedido:',error);
+        alert('No se pudo enviar el pedido. Inténtalo nuevamente.');
+        boton.disabled=false;
+      }
+    });
+    renderCategorias();renderProducts();renderCart();deliveryFields();
   </script>
   <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
     import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app-check.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA",
@@ -374,10 +572,26 @@ try {
   });
     const guardarPedidoOriginal = window.enviarPedidoFirebase;
 
-window.enviarPedidoFirebase = async (pedido) => {
-  await signInAnonymously(auth);
-  return guardarPedidoOriginal(pedido);
-};
+    window.enviarPedidoFirebase = async (pedido) => {
+      if (!auth.currentUser) await signInAnonymously(auth);
+      return guardarPedidoOriginal(pedido);
+    };
+
+    let detenerCatalogo = () => {};
+    onAuthStateChanged(auth, async user => {
+      detenerCatalogo();
+      if (!user) {
+        try { await signInAnonymously(auth); }
+        catch (error) { window.errorCatalogoFirebase?.(error); }
+        return;
+      }
+      detenerCatalogo = onSnapshot(collection(db, 'productos'),
+        snapshot => {
+          window.actualizarCatalogoFirebase?.(snapshot.docs.map(x=>({id:x.id,d:x.data()})));
+        },
+        error => window.errorCatalogoFirebase?.(error)
+      );
+    });
   </script>
 </body>
 </html>
