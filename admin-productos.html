@@ -130,9 +130,9 @@
   </main>
   <script type="module">
     import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
-    import {getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-    import {getFirestore,collection,addDoc,doc,updateDoc,setDoc,onSnapshot,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
-    import {getStorage,ref,uploadBytesResumable,getDownloadURL,setMaxUploadRetryTime} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-storage.js';
+    import {getAuth,signInWithEmailAndPassword as localSignInWithEmailAndPassword,onAuthStateChanged as localOnAuthStateChanged,signOut as localSignOut} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
+    import {getFirestore,collection as localCollection,addDoc as localAddDoc,doc as localDoc,updateDoc as localUpdateDoc,setDoc as localSetDoc,onSnapshot as localOnSnapshot,serverTimestamp as localServerTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+    import {getStorage,ref as localRef,uploadBytesResumable as localUploadBytesResumable,getDownloadURL as localGetDownloadURL,setMaxUploadRetryTime as localSetMaxUploadRetryTime} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-storage.js';
 
     const firebaseConfig={
       apiKey:'AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA',
@@ -142,16 +142,32 @@
       messagingSenderId:'856650093973',
       appId:'1:856650093973:web:a4cd3ad8e863617706d29c'
     };
+    const integrado=window.self!==window.top && new URLSearchParams(location.search).get('integrado')==='1';
+    // Comparte la autenticación REAL del panel de pedidos, sin volver a solicitar
+    // correo ni contraseña. Los métodos también se comparten para evitar instancias
+    // distintas de Firebase entre los dos contextos del navegador.
+    const puente=integrado ? window.parent.__pizzaAdminBridge : null;
     const app=initializeApp(firebaseConfig);
-    const auth=getAuth(app);
-    const db=getFirestore(app);
-    const storage=getStorage(app);
+    const auth=puente?.auth ?? getAuth(app);
+    const db=puente?.db ?? getFirestore(app);
+    const storage=puente?.storage ?? getStorage(app);
+    const signInWithEmailAndPassword=puente?.signInWithEmailAndPassword ?? localSignInWithEmailAndPassword;
+    const onAuthStateChanged=puente?.onAuthStateChanged ?? localOnAuthStateChanged;
+    const signOut=puente?.signOut ?? localSignOut;
+    const collection=puente?.collection ?? localCollection;
+    const addDoc=puente?.addDoc ?? localAddDoc;
+    const doc=puente?.doc ?? localDoc;
+    const updateDoc=puente?.updateDoc ?? localUpdateDoc;
+    const setDoc=puente?.setDoc ?? localSetDoc;
+    const onSnapshot=puente?.onSnapshot ?? localOnSnapshot;
+    const serverTimestamp=puente?.serverTimestamp ?? localServerTimestamp;
+    const ref=puente?.ref ?? localRef;
+    const uploadBytesResumable=puente?.uploadBytesResumable ?? localUploadBytesResumable;
+    const getDownloadURL=puente?.getDownloadURL ?? localGetDownloadURL;
+    const setMaxUploadRetryTime=puente?.setMaxUploadRetryTime ?? localSetMaxUploadRetryTime;
     setMaxUploadRetryTime(storage, 30000);
     const $=id=>document.getElementById(id);
-    // Cuando se abre dentro del panel de pedidos, evita encabezados y sesión duplicados.
-    if(window.self!==window.top && new URLSearchParams(location.search).get('integrado')==='1') {
-      document.documentElement.classList.add('integrado');
-    }
+    if(integrado) document.documentElement.classList.add('integrado');
     let productos=[];
     let dejarDeEscuchar=()=>{};
     const pizzasBase=[
