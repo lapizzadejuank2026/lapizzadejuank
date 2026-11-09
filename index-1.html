@@ -200,6 +200,7 @@
     ];
     let pizzas = pizzaBase.map(p=>({...p}));
     let productosAdmin = [];
+    let catalogoCargado = false;
     let categoriaActual = 'Pizzas';
     const flavors = ['Hawaiana','Carnes','Pollo champiñón','Mi Tierrita','Mexicana','Venezolana','De la Casa','Ranchera','Campesina','Pepperoni'];
     const money = value => new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(value);
@@ -236,6 +237,7 @@
     function sincronizarCarrito() {
       cart=cart.filter(item=>{
         const p=lookup(item);
+        if(item.id.startsWith('catalogo:') && !catalogoCargado) return true;
         return !!p && Number.isInteger(item.qty) && item.qty>0 && item.qty<=99 &&
           (item.id.startsWith('catalogo:') ||
            (Array.isArray(item.flavors) && item.flavors.length>=1 && item.flavors.length<=p.max && item.flavors.every(f=>flavors.includes(f))));
@@ -374,7 +376,7 @@
       sincronizarCarrito();
       const holder=byId('cartItems');
       holder.replaceChildren();
-      const count=cart.reduce((a,b)=>a+b.qty,0);
+      const count=cart.filter(item=>lookup(item)).reduce((a,b)=>a+b.qty,0);
       byId('cartCount').textContent=String(count);
       byId('cartItemsLabel').textContent=`${count} ${count===1?'producto':'productos'}`;
       byId('previewButton').disabled=count===0;
@@ -419,7 +421,7 @@
     function showSummary(event) {
       event.preventDefault();
       sincronizarCarrito();
-      if(!cart.length) { renderCart();return; }
+      if(!cart.length || cart.some(item=>!lookup(item))) { renderCart();return; }
       const f=new FormData(byId('orderForm'));
       const delivery=f.get('delivery')==='domicilio';
       const productos=cart.map(item=>{
@@ -491,6 +493,7 @@
         };
       });
       productosAdmin=nuevos;
+      catalogoCargado=true;
       sincronizarCarrito();
       if(selectedPizza && byId('pizzaDialog').open) byId('pizzaDialog').close();
       if(pedidoPendiente) {
