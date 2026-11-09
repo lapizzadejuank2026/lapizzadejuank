@@ -290,8 +290,18 @@
       if(categoriaActual==='Pizzas') {
         for(const p of pizzas.filter(p=>p.activo!==false)) {
           const card=el('article','','product');
-          const art=el('div','🍕','product-art');
-          art.setAttribute('aria-hidden','true');
+          const art=el('div','','product-art');
+          if(p.fotoURL && /^https:\/\//i.test(p.fotoURL)){
+            const img=document.createElement('img');
+            img.src=p.fotoURL;
+            img.alt='Fotografía de '+p.name;
+            img.loading='lazy';
+            img.onerror=()=>art.replaceChildren(el('span','🍕'));
+            art.append(img);
+          }else{
+            art.textContent='🍕';
+            art.setAttribute('aria-hidden','true');
+          }
           const body=el('div','','product-body');
           const row=el('div','','product-title');
           row.append(el('h3',p.name),el('strong',money(p.price),'price'));
@@ -506,6 +516,7 @@
         return {...p,
           name:d && String(d.nombre||'').trim()?String(d.nombre).trim():p.name,
           price:d && Number.isInteger(nuevoPrecio) && nuevoPrecio>=0?nuevoPrecio:p.price,
+          fotoURL:d && /^https:\/\//i.test(String(d.fotoURL||''))?String(d.fotoURL):'',
           activo:d?d.activo!==false:true
         };
       });
