@@ -30,6 +30,9 @@
     #mensaje,#errorLogin{color:#ffd575;font-weight:bold;white-space:pre-wrap}
     a{color:#ffe09b}
     [hidden]{display:none!important}
+    .integrado header,.integrado #panel > .caja:first-child{display:none!important}
+    .integrado main{max-width:none;padding:2px 0 16px}
+    .integrado #panel > .caja{margin-top:6px}
     @media(max-width:520px){.fila{grid-template-columns:1fr}}
   </style>
 </head>
@@ -121,6 +124,10 @@
     const db=getFirestore(app);
     const storage=getStorage(app);
     const $=id=>document.getElementById(id);
+    // Cuando se abre dentro del panel de pedidos, evita encabezados y sesión duplicados.
+    if(window.self!==window.top && new URLSearchParams(location.search).get('integrado')==='1') {
+      document.documentElement.classList.add('integrado');
+    }
     let productos=[];
     let dejarDeEscuchar=()=>{};
     const mensaje=texto=>$('mensaje').textContent=texto;
