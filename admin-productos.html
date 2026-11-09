@@ -51,6 +51,7 @@
         <button>Entrar</button>
       </form>
       <p id="errorLogin" role="alert"></p>
+      <p class="ayuda">Si no se abre aquí, <a href="admin-productos.html?v=editor20261109" target="_blank" rel="noopener">abre Productos en una página completa</a>.</p>
     </section>
 
     <section id="panel" hidden>
@@ -128,11 +129,31 @@
       </section>
     </section>
   </main>
+  <script>
+    // Si falla la carga de JavaScript, NO recargar silenciosamente el formulario.
+    window.__pizzaEditorListo=false;
+    document.getElementById('login').addEventListener('submit',function(evento){
+      evento.preventDefault();
+      if(!window.__pizzaEditorListo){
+        document.getElementById('errorLogin').textContent=
+          'No terminó de cargar el editor. Comprueba Internet y vuelve a abrir Productos.';
+      }
+    },true);
+    window.addEventListener('load',function(){
+      setTimeout(function(){
+        if(!window.__pizzaEditorListo && !document.getElementById('acceso').hidden){
+          document.getElementById('errorLogin').textContent=
+            'No se pudo cargar Firebase para Productos. Abre el administrador en pantalla completa con el enlace de abajo.';
+        }
+      },3000);
+    });
+  </script>
   <script type="module">
     import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
     import {getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
     import {getFirestore,collection,addDoc,doc,updateDoc,setDoc,onSnapshot,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
-    import {getStorage,ref,uploadBytesResumable,getDownloadURL,setMaxUploadRetryTime} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-storage.js';
+    // Storage se importa al seleccionar una foto. Una falla en ese servicio
+    // no debe impedir iniciar sesión o modificar precios y productos.
 
     const firebaseConfig={
       apiKey:'AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA',
@@ -145,8 +166,21 @@
     const app=initializeApp(firebaseConfig);
     const auth=getAuth(app);
     const db=getFirestore(app);
-    const storage=getStorage(app);
-    setMaxUploadRetryTime(storage, 30000);
+    let almacenamientoPendiente;
+    function obtenerAlmacenamiento(){
+      if(!almacenamientoPendiente){
+        almacenamientoPendiente=import('https://www.gstatic.com/firebasejs/13.1.0/firebase-storage.js')
+          .then(({getStorage,ref,uploadBytesResumable,getDownloadURL,setMaxUploadRetryTime})=>{
+            const storage=getStorage(app);
+            setMaxUploadRetryTime(storage,30000);
+            return {storage,ref,uploadBytesResumable,getDownloadURL};
+          }).catch(error=>{
+            almacenamientoPendiente=null;
+            throw new Error('No se pudo cargar Firebase Storage. Puedes seguir editando precios y productos sin subir fotos.');
+          });
+      }
+      return almacenamientoPendiente;
+    }
     const $=id=>document.getElementById(id);
     // Cuando se abre dentro del panel de pedidos, evita encabezados y sesión duplicados.
     if(window.self!==window.top && new URLSearchParams(location.search).get('integrado')==='1') {
@@ -308,7 +342,7 @@
           if(archivo){
             const extension=archivo.type==='image/png'?'png':archivo.type==='image/webp'?'webp':'jpg';
             const ruta='productos/'+auth.currentUser.uid+'/pizzas/'+id+'-'+Date.now()+'.'+extension;
-            datos.fotoURL=await subirFotoConProgreso(ref(storage,ruta),archivo,'foto de '+datos.nombre);
+            datos.fotoURL=await subirFotoConProgreso(ruta,archivo,'foto de '+datos.nombre);
           }
           await setDoc(doc(db,'productos',id),datos,{merge:true});
         }
@@ -322,10 +356,11 @@
     const pesos=n=>'$'+Number(n||0).toLocaleString('es-CO');
 
 
-    // Muestra porcentaje y devuelve un error si Firebase Storage no responde.
-    function subirFotoConProgreso(archivoRef, archivo, etiqueta='foto'){
+    // Cargar Storage solo cuando realmente se necesite subir una fotografía.
+    async function subirFotoConProgreso(ruta, archivo, etiqueta='foto'){
+      const {storage,ref,uploadBytesResumable,getDownloadURL}=await obtenerAlmacenamiento();
       return new Promise((resolve,reject)=>{
-        const tarea=uploadBytesResumable(archivoRef,archivo,{contentType:archivo.type});
+        const tarea=uploadBytesResumable(ref(storage,ruta),archivo,{contentType:archivo.type});
         let terminada=false;
         const limite=setTimeout(()=>{
           if(terminada)return;
@@ -365,6 +400,7 @@
       }catch(error){$('errorLogin').textContent='No se pudo ingresar. Revisa tu correo y contraseña.';}
     });
     $('salir').addEventListener('click',()=>signOut(auth));
+    window.__pizzaEditorListo=true;
 
     onAuthStateChanged(auth,user=>{
       dejarDeEscuchar();
@@ -472,8 +508,7 @@
           mensaje('Subiendo foto a Firebase Storage...');
           const extension=archivo.type==='image/png'?'png':archivo.type==='image/webp'?'webp':'jpg';
           const ruta=`productos/${auth.currentUser.uid}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-          const archivoRef=ref(storage,ruta);
-          fotoURL=await subirFotoConProgreso(archivoRef,archivo,'foto del producto');
+          fotoURL=await subirFotoConProgreso(ruta,archivo,'foto del producto');
         }
         const datos={
           nombre,descripcion:$('descripcion').value.trim(),precio,categoria,
