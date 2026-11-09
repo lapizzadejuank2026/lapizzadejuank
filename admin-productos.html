@@ -63,11 +63,11 @@
       </div>
 
       <section class="caja">
-        <h2>🍕 Precios de pizzas por tamaño</h2>
-        <p class="ayuda">Actualiza los precios y decide qué tamaños se muestran. La selección de sabores se mantiene igual. El cambio se verá en el menú de clientes.</p>
+        <h2>🍕 Nombres y precios de pizzas por tamaño</h2>
+        <p class="ayuda">Cambia el nombre, el precio y decide qué tamaños se muestran. La selección de sabores se mantiene igual. El cambio se verá en el menú de clientes.</p>
         <form id="formPizzas">
           <div id="listaTamanos"></div>
-          <button type="submit" id="guardarPizzas">💾 Guardar precios y tamaños</button>
+          <button type="submit" id="guardarPizzas">💾 Guardar nombres, precios y tamaños</button>
         </form>
         <p id="mensajePizzas" role="status"></p>
       </section>
@@ -160,17 +160,24 @@
         const card=document.createElement('div'); card.className='tamano';
         const fila=document.createElement('div');fila.className='fila';
         const nombre=document.createElement('label');
-        nombre.textContent=pizza.nombre+' ('+pizza.max+' sabores)';
+        nombre.textContent='Nombre ('+pizza.max+' sabores)';
+        const nombreInput=document.createElement('input');
+        nombreInput.type='text';nombreInput.required=true;nombreInput.maxLength=100;
+        nombreInput.value=d.nombre||pizza.nombre;nombreInput.dataset.nombreTamano=pizza.id;
+        nombreInput.setAttribute('aria-label','Nombre de '+pizza.nombre);
+        nombre.append(nombreInput);
+        const precioLabel=document.createElement('label');
+        precioLabel.textContent='Precio en pesos colombianos';
         const precio=document.createElement('input');
         precio.type='number';precio.required=true;precio.min='0';precio.max='99999999';precio.step='1';
         precio.value=d.precio??pizza.precio;precio.dataset.tamano=pizza.id;precio.setAttribute('aria-label','Precio de '+pizza.nombre);
-        nombre.append(precio);
+        precioLabel.append(precio);
         const visible=document.createElement('label');visible.className='check';
         const activo=document.createElement('input');activo.type='checkbox';activo.checked=d.activo!==false;
         activo.dataset.visibleTamano=pizza.id;
         visible.append(activo,document.createTextNode('Visible en el menú'));
-        fila.append(nombre,visible);
-        card.append(fila);
+        fila.append(nombre,precioLabel);
+        card.append(fila,visible);
         lista.append(card);
       }
     }
@@ -179,25 +186,28 @@
       const boton=$('guardarPizzas');
       boton.disabled=true;
       sincronizandoTamanos=true;
-      $('mensajePizzas').textContent='Guardando precios...';
+      $('mensajePizzas').textContent='Guardando nombres y precios...';
       try{
         if(!auth.currentUser)throw new Error('Inicia sesión para guardar.');
         const cambios=pizzasBase.map((pizza,idx)=>{
           const campo=$('listaTamanos').querySelector('[data-tamano="'+pizza.id+'"]');
+          const nombreCampo=$('listaTamanos').querySelector('[data-nombre-tamano="'+pizza.id+'"]');
+          const nombre=nombreCampo.value.trim();
+          if(!nombre) throw new Error('Escribe el nombre para '+pizza.nombre);
           const visible=$('listaTamanos').querySelector('[data-visible-tamano="'+pizza.id+'"]');
           const precio=Number(campo.value);
           if(!Number.isInteger(precio)||precio<0||precio>99999999) throw new Error('Revisa el precio de '+pizza.nombre);
-          return {id:'pizza-tamano-'+pizza.id,nombre:pizza.nombre,precio,categoria:'Pizzas',tipo:'pizza-tamano',
+          return {id:'pizza-tamano-'+pizza.id,nombre,precio,categoria:'Pizzas',tipo:'pizza-tamano',
                   max:pizza.max,activo:visible.checked,ordenCategoria:1,orden:idx+1,actualizadoEn:serverTimestamp()};
         });
         for(const cambio of cambios){
           const {id,...datos}=cambio;
           await setDoc(doc(db,'productos',id),datos,{merge:true});
         }
-        $('mensajePizzas').textContent='✅ Precios y disponibilidad actualizados en Firebase.';
+        $('mensajePizzas').textContent='✅ Nombres, precios y disponibilidad actualizados en Firebase.';
       }catch(error){
         console.error(error);
-        $('mensajePizzas').textContent='No se pudieron guardar todos los precios: '+(error.code==='permission-denied'?'revisa las reglas de Firebase.':error.message||'intenta de nuevo.');
+        $('mensajePizzas').textContent='No se pudieron guardar todos los cambios: '+(error.code==='permission-denied'?'revisa las reglas de Firebase.':error.message||'intenta de nuevo.');
       }finally{sincronizandoTamanos=false;boton.disabled=false;pintarTamanos();}
     });
     const mensaje=texto=>$('mensaje').textContent=texto;
