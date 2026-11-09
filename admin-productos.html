@@ -64,7 +64,7 @@
 
       <section class="caja">
         <h2>🍕 Nombres y precios de pizzas por tamaño</h2>
-        <p class="ayuda">Cambia el nombre, el precio y decide qué tamaños se muestran. La selección de sabores se mantiene igual. El cambio se verá en el menú de clientes.</p>
+        <p class="ayuda">Cambia el nombre, el precio y la foto de presentación de cada tamaño; también decide qué tamaños se muestran. La selección de sabores se mantiene igual. El cambio se verá en el menú de clientes.</p>
         <form id="formPizzas">
           <div id="listaTamanos"></div>
           <button type="submit" id="guardarPizzas">💾 Guardar nombres, precios y tamaños</button>
@@ -254,8 +254,27 @@
         const activo=document.createElement('input');activo.type='checkbox';activo.checked=d.activo!==false;
         activo.dataset.visibleTamano=pizza.id;
         visible.append(activo,document.createTextNode('Visible en el menú'));
+        const fotoLabel=document.createElement('label');
+        fotoLabel.textContent='Foto de presentación desde el celular (JPG, PNG o WEBP, máximo 5 MB)';
+        const fotoInput=document.createElement('input');
+        fotoInput.type='file';fotoInput.accept='image/jpeg,image/png,image/webp';
+        fotoInput.dataset.fotoTamano=pizza.id;
+        fotoLabel.append(fotoInput);
+        const enlaceLabel=document.createElement('label');
+        enlaceLabel.textContent='O enlace de fotografía (HTTPS)';
+        const enlace=document.createElement('input');
+        enlace.type='url';enlace.placeholder='https://...';
+        enlace.value=d.fotoURL||'';
+        enlace.dataset.fotourlTamano=pizza.id;
+        enlaceLabel.append(enlace);
         fila.append(nombre,precioLabel);
-        card.append(fila,visible);
+        card.append(fila,visible,fotoLabel,enlaceLabel);
+        if(d.fotoURL && /^https:\/\//i.test(d.fotoURL)){
+          const preview=document.createElement('img');
+          preview.src=d.fotoURL;preview.alt='Foto actual de '+(d.nombre||pizza.nombre);
+          preview.loading='lazy';preview.style.cssText='display:block;float:none;max-width:140px;max-height:115px;margin:10px 0;border-radius:10px;object-fit:cover';
+          card.append(preview);
+        }
         lista.append(card);
       }
     }
@@ -275,11 +294,22 @@
           const visible=$('listaTamanos').querySelector('[data-visible-tamano="'+pizza.id+'"]');
           const precio=Number(campo.value);
           if(!Number.isInteger(precio)||precio<0||precio>99999999) throw new Error('Revisa el precio de '+pizza.nombre);
+          const campoURL=$('listaTamanos').querySelector('[data-fotourl-tamano="'+pizza.id+'"]');
+          const fotoURL=campoURL.value.trim();
+          if(fotoURL && !/^https:\/\//i.test(fotoURL)) throw new Error('La foto de '+pizza.nombre+' necesita un enlace HTTPS.');
+          const archivo=$('listaTamanos').querySelector('[data-foto-tamano="'+pizza.id+'"]').files[0]||null;
+          if(archivo && (!['image/jpeg','image/png','image/webp'].includes(archivo.type)||archivo.size>5*1024*1024))
+            throw new Error('La foto de '+pizza.nombre+' debe ser JPG, PNG o WEBP, máximo 5 MB.');
           return {id:'pizza-tamano-'+pizza.id,nombre,precio,categoria:'Pizzas',tipo:'pizza-tamano',
-                  max:pizza.max,activo:visible.checked,ordenCategoria:1,orden:idx+1,actualizadoEn:serverTimestamp()};
+                  max:pizza.max,activo:visible.checked,ordenCategoria:1,orden:idx+1,fotoURL,archivo,actualizadoEn:serverTimestamp()};
         });
         for(const cambio of cambios){
-          const {id,...datos}=cambio;
+          const {id,archivo,...datos}=cambio;
+          if(archivo){
+            const extension=archivo.type==='image/png'?'png':archivo.type==='image/webp'?'webp':'jpg';
+            const ruta='productos/'+auth.currentUser.uid+'/pizzas/'+id+'-'+Date.now()+'.'+extension;
+            datos.fotoURL=await subirFotoConProgreso(ref(storage,ruta),archivo,'foto de '+datos.nombre);
+          }
           await setDoc(doc(db,'productos',id),datos,{merge:true});
         }
         $('mensajePizzas').textContent='✅ Nombres, precios y disponibilidad actualizados en Firebase.';
