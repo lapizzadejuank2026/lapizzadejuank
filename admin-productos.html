@@ -146,7 +146,7 @@
     const auth=getAuth(app);
     const db=getFirestore(app);
     const storage=getStorage(app);
-    setMaxUploadRetryTime(storage, 35000);
+    setMaxUploadRetryTime(storage, 30000);
     const $=id=>document.getElementById(id);
     // Cuando se abre dentro del panel de pedidos, evita encabezados y sesión duplicados.
     if(window.self!==window.top && new URLSearchParams(location.search).get('integrado')==='1') {
@@ -289,152 +289,11 @@
       }finally{sincronizandoTamanos=false;boton.disabled=false;pintarTamanos();}
     });
     const mensaje=texto=>$('mensaje').textContent=texto;
-    const pesos=n=>'
+    const pesos=n=>'$'+Number(n||0).toLocaleString('es-CO');
 
-    $('login').addEventListener('submit',async e=>{
-      e.preventDefault();
-      $('errorLogin').textContent='';
-      try{
-        await signInWithEmailAndPassword(auth,$('correo').value.trim(),$('clave').value);
-        $('clave').value='';
-      }catch(error){$('errorLogin').textContent='No se pudo ingresar. Revisa tu correo y contraseña.';}
-    });
-    $('salir').addEventListener('click',()=>signOut(auth));
 
-    onAuthStateChanged(auth,user=>{
-      dejarDeEscuchar();
-      $('acceso').hidden=!!user;
-      $('panel').hidden=!user;
-      if(!user){productos=[];return;}
-      $('usuario').textContent='Sesión: '+user.email;
-      $('lista').textContent='Cargando productos...';
-      dejarDeEscuchar=onSnapshot(collection(db,'productos'),snapshot=>{
-        productos=snapshot.docs.map(x=>({id:x.id,...x.data()}));
-        pintar();
-        pintarTamanos();
-        pintarSabores();
-      },error=>{
-        $('lista').textContent='No hay acceso a la colección productos. Antes de guardar hay que configurar las reglas de Firestore para el administrador.';
-        console.error(error);
-      });
-    });
-
-    function limpiar(){
-      $('formProducto').reset();
-      $('idProducto').value='';
-      $('tituloForm').textContent='Agregar producto';
-      $('activo').checked=true;
-      $('orden').value=10;
-      $('ordenCategoria').value=10;
-    }
-    $('cancelar').addEventListener('click',()=>{limpiar();mensaje('Edición cancelada.');});
-
-    function editar(p){
-      $('idProducto').value=p.id;
-      $('nombre').value=p.nombre||'';
-      $('descripcion').value=p.descripcion||'';
-      $('precio').value=p.precio??0;
-      $('categoria').value=p.categoria||'';
-      $('ordenCategoria').value=p.ordenCategoria??10;
-      $('orden').value=p.orden??10;
-      $('fotoURL').value=p.fotoURL||'';
-      $('archivoFoto').value='';
-      $('activo').checked=p.activo!==false;
-      $('tituloForm').textContent='Editar: '+p.nombre;
-      mensaje('Editando producto. Pulsa Guardar para aplicar cambios.');
-      $('tituloForm').scrollIntoView({behavior:'smooth'});
-    }
-
-    function pintar(){
-      const lista=$('lista');
-      lista.replaceChildren();
-      const productosComunes=productos.filter(x=>x.tipo!=='pizza-tamano' && x.tipo!=='pizza-sabor');
-      if(!productosComunes.length){lista.textContent='Todavía no hay productos adicionales registrados.';return;}
-      const ordenados=[...productosComunes].sort((a,b)=>
-        (Number(a.ordenCategoria??10)-Number(b.ordenCategoria??10))||
-        String(a.categoria||'').localeCompare(String(b.categoria||''),'es')||
-        (Number(a.orden??10)-Number(b.orden??10))||
-        String(a.nombre||'').localeCompare(String(b.nombre||''),'es'));
-      for(const p of ordenados){
-        const tarjeta=document.createElement('article');
-        tarjeta.className='producto';
-        if(p.fotoURL && /^https:\/\//i.test(p.fotoURL)){
-          const img=document.createElement('img');
-          img.src=p.fotoURL;
-          img.alt='Foto del producto';
-          img.loading='lazy';
-          tarjeta.append(img);
-        }
-        const h=document.createElement('h3');h.textContent=p.nombre||'Sin nombre';
-        const datos=document.createElement('p');
-        datos.textContent=`${p.categoria||'Sin categoría'} · ${pesos(p.precio)} · ${p.activo===false?'Oculto':'Visible'}`;
-        const descripcion=document.createElement('p');descripcion.textContent=p.descripcion||'';
-        const acciones=document.createElement('div');acciones.className='acciones';
-        const bEditar=document.createElement('button');bEditar.textContent='✏️ Editar';
-        bEditar.addEventListener('click',()=>editar(p));
-        const bVisibilidad=document.createElement('button');
-        bVisibilidad.textContent=p.activo===false?'👁 Mostrar':'🙈 Ocultar';
-        bVisibilidad.addEventListener('click',async()=>{
-          bVisibilidad.disabled=true;
-          try{
-            await updateDoc(doc(db,'productos',p.id),{activo:p.activo===false,actualizadoEn:serverTimestamp()});
-            mensaje('Visibilidad actualizada en Firebase.');
-          }catch(error){mensaje('No se pudo cambiar: revisa los permisos de Firestore.');bVisibilidad.disabled=false;}
-        });
-        acciones.append(bEditar,bVisibilidad);
-        tarjeta.append(h,datos,descripcion,acciones);
-        lista.append(tarjeta);
-      }
-    }
-
-    $('formProducto').addEventListener('submit',async e=>{
-      e.preventDefault();
-      const boton=$('guardar');
-      boton.disabled=true;
-      mensaje('Guardando producto...');
-      try{
-        if(!auth.currentUser)throw new Error('Debes iniciar sesión.');
-        const nombre=$('nombre').value.trim();
-        const categoria=$('categoria').value.trim();
-        const precio=Number($('precio').value);
-        if(!nombre||!categoria||!Number.isInteger(precio)||precio<0)throw new Error('Revisa nombre, categoría y precio.');
-        let fotoURL=$('fotoURL').value.trim();
-        if(fotoURL && !/^https:\/\//i.test(fotoURL))throw new Error('El enlace de foto debe comenzar por https://');
-        const archivo=$('archivoFoto').files[0];
-        if(archivo){
-          if(!['image/jpeg','image/png','image/webp'].includes(archivo.type)||archivo.size>5*1024*1024)
-            throw new Error('Selecciona una imagen JPG, PNG o WEBP de máximo 5 MB.');
-          mensaje('Iniciando subida de foto a Firebase Storage...');
-          const extension=archivo.type==='image/png'?'png':archivo.type==='image/webp'?'webp':'jpg';
-          const ruta=`productos/${auth.currentUser.uid}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-          const archivoRef=ref(storage,ruta);
-          fotoURL=await subirFotoConProgreso(archivoRef,archivo);
-        }
-        const datos={
-          nombre,descripcion:$('descripcion').value.trim(),precio,categoria,
-          orden:Number($('orden').value),ordenCategoria:Number($('ordenCategoria').value),
-          activo:$('activo').checked,fotoURL,actualizadoEn:serverTimestamp()
-        };
-        const id=$('idProducto').value;
-        if(id){await updateDoc(doc(db,'productos',id),datos);}
-        else{await addDoc(collection(db,'productos'),{...datos,creadoEn:serverTimestamp()});}
-        limpiar();
-        mensaje('✅ Producto guardado correctamente en Firebase.');
-      }catch(error){
-        console.error(error);
-        const falloStorage=String(error.code||'').startsWith('storage/');
-        const detalle = falloStorage
-          ? ('La foto no se pudo subir ('+error.code+'). Revisa Firebase Storage, su depósito y las reglas. Para guardar el producto sin foto, quita el archivo seleccionado y pulsa Guardar de nuevo.')
-          : (error.code==='permission-denied'?'Faltan permisos de Firebase.':error.message||'Revisa Firebase Storage y sus reglas.');
-        mensaje('No se pudo guardar: '+detalle);
-      }finally{boton.disabled=false;}
-    });
-  </script>
-</body>
-</html>
-+Number(n||0).toLocaleString('es-CO');
-    // Una subida fallida no debe bloquear indefinidamente el formulario de productos.
-    function subirFotoConProgreso(archivoRef, archivo){
+    // Muestra porcentaje y devuelve un error si Firebase Storage no responde.
+    function subirFotoConProgreso(archivoRef, archivo, etiqueta='foto'){
       return new Promise((resolve,reject)=>{
         const tarea=uploadBytesResumable(archivoRef,archivo,{contentType:archivo.type});
         let terminada=false;
@@ -442,13 +301,13 @@
           if(terminada)return;
           terminada=true;
           tarea.cancel();
-          reject(new Error('La subida de foto no respondió. Comprueba que Firebase Storage esté activado y que sus reglas permitan guardar fotos. Puedes guardar el producto sin foto.'));
+          reject(new Error('La foto no se pudo subir. Revisa en Firebase Console si Storage está habilitado y si el depósito es el correcto.'));
         },45000);
         tarea.on('state_changed',
           datos=>{
             if(terminada)return;
-            const pct=Math.round(100*datos.bytesTransferred/Math.max(1,datos.totalBytes));
-            mensaje('Subiendo foto: '+pct+' %');
+            const porcentaje=Math.round(100*datos.bytesTransferred/Math.max(1,datos.totalBytes));
+            mensaje('Subiendo '+etiqueta+': '+porcentaje+' %');
           },
           error=>{
             if(terminada)return;
@@ -460,7 +319,8 @@
             if(terminada)return;
             terminada=true;
             clearTimeout(limite);
-            try{resolve(await getDownloadURL(tarea.snapshot.ref));}catch(error){reject(error);}
+            try{resolve(await getDownloadURL(tarea.snapshot.ref));}
+            catch(error){reject(error);}
           }
         );
       });
@@ -583,8 +443,7 @@
           const extension=archivo.type==='image/png'?'png':archivo.type==='image/webp'?'webp':'jpg';
           const ruta=`productos/${auth.currentUser.uid}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
           const archivoRef=ref(storage,ruta);
-          await uploadBytes(archivoRef,archivo,{contentType:archivo.type});
-          fotoURL=await getDownloadURL(archivoRef);
+          fotoURL=await subirFotoConProgreso(archivoRef,archivo,'foto del producto');
         }
         const datos={
           nombre,descripcion:$('descripcion').value.trim(),precio,categoria,
@@ -598,7 +457,7 @@
         mensaje('✅ Producto guardado correctamente en Firebase.');
       }catch(error){
         console.error(error);
-        mensaje('No se pudo guardar: '+(error.code==='permission-denied'?'faltan permisos de Firebase.':error.message||'revisa Firebase Storage y las reglas.'));
+        mensaje('No se pudo guardar: '+(String(error.code||'').startsWith('storage/')?'Error de Firebase Storage ('+error.code+'). Verifica el depósito y sus reglas. Puedes quitar el archivo y guardar sin foto.':error.code==='permission-denied'?'Faltan permisos de Firebase.':error.message||'Revisa Firebase Storage y sus reglas.'));
       }finally{boton.disabled=false;}
     });
   </script>
