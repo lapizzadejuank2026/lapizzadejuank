@@ -202,7 +202,19 @@
     let productosAdmin = [];
     let catalogoCargado = false;
     let categoriaActual = 'Pizzas';
-    const flavors = ['Hawaiana','Carnes','Pollo champiñón','Mi Tierrita','Mexicana','Venezolana','De la Casa','Ranchera','Campesina','Pepperoni'];
+    const saboresBase = [
+      {id:'hawaiana',nombre:'Hawaiana'},
+      {id:'carnes',nombre:'Carnes'},
+      {id:'pollo-champinon',nombre:'Pollo champiñón'},
+      {id:'mi-tierrita',nombre:'Mi Tierrita'},
+      {id:'mexicana',nombre:'Mexicana'},
+      {id:'venezolana',nombre:'Venezolana'},
+      {id:'de-la-casa',nombre:'De la Casa'},
+      {id:'ranchera',nombre:'Ranchera'},
+      {id:'campesina',nombre:'Campesina'},
+      {id:'pepperoni',nombre:'Pepperoni'}
+    ];
+    let flavors = saboresBase.map(s=>s.nombre);
     const money = value => new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(value);
     const byId = id => document.getElementById(id);
     const storageKey = 'juanK-carrito-demo-v1';
@@ -462,11 +474,16 @@
     window.actualizarCatalogoFirebase=(documentos)=>{
       const nuevos=[];
       const overrides=new Map();
+      const overridesSabores=new Map();
       for(const item of documentos) {
         const d=item.d||{};
         const precio=Number(d.precio);
         if(d.tipo==='pizza-tamano' && item.id.startsWith('pizza-tamano-')) {
-          overrides.set(item.id.slice(13),d);
+          overrides.set(item.id.slice('pizza-tamano-'.length),d);
+          continue;
+        }
+        if(d.tipo==='pizza-sabor' && item.id.startsWith('pizza-sabor-')) {
+          overridesSabores.set(item.id.slice('pizza-sabor-'.length),d);
           continue;
         }
         if(d.activo===false || !String(d.nombre||'').trim() || !String(d.categoria||'').trim() ||
@@ -491,6 +508,11 @@
           price:d && Number.isInteger(nuevoPrecio) && nuevoPrecio>=0?nuevoPrecio:p.price,
           activo:d?d.activo!==false:true
         };
+      });
+      flavors=saboresBase.filter(s=>overridesSabores.get(s.id)?.activo!==false).map(s=>{
+        const override=overridesSabores.get(s.id);
+        const nombre=String(override?.nombre||'').trim();
+        return nombre||s.nombre;
       });
       productosAdmin=nuevos;
       catalogoCargado=true;
