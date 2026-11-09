@@ -27,7 +27,7 @@
     .producto img{max-width:110px;max-height:110px;object-fit:cover;border-radius:10px;float:right;margin-left:10px}
     .producto h3{margin:0 0 6px}
     .producto p{overflow-wrap:anywhere}
-    #mensaje,#errorLogin,#mensajePizzas{color:#ffd575;font-weight:bold;white-space:pre-wrap}
+    #mensaje,#errorLogin,#mensajePizzas,#mensajeSabores{color:#ffd575;font-weight:bold;white-space:pre-wrap}
     .tamano{background:#1b1b1b;border:1px solid #454545;border-radius:11px;padding:12px;margin:10px 0}
     .tamano .fila{align-items:center}
     .tamano .check{margin-top:14px}
@@ -70,6 +70,15 @@
           <button type="submit" id="guardarPizzas">💾 Guardar nombres, precios y tamaños</button>
         </form>
         <p id="mensajePizzas" role="status"></p>
+      </section>
+      <section class="caja">
+        <h2>🧀 Sabores de pizza que ya tenemos</h2>
+        <p class="ayuda">Aquí están los sabores del menú original. Puedes cambiar sus nombres o mostrar y ocultar cada sabor. El precio de la pizza depende del tamaño elegido arriba.</p>
+        <form id="formSabores">
+          <div id="listaSabores"></div>
+          <button id="guardarSabores" type="submit">💾 Guardar sabores de pizza</button>
+        </form>
+        <p id="mensajeSabores" role="status"></p>
       </section>
       <section class="caja">
         <h2 id="tituloForm">Agregar producto</h2>
@@ -150,7 +159,75 @@
       {id:'mediana',nombre:'Pizza mediana',precio:45000,max:3},
       {id:'familiar',nombre:'Pizza familiar',precio:62000,max:3}
     ];
+    const saboresBase=[
+      {id:'hawaiana',nombre:'Hawaiana'},
+      {id:'carnes',nombre:'Carnes'},
+      {id:'pollo-champinon',nombre:'Pollo champiñón'},
+      {id:'mi-tierrita',nombre:'Mi Tierrita'},
+      {id:'mexicana',nombre:'Mexicana'},
+      {id:'venezolana',nombre:'Venezolana'},
+      {id:'de-la-casa',nombre:'De la Casa'},
+      {id:'ranchera',nombre:'Ranchera'},
+      {id:'campesina',nombre:'Campesina'},
+      {id:'pepperoni',nombre:'Pepperoni'}
+    ];
     let sincronizandoTamanos=false;
+    let sincronizandoSabores=false;
+    function pintarSabores(){
+      if(sincronizandoSabores) return;
+      const lista=$('listaSabores');
+      lista.replaceChildren();
+      for (const sabor of saboresBase){
+        const dato=productos.find(p=>p.id==='pizza-sabor-'+sabor.id && p.tipo==='pizza-sabor')||{};
+        const contenedor=document.createElement('div');contenedor.className='tamano';
+        const fila=document.createElement('div');fila.className='fila';
+        const label=document.createElement('label');label.textContent='Sabor de pizza';
+        const nombre=document.createElement('input');
+        nombre.type='text';nombre.required=true;nombre.maxLength=100;
+        nombre.dataset.nombreSabor=sabor.id;
+        nombre.setAttribute('aria-label','Nombre del sabor '+sabor.nombre);
+        nombre.value=dato.nombre||sabor.nombre;
+        label.append(nombre);
+        const visible=document.createElement('label');visible.className='check';
+        const activo=document.createElement('input');activo.type='checkbox';
+        activo.dataset.visibleSabor=sabor.id;
+        activo.checked=dato.activo!==false;
+        visible.append(activo,document.createTextNode('Disponible'));
+        fila.append(label,visible);
+        contenedor.append(fila);
+        lista.append(contenedor);
+      }
+    }
+    $('formSabores').addEventListener('submit',async e=>{
+      e.preventDefault();
+      if(!auth.currentUser){
+        $('mensajeSabores').textContent='Inicia sesión para guardar.';
+        return;
+      }
+      const cambios=saboresBase.map((sabor,idx)=>{
+        const nombre=$('listaSabores').querySelector('[data-nombre-sabor="'+sabor.id+'"]').value.trim();
+        const activo=$('listaSabores').querySelector('[data-visible-sabor="'+sabor.id+'"]').checked;
+        if(!nombre) throw new Error('Revisa el nombre del sabor '+sabor.nombre);
+        return {id:'pizza-sabor-'+sabor.id,nombre,activo,orden:idx+1,tipo:'pizza-sabor',categoria:'Pizzas',actualizadoEn:serverTimestamp()};
+      });
+      const boton=$('guardarSabores');
+      boton.disabled=true;
+      sincronizandoSabores=true;
+      $('mensajeSabores').textContent='Guardando sabores...';
+      try{
+        for(const {id,...datos} of cambios){
+          await setDoc(doc(db,'productos',id),datos,{merge:true});
+        }
+        $('mensajeSabores').textContent='✅ Sabores actualizados en Firebase.';
+      }catch(error){
+        console.error(error);
+        $('mensajeSabores').textContent='No se pudieron guardar todos los sabores: '+(error.code==='permission-denied'?'Revisa las reglas de Firebase.':error.message||'Revisa tu conexión.');
+      }finally{
+        sincronizandoSabores=false;
+        boton.disabled=false;
+        pintarSabores();
+      }
+    });
     function pintarTamanos(){
       if(sincronizandoTamanos)return;
       const lista=$('listaTamanos');
@@ -234,6 +311,7 @@
         productos=snapshot.docs.map(x=>({id:x.id,...x.data()}));
         pintar();
         pintarTamanos();
+        pintarSabores();
       },error=>{
         $('lista').textContent='No hay acceso a la colección productos. Antes de guardar hay que configurar las reglas de Firestore para el administrador.';
         console.error(error);
@@ -269,7 +347,7 @@
     function pintar(){
       const lista=$('lista');
       lista.replaceChildren();
-      const productosComunes=productos.filter(x=>x.tipo!=='pizza-tamano');
+      const productosComunes=productos.filter(x=>x.tipo!=='pizza-tamano' && x.tipo!=='pizza-sabor');
       if(!productosComunes.length){lista.textContent='Todavía no hay productos adicionales registrados.';return;}
       const ordenados=[...productosComunes].sort((a,b)=>
         (Number(a.ordenCategoria??10)-Number(b.ordenCategoria??10))||
