@@ -74,33 +74,21 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-  import { getFirestore, collection, addDoc, setDoc, onSnapshot, doc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
-  import { getStorage, ref, uploadBytesResumable, getDownloadURL, setMaxUploadRetryTime } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-storage.js';
+  import { getFirestore, collection, onSnapshot, doc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
 
   const firebaseConfig = {
     apiKey: 'AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA',
     authDomain: 'pizzadejuank.firebaseapp.com',
     projectId: 'pizzadejuank',
-    storageBucket: 'pizzadejuank.firebasestorage.app',
+    storageBucket: 'pizzadejuank.appspot.com',
     messagingSenderId: '856650093973',
     appId: '1:856650093973:web:a4cd3ad8e863617706d29c'
   };
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
-  const storage = getStorage(app);
 
-  // La administración integrada usa exactamente esta sesión y las mismas
-  // funciones de Firebase que la recepción, evitando un segundo inicio de sesión.
-  // El iframe es del mismo origen; el navegador no expone este puente a otros sitios.
-  window.__pizzaAdminBridge = Object.freeze({
-    auth, db, storage,
-    signInWithEmailAndPassword, onAuthStateChanged, signOut,
-    collection, addDoc, doc, updateDoc, setDoc, onSnapshot, serverTimestamp,
-    ref, uploadBytesResumable, getDownloadURL, setMaxUploadRetryTime
-  });
-
-  const acceso = document.getElementById('acceso');
+    const acceso = document.getElementById('acceso');
   const panel = document.getElementById('panel');
   const estado = document.getElementById('estado');
   const lista = document.getElementById('lista');
@@ -125,7 +113,7 @@
     tabProductos.setAttribute('aria-selected', String(!mostrarPedidos));
     if (!mostrarPedidos && !marcoCargado) {
       marcoCargado = true;
-      marcoProductos.src = 'admin-productos.html?integrado=1&v=2';
+      marcoProductos.src = 'admin-productos.html?integrado=1';
     }
   }
   tabPedidos.addEventListener('click', () => cambiarVista('pedidos'));
