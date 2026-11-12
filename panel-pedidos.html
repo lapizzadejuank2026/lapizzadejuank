@@ -654,6 +654,17 @@
           }
         });
         asignacion.append(etiqueta,selector,estadoAsignacion,botonAsignar);
+        // Función preparada visualmente. No enviar ofertas hasta autorizar a cada
+        // domiciliario y garantizar una única aceptación por pedido en Firebase.
+        const botonTodos = document.createElement('button');
+        botonTodos.type = 'button';
+        botonTodos.className = 'secundario';
+        botonTodos.disabled = true;
+        botonTodos.textContent = '📣 Enviar a todos (próximamente)';
+        const avisoTodos = document.createElement('p');
+        avisoTodos.className = 'ayuda';
+        avisoTodos.textContent = 'Próximamente: ofrecer a todos los domiciliarios activos. El primero que acepte se lo queda y la oferta se cierra para los demás.';
+        asignacion.append(botonTodos,avisoTodos);
         if (!personalDisponible || !disponibles.length) {
           const ayuda = document.createElement('p');
           ayuda.className = 'ayuda';
