@@ -35,6 +35,11 @@
     .equipo-form input,.equipo-form select { display:block; width:100%; margin-top:7px; border:0; border-radius:9px; padding:13px; font-size:16px; background:white; color:#111; }
     .equipo-form .fila-botones { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
     .equipo-form .fila-botones button { margin:4px 0; }
+    .asignacion { border-top:1px solid #555; padding-top:12px; margin-top:16px; }
+    .asignacion label { display:block; font-weight:bold; margin:8px 0; }
+    .asignacion select { display:block; width:100%; font:inherit; background:#fff; color:#111; border:0; border-radius:9px; padding:13px; margin:8px 0; }
+    .asignacion .ayuda { color:#ddd; font-size:13px; }
+    .asignacion .estado-asignacion { font-size:14px; color:#ffda83; }
     .equipo-tarjeta { background:#191919; padding:15px; margin:10px 0; border:1px solid #474747; border-radius:10px; }
     .equipo-tarjeta h3 { margin:0 0 9px; font-size:18px; overflow-wrap:anywhere; }
     .equipo-tarjeta .acciones { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
@@ -179,6 +184,8 @@
   let detenerEquipo = () => {};
   let equipoCargado = false;
   let personal = [];
+  let personalDisponible = false;
+  let pedidosCache = [];
   const marcoProductos = document.getElementById('marco-productos');
 
   function cambiarVista(nombre) {
@@ -291,12 +298,16 @@
         personal = snapshot.docs.map(reg => ({ id: reg.id, ...reg.data() }));
         personal.sort((a,b) => String(a.nombre||'').localeCompare(String(b.nombre||''), 'es'));
         equipoMensaje.textContent = '';
+        personalDisponible = true;
         mostrarEquipo();
+        pintar(pedidosCache);
       },
       error => {
         equipoCargado = false;
+        personalDisponible = false;
         personal = [];
         equipoLista.replaceChildren();
+        pintar(pedidosCache);
         equipoEstado.textContent = mensajeErrorEquipo(error);
       }
     );
@@ -435,6 +446,7 @@
   }
 
   function pintar(documentos) {
+    pedidosCache = documentos;
     lista.replaceChildren();
 
     const pedidos = documentos.filter(
@@ -524,6 +536,80 @@
           : '$' + Number(d.total).toLocaleString('es-CO'))
       ));
 
+      // Asignación manual de pedidos a domiciliarios: el estado y la alarma no cambian.
+      const tipoEntrega = String(d.modalidad || d.tipoEntrega || '').toLowerCase();
+      if (tipoEntrega.includes('domicilio') || d.domiciliarioId) {
+        const asignacion = document.createElement('div');
+        asignacion.className = 'asignacion';
+        const etiqueta = document.createElement('label');
+        etiqueta.textContent = '🛵 Domiciliario del pedido';
+        const selector = document.createElement('select');
+        selector.id = 'repartidor-' + id.replace(/[^a-z0-9_-]/gi,'');
+        etiqueta.htmlFor = selector.id;
+        const vacio = document.createElement('option');
+        vacio.value = '';
+        vacio.textContent = 'Selecciona un domiciliario';
+        selector.append(vacio);
+        const disponibles = personal.filter(p => p.rol === 'domiciliario' && p.activo !== false);
+        for (const repartidor of disponibles) {
+          const opcion = document.createElement('option');
+          opcion.value = repartidor.id;
+          opcion.textContent = repartidor.nombre || 'Sin nombre';
+          selector.append(opcion);
+        }
+        const asignado = disponibles.find(p => p.id === d.domiciliarioId);
+        if (d.domiciliarioId && !asignado) {
+          const opcion = document.createElement('option');
+          opcion.value = String(d.domiciliarioId);
+          opcion.textContent = String(d.domiciliarioNombre || 'Asignación anterior') + ' (no disponible)';
+          opcion.disabled = true;
+          selector.append(opcion);
+        }
+        selector.value = d.domiciliarioId || '';
+        const estadoAsignacion = document.createElement('p');
+        estadoAsignacion.className = 'estado-asignacion';
+        estadoAsignacion.setAttribute('role','status');
+        estadoAsignacion.textContent = d.domiciliarioId
+          ? 'Asignado a: ' + (d.domiciliarioNombre || 'domiciliario registrado')
+          : 'Pendiente de asignación';
+        const botonAsignar = document.createElement('button');
+        botonAsignar.type = 'button';
+        botonAsignar.textContent = '💾 Guardar asignación';
+        botonAsignar.disabled = !personalDisponible || !disponibles.length;
+        botonAsignar.addEventListener('click', async()=>{
+          const repartidor = disponibles.find(p => p.id === selector.value);
+          if (!repartidor || !auth.currentUser) {
+            estadoAsignacion.textContent = 'Selecciona un domiciliario activo.';
+            return;
+          }
+          botonAsignar.disabled = true;
+          estadoAsignacion.textContent = 'Guardando...';
+          try {
+            await updateDoc(doc(db,'pedidos',id), {
+              domiciliarioId:repartidor.id,
+              domiciliarioNombre:repartidor.nombre,
+              domiciliarioAsignadoEn:serverTimestamp()
+            });
+            estadoAsignacion.textContent = '✅ Asignado a ' + repartidor.nombre;
+          }catch(error){
+            estadoAsignacion.textContent = error?.code === 'permission-denied'
+              ? 'Firebase no permite asignar el pedido. Revisa las reglas de Firestore.'
+              : 'No se pudo guardar la asignación. Revisa la conexión.';
+            botonAsignar.disabled = false;
+          }
+        });
+        asignacion.append(etiqueta,selector,estadoAsignacion,botonAsignar);
+        if (!personalDisponible || !disponibles.length) {
+          const ayuda = document.createElement('p');
+          ayuda.className = 'ayuda';
+          ayuda.textContent = !personalDisponible
+            ? 'Falta autorizar la colección personal en Firebase.'
+            : 'Primero registra un domiciliario activo en Equipo y roles.';
+          asignacion.append(ayuda);
+        }
+        tarjeta.append(asignacion);
+      }
+
       if (nuevo) {
         const boton = document.createElement('button');
         boton.textContent = '✅ Confirmar recepción';
@@ -555,7 +641,9 @@
     detenerEscucha();
     detenerEquipo();
     equipoCargado = false;
+    personalDisponible = false;
     personal = [];
+    pedidosCache = [];
     equipoLista.replaceChildren();
     limpiarEquipo();
 
@@ -576,7 +664,8 @@
       'Sesión: ' + user.email;
 
     estado.textContent = 'Conectando con Firestore...';
-    equipoEstado.textContent = 'Abre Equipo y roles para consultar el personal.';
+    equipoEstado.textContent = 'Consultando personal disponible...';
+    escucharEquipo();
 
     detenerEscucha = onSnapshot(
       collection(db, 'pedidos'),
