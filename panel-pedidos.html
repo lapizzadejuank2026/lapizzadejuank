@@ -25,7 +25,7 @@
     .asignacion button { margin-top:10px; }
     .asignacion .aviso-equipo { color:#e0c388; font-size:13px; overflow-wrap:anywhere; }
     [hidden] { display: none !important; }
-    .tabs { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin:0 0 18px; position:sticky; top:0; z-index:5; padding:10px 0; background:#121212; }
+    .tabs { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; margin:0 0 18px; position:sticky; top:0; z-index:5; padding:10px 0; background:#121212; }
     .tabs button { margin:0; background:#292929; color:#f2f2f2; border:1px solid #484848; text-align:center; padding:14px 8px; font-size:15px; }
     .tabs button[aria-selected="true"] { color:#1b1410; background:#f6bd42; border-color:#f6bd42; }
     .tabs .cantidad { display:inline-block; border-radius:20px; padding:2px 7px; background:#a71919; color:white; font-size:12px; margin-left:4px; min-width:23px; }
@@ -33,13 +33,13 @@
     .resumen strong { color:#f6bd42; }
     .seccion-titulo { font-size:21px; margin:10px 0 4px; }
     .hint { color:#c8c8c8; font-size:14px; line-height:1.45; }
-    #marco-productos { display:block; width:100%; height:1100px; border:0; border-radius:13px; background:#111; }
+    #marco-productos, #marco-equipo { display:block; width:100%; height:1100px; border:0; border-radius:13px; background:#111; }
     button:focus-visible { outline:3px solid #fff; outline-offset:2px; }
-    @media(max-width:520px) { header{padding:18px 12px} h1{font-size:23px} main{padding:10px 10px 24px} .caja,.pedido{padding:15px} .tabs{gap:6px} .tabs button{font-size:14px;padding:14px 5px} }
+    @media(max-width:520px) { header{padding:18px 12px} h1{font-size:23px} main{padding:10px 10px 24px} .caja,.pedido{padding:15px} .tabs{gap:6px} .tabs button{font-size:12px;padding:12px 3px} }
   </style>
 </head>
 <body>
-<header><h1>🍕 La Pizza de Juan K</h1><div>Centro de control · Pedidos y productos</div></header>
+<header><h1>🍕 La Pizza de Juan K</h1><div>Centro de control · Pedidos, productos y equipo</div></header>
 <main>
   <section id="acceso" class="caja">
     <h2>Acceso del negocio</h2>
@@ -55,6 +55,7 @@
     <nav class="tabs" aria-label="Secciones del administrador">
       <button id="tab-pedidos" type="button" role="tab" aria-controls="vista-pedidos" aria-selected="true">🔔 Pedidos <span id="nuevos-tab" class="cantidad" hidden>0</span></button>
       <button id="tab-productos" type="button" role="tab" aria-controls="vista-productos" aria-selected="false">📦 Productos</button>
+      <button id="tab-equipo" type="button" role="tab" aria-controls="vista-equipo" aria-selected="false">👥 Equipo y roles</button>
     </nav>
     <section id="vista-pedidos" role="tabpanel" aria-labelledby="tab-pedidos">
     <div class="caja">
@@ -72,6 +73,13 @@
         <p class="hint">Agrega productos, cambia precios, organiza categorías y administra fotografías. La recepción y su alarma siguen activas mientras trabajas aquí.</p>
       </div>
       <iframe id="marco-productos" title="Editor de productos" loading="lazy"></iframe>
+    </section>
+    <section id="vista-equipo" role="tabpanel" aria-labelledby="tab-equipo" hidden>
+      <div class="caja">
+        <h2 class="seccion-titulo">👥 Mi equipo y roles</h2>
+        <p class="hint">Crea las cuentas de los domiciliarios, asigna roles y activa o desactiva su acceso. Este módulo necesita reglas de seguridad antes de usarse en producción.</p>
+      </div>
+      <iframe id="marco-equipo" title="Gestión de trabajadores"></iframe>
     </section>
   </section>
 </main>
@@ -128,27 +136,40 @@
   let hayNuevos = false;
   let audio;
   let marcoCargado = false;
+  let equipoCargado = false;
   let observadorMarco;
 
   const tabPedidos = document.getElementById('tab-pedidos');
   const tabProductos = document.getElementById('tab-productos');
+  const tabEquipo = document.getElementById('tab-equipo');
   const vistaPedidos = document.getElementById('vista-pedidos');
   const vistaProductos = document.getElementById('vista-productos');
+  const vistaEquipo = document.getElementById('vista-equipo');
   const marcoProductos = document.getElementById('marco-productos');
+  const marcoEquipo = document.getElementById('marco-equipo');
 
   function cambiarVista(nombre) {
     const mostrarPedidos = nombre === 'pedidos';
+    const mostrarProductos = nombre === 'productos';
+    const mostrarEquipo = nombre === 'equipo';
     vistaPedidos.hidden = !mostrarPedidos;
-    vistaProductos.hidden = mostrarPedidos;
+    vistaProductos.hidden = !mostrarProductos;
+    vistaEquipo.hidden = !mostrarEquipo;
     tabPedidos.setAttribute('aria-selected', String(mostrarPedidos));
-    tabProductos.setAttribute('aria-selected', String(!mostrarPedidos));
-    if (!mostrarPedidos && !marcoCargado) {
+    tabProductos.setAttribute('aria-selected', String(mostrarProductos));
+    tabEquipo.setAttribute('aria-selected', String(mostrarEquipo));
+    if (mostrarProductos && !marcoCargado) {
       marcoCargado = true;
       marcoProductos.src = 'admin-productos.html?integrado=1&v=edicion-individual-20261109';
+    }
+    if (mostrarEquipo && !equipoCargado) {
+      equipoCargado = true;
+      marcoEquipo.src = 'equipo-roles.html?v=20261112';
     }
   }
   tabPedidos.addEventListener('click', () => cambiarVista('pedidos'));
   tabProductos.addEventListener('click', () => cambiarVista('productos'));
+  tabEquipo.addEventListener('click', () => cambiarVista('equipo'));
 
   // El iframe es del mismo sitio. Ajustar su altura evita dos barras de desplazamiento.
   marcoProductos.addEventListener('load', () => {
@@ -169,6 +190,25 @@
       marcoProductos.addEventListener('load', () => mutaciones.disconnect(), {once:true});
     } catch (e) {
       // Si el contenido no está disponible, el iframe conserva altura mínima.
+    }
+  });
+
+  marcoEquipo.addEventListener('load', () => {
+    try {
+      const interno = marcoEquipo.contentDocument;
+      if (!interno) return;
+      const ajustar = () => {
+        const alto = Math.max(interno.body?.scrollHeight || 0, interno.documentElement?.scrollHeight || 0, 650);
+        marcoEquipo.style.height = (alto + 20) + 'px';
+      };
+      ajustar();
+      const observador = new ResizeObserver(ajustar);
+      if (interno.body) observador.observe(interno.body);
+      const mutaciones = new MutationObserver(ajustar);
+      if (interno.body) mutaciones.observe(interno.body, {childList:true,subtree:true,attributes:true});
+      marcoEquipo.addEventListener('load', () => {observador.disconnect();mutaciones.disconnect();},{once:true});
+    } catch (error) {
+      // No interferir con Pedidos si falla la visualización del equipo.
     }
   });
 
