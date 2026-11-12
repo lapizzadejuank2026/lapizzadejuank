@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ae2020">
+  <title>Domiciliarios | La Pizza de Juanca</title>
+  <style>
+    :root{color-scheme:dark;--fondo:#101010;--panel:#232323;--rojo:#ad2020;--oro:#f5bd43;--texto:#fff;--suave:#d3d3d3}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--fondo);color:var(--texto)}
+    header{background:var(--rojo);padding:25px 17px;text-align:center}
+    header h1{margin:0 0 8px;font-size:26px}
+    header p{margin:0;color:#ffe8e8;font-size:15px}
+    main{max-width:650px;margin:0 auto;padding:16px 14px 40px}
+    .caja{background:var(--panel);border-radius:16px;padding:20px;margin:13px 0}
+    h2{font-size:21px;margin:0 0 12px}
+    p{line-height:1.5}
+    .ayuda{font-size:14px;color:var(--suave)}
+    .aviso{color:#ffdb86;background:#342b1c;padding:14px;border-radius:10px;font-size:14px;line-height:1.5}
+    label{display:block;font-size:15px;font-weight:bold;margin:13px 0 6px}
+    input{display:block;width:100%;border:1px solid #bbb;background:#fff;color:#111;border-radius:10px;padding:13px;font:inherit;margin-top:7px}
+    button{font:inherit;cursor:pointer;border:0;border-radius:11px;padding:14px 13px;font-weight:bold}
+    .principal{width:100%;background:var(--oro);color:#17120c;margin-top:17px;font-size:17px}
+    .secundario{background:#ececec;color:#151515}
+    .principal:disabled,.secundario:disabled{opacity:.45;cursor:not-allowed}
+    .estado{min-height:21px;color:#ffda83;font-size:14px}
+    .cabecera{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .cabecera p{margin:3px 0;overflow-wrap:anywhere}
+    .cabecera button{font-size:13px;padding:11px;flex:none}
+    .pestanas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:14px 0}
+    .pestanas button{font-size:13px;min-width:0;background:#2c2c2c;color:#fff;border:1px solid #777;padding:13px 4px}
+    .pestanas button[aria-selected="true"]{background:var(--oro);color:#16110d;border-color:var(--oro)}
+    .pasos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:15px}
+    .pasos button{background:#353535;color:white;border:1px solid #575757;min-height:69px}
+    .pasos button:disabled{opacity:.65;cursor:not-allowed}
+    .vacio{padding:26px 16px;border:1px dashed #777;border-radius:12px;text-align:center;color:#ddd}
+    .vacio .icono{font-size:45px;display:block;margin-bottom:9px}
+    [hidden]{display:none!important}
+    a{color:#ffe09b}
+    button:focus-visible,input:focus-visible{outline:3px solid white;outline-offset:2px}
+  </style>
+</head>
+<body>
+<header>
+  <h1>🛵 La Pizza de Juanca</h1>
+  <p>Aplicación de domiciliarios</p>
+</header>
+<main>
+  <section class="caja" id="acceso">
+    <h2>Ingresar a mi cuenta</h2>
+    <p class="ayuda">Esta pantalla es para los repartidores registrados por el administrador.</p>
+    <form id="login">
+      <label>Correo electrónico
+        <input id="correo" type="email" autocomplete="username" placeholder="correo@ejemplo.com" required>
+      </label>
+      <label>Contraseña
+        <input id="clave" type="password" autocomplete="current-password" required>
+      </label>
+      <button id="entrar" class="principal" type="submit">🔐 Iniciar sesión</button>
+    </form>
+    <p id="mensaje-acceso" class="estado" role="status" aria-live="polite">Preparando el acceso...</p>
+    <p class="aviso">🔒 El administrador debe crear y autorizar la cuenta del domiciliario en Firebase antes de usar pedidos reales. Este portal está en preparación.</p>
+  </section>
+  <section id="portal" hidden>
+    <div class="caja cabecera">
+      <div><h2>Mi jornada</h2><p id="correo-sesion" class="ayuda"></p></div>
+      <button class="secundario" id="salir" type="button">Salir</button>
+    </div>
+    <p class="aviso" role="status">🛡️ Sesión autenticada. La asignación de pedidos seguirá deshabilitada hasta vincular tu cuenta al rol de domiciliario y configurar las reglas de seguridad de Firebase.</p>
+    <nav class="pestanas" aria-label="Secciones de la aplicación">
+      <button type="button" id="tab-pedidos" aria-selected="true">📦 Mis pedidos</button>
+      <button type="button" id="tab-historial" aria-selected="false">🕘 Historial</button>
+      <button type="button" id="tab-cuenta" aria-selected="false">👤 Mi cuenta</button>
+    </nav>
+    <section class="caja" id="vista-pedidos">
+      <h2>Entregas asignadas</h2>
+      <div class="vacio"><span class="icono">🛵</span><strong>Los pedidos todavía no están conectados</strong><p class="ayuda">Cuando se habiliten las reglas, aquí aparecerán únicamente tus entregas autorizadas.</p></div>
+      <h2 style="margin-top:22px">Estado de entrega</h2>
+      <p class="ayuda">Estos botones se activarán cuando haya un pedido real asignado.</p>
+      <div class="pasos">
+        <button type="button" disabled>✅ Aceptar</button>
+        <button type="button" disabled>🍕 Recogido</button>
+        <button type="button" disabled>🛵 En camino</button>
+        <button type="button" disabled>🏠 Entregado</button>
+      </div>
+    </section>
+    <section class="caja" id="vista-historial" hidden>
+      <h2>Historial de domicilios</h2>
+      <div class="vacio"><span class="icono">🕘</span>El historial se mostrará cuando estén activadas las entregas.</div>
+    </section>
+    <section class="caja" id="vista-cuenta" hidden>
+      <h2>Mi cuenta</h2>
+      <p id="cuenta-correo"></p>
+      <p class="ayuda">La cuenta está autenticada, pero aún debe relacionarse con el registro del trabajador en el administrador. No se muestran datos privados ni pedidos hasta verificar los permisos.</p>
+    </section>
+  </section>
+  <p class="ayuda" style="text-align:center"><a href="index.html">← Volver a La Pizza de Juanca</a></p>
+</main>
+<script>
+  window.__domiciliariosListo=false;
+  document.getElementById('login').addEventListener('submit',e=>{
+    e.preventDefault();
+    if(!window.__domiciliariosListo){
+      document.getElementById('mensaje-acceso').textContent='No se pudo cargar Firebase. Comprueba la conexión a Internet y vuelve a abrir la página.';
+    }
+  },true);
+</script>
+<script type="module">
+  import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
+  import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
+  const app=initializeApp({
+    apiKey:'AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA',
+    authDomain:'pizzadejuank.firebaseapp.com',
+    projectId:'pizzadejuank',
+    storageBucket:'pizzadejuank.firebasestorage.app',
+    messagingSenderId:'856650093973',
+    appId:'1:856650093973:web:a4cd3ad8e863617706d29c'
+  });
+  const auth=getAuth(app);
+  const $=id=>document.getElementById(id);
+  const vistas=['pedidos','historial','cuenta'];
+  function seleccionarVista(nombre){
+    for(const n of vistas){
+      $('vista-'+n).hidden=n!==nombre;
+      $('tab-'+n).setAttribute('aria-selected',String(n===nombre));
+    }
+  }
+  for(const nombre of vistas)$('tab-'+nombre).addEventListener('click',()=>seleccionarVista(nombre));
+  $('login').addEventListener('submit',async e=>{
+    e.preventDefault();
+    $('entrar').disabled=true;
+    $('mensaje-acceso').textContent='Comprobando cuenta...';
+    try{
+      await signInWithEmailAndPassword(auth,$('correo').value.trim(),$('clave').value);
+      $('clave').value='';
+    }catch(error){
+      const codigo=error?.code||'';
+      $('mensaje-acceso').textContent={
+        'auth/invalid-credential':'Correo o contraseña incorrectos.',
+        'auth/too-many-requests':'Demasiados intentos. Intenta más tarde.',
+        'auth/network-request-failed':'Revisa tu conexión a Internet.',
+        'auth/operation-not-allowed':'El acceso por correo no está habilitado.',
+        'auth/unauthorized-domain':'Falta autorizar este dominio en Firebase.'
+      }[codigo]||'No fue posible iniciar sesión ('+codigo+').';
+    }finally{
+      $('entrar').disabled=false;
+    }
+  });
+  $('salir').addEventListener('click',()=>signOut(auth));
+  onAuthStateChanged(auth,user=>{
+    $('acceso').hidden=!!user;
+    $('portal').hidden=!user;
+    $('correo-sesion').textContent=user?.email||'';
+    $('cuenta-correo').textContent=user?'Correo: '+(user.email||'No disponible'):'';
+    if(!user){
+      $('mensaje-acceso').textContent='Tu encargado debe activar tu acceso.';
+      seleccionarVista('pedidos');
+    }
+  },error=>{
+    $('mensaje-acceso').textContent='No se pudo verificar la sesión ('+(error.code||'error')+').';
+  });
+  window.__domiciliariosListo=true;
+</script>
+</body>
+</html>
