@@ -15,7 +15,7 @@ El menú y el panel actualmente publicados deben seguir funcionando.
 
 ## Antes de publicar: tareas indispensables
 
-1. Crear primero el usuario del domiciliario en Firebase Authentication con correo/contraseña. Para invitar usuarios desde la propia aplicación hará falta un proceso de registro confiable; nunca guardar contraseñas en Firestore.
+1. **Nuevo flujo propuesto:** desde `equipo-roles.html`, el administrador crea la cuenta del domiciliario en Firebase Authentication mediante una instancia secundaria aislada (para no perder su sesión). Se genera una contraseña temporal aleatoria que NO se guarda ni se muestra; se escribe el perfil `equipo/{uid}` y se solicita un correo de recuperación para que el domiciliario elija su propia contraseña. Esto **no se habilita en producción** hasta confirmar la entrega del correo y las reglas de acceso. Si falla la escritura en Firestore, se intenta eliminar la cuenta recién creada para evitar perfiles huérfanos. Si falla ese intento, se requiere una limpieza manual con el UID indicado.
 2. Crear documento **equipo/UID_DEL_DOMICILIARIO**, con nombre, rol = domiciliario, activo = true y restauranteId = la-pizza-de-juanca. El ID del documento debe ser su UID real de Authentication.
 3. Revisar las reglas VIGENTES de Firestore antes de cambiarlas. Conservar intactos los permisos actuales del administrador y el permiso limitado de crear pedidos para clientes anónimos.
 4. Solo el administrador puede listar, crear, actualizar o desactivar perfiles en equipo. El repartidor solo puede obtener su propio perfil y no cambiar el rol ni el estado activo.
@@ -26,7 +26,8 @@ El menú y el panel actualmente publicados deben seguir funcionando.
 
 ## Cambios de código
 
-- panel-pedidos.html: selector de repartidor y botón para guardar la asignación; no modifica la lógica de confirmación ni la alarma.
+- panel-pedidos.html: incorpora pestaña **Equipo y roles** y selector de repartidor, con botón para guardar la asignación; no modifica la lógica de confirmación ni la alarma.
+- equipo-roles.html: formulario para crear cuenta, invitación por correo y altas/bajas de perfiles, sujeto al bloqueo de permisos de Firestore. La cuenta Auth de un empleado desactivado permanece existente, pero las reglas deben impedirle consultar o modificar pedidos.
 - domiciliario.html: página con inicio de sesión, consulta filtrada por UID, información de entrega, cambios de estado y pago mixto.
 - La demo pública **demo-domiciliario.html** sigue separada y solo contiene datos ficticios.
 
@@ -39,3 +40,8 @@ Las reglas de Firestore son aditivas: agregar otro allow demasiado amplio en otr
 ## Secuencia de prueba real
 
 Cliente envía → admin confirma → admin asigna por UID → repartidor entra con su usuario → ve solamente el pedido asignado → acepta → sale a entregar → registra 35.000 efectivo y 25.000 transferencia para un pedido de 60.000 COP → el administrador verifica el pago bancario y recibe el efectivo por un procedimiento separado.
+
+
+## Reglas de acceso y activación
+
+La operación necesita una regla `match /equipo/{uid}` que permita al administrador **listar, crear y actualizar** perfiles; al domiciliario solo **obtener su propio perfil**, pero nunca modificarlo. El acceso a `pedidos` debe exigir UID coincidente, rol `domiciliario`, perfil activo y restaurante autorizado. No añadir un `allow read` público. La seguridad real NO depende de que el selector esté oculto en la pantalla: depende de las reglas en Firestore. Para revocaciones inmediatas de acceso también debe verificarse el perfil activo en cada lectura y modificación. Probar primero con el emulador de Firestore y cuentas de prueba.
