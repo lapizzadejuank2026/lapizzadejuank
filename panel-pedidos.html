@@ -19,6 +19,11 @@
     .dato { margin: 8px 0; overflow-wrap: anywhere; }
     .productos { white-space: pre-wrap; overflow-wrap: anywhere; background: #181818; padding: 12px; border-radius: 8px; }
     .nuevo { border: 2px solid #f6bd42; }
+    .asignacion { margin-top:15px; padding:13px; background:#1a1a1d; border:1px solid #555; border-radius:10px; }
+    .asignacion h3 { margin:0 0 7px; font-size:16px; }
+    .asignacion select { background:#fff; color:#171717; padding:12px; border-radius:8px; border:0; width:100%; font:inherit; }
+    .asignacion button { margin-top:10px; }
+    .asignacion .aviso-equipo { color:#e0c388; font-size:13px; overflow-wrap:anywhere; }
     [hidden] { display: none !important; }
     .tabs { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin:0 0 18px; position:sticky; top:0; z-index:5; padding:10px 0; background:#121212; }
     .tabs button { margin:0; background:#292929; color:#f2f2f2; border:1px solid #484848; text-align:center; padding:14px 8px; font-size:15px; }
@@ -96,7 +101,7 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-  import { getFirestore, collection, onSnapshot, doc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+  import { getFirestore, collection, onSnapshot, doc, updateDoc, serverTimestamp, runTransaction } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
 
   const firebaseConfig = {
     apiKey: 'AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA',
@@ -115,6 +120,10 @@
   const estado = document.getElementById('estado');
   const lista = document.getElementById('lista');
   let detenerEscucha = () => {};
+  let detenerEquipo = () => {};
+  let repartidoresDisponibles = [];
+  let mensajeEquipo = 'Todavía no hay domiciliarios registrados en Mi equipo y roles.';
+  let ultimosPedidos = [];
   let alarmaActiva = false;
   let hayNuevos = false;
   let audio;
@@ -241,6 +250,7 @@
   }
 
   function pintar(documentos) {
+    ultimosPedidos = documentos;
     lista.replaceChildren();
 
     const pedidos = documentos.filter(
@@ -351,6 +361,71 @@
         tarjeta.append(boton);
       }
 
+      // La asignación no altera "estado", por lo que la alarma sigue su ciclo actual.
+      const esDomicilio = String(d.modalidad || d.tipoEntrega || '').toLowerCase() === 'domicilio';
+      if (esDomicilio && !nuevo) {
+        const asignacion = document.createElement('div');
+        asignacion.className = 'asignacion';
+        const subtitulo = document.createElement('h3');
+        subtitulo.textContent = '🛵 Asignación de domiciliario';
+        asignacion.append(subtitulo);
+        if (d.domiciliarioUid) {
+          asignacion.append(linea('Asignado a: ' + (d.domiciliarioNombre || 'Domiciliario')));
+          asignacion.append(linea('Estado de la entrega: ' + (d.estadoDomicilio || 'asignado')));
+          asignacion.append(linea('El repartidor verá los datos del cliente desde su cuenta autorizada.'));
+        } else if (repartidoresDisponibles.length) {
+          const elegir = document.createElement('select');
+          elegir.setAttribute('aria-label', 'Seleccionar domiciliario para el pedido ' + id.slice(0,8));
+          const tituloOpcion = document.createElement('option');
+          tituloOpcion.value = '';
+          tituloOpcion.textContent = 'Selecciona un domiciliario';
+          elegir.append(tituloOpcion);
+          for (const repartidor of repartidoresDisponibles) {
+            const opcion = document.createElement('option');
+            opcion.value = repartidor.uid;
+            opcion.textContent = repartidor.nombre;
+            elegir.append(opcion);
+          }
+          const asignar = document.createElement('button');
+          asignar.type = 'button';
+          asignar.textContent = '🛵 Asignar domiciliario';
+          asignar.addEventListener('click', async () => {
+            const repartidor = repartidoresDisponibles.find(x => x.uid === elegir.value);
+            if (!repartidor) { alert('Primero selecciona un domiciliario activo.'); return; }
+            if (!confirm('¿Asignar el pedido ' + id.slice(0,8) + ' a ' + repartidor.nombre + '?')) return;
+            asignar.disabled = true;
+            try {
+              await runTransaction(db, async tx => {
+                const referencia = doc(db, 'pedidos', id);
+                const actual = await tx.get(referencia);
+                if (!actual.exists()) throw new Error('El pedido ya no existe.');
+                const datos = actual.data();
+                if (String(datos.estado || '').toLowerCase() !== 'recibido') throw new Error('Confirma primero la recepción del pedido.');
+                if (datos.domiciliarioUid) throw new Error('Este pedido ya tiene un domiciliario asignado.');
+                if (String(datos.modalidad || datos.tipoEntrega || '').toLowerCase() !== 'domicilio') throw new Error('Este pedido no corresponde a un domicilio.');
+                tx.update(referencia, {
+                  domiciliarioUid: repartidor.uid,
+                  domiciliarioNombre: repartidor.nombre,
+                  estadoDomicilio: 'asignado',
+                  asignadoEn: serverTimestamp()
+                });
+              });
+            } catch(error) {
+              console.error('No se pudo asignar domiciliario:',error);
+              alert('No se pudo asignar el pedido. ' + (error?.code || error?.message || 'Revisa Firestore y vuelve a intentarlo.'));
+              asignar.disabled = false;
+            }
+          });
+          asignacion.append(elegir, asignar);
+        } else {
+          const aviso = document.createElement('p');
+          aviso.className = 'aviso-equipo';
+          aviso.textContent = mensajeEquipo;
+          asignacion.append(aviso);
+        }
+        tarjeta.append(asignacion);
+      }
+
       lista.append(tarjeta);
     }
 
@@ -359,6 +434,7 @@
 
   onAuthStateChanged(auth, (user) => {
     detenerEscucha();
+    detenerEquipo();
 
     acceso.hidden = !!user;
     panel.hidden = !user;
@@ -377,6 +453,23 @@
       'Sesión: ' + user.email;
 
     estado.textContent = 'Conectando con Firestore...';
+
+    // Equipo se consulta solo para asignar pedidos de este restaurante.
+    detenerEquipo = onSnapshot(collection(db, 'equipo'),
+      snapshot => {
+        repartidoresDisponibles = snapshot.docs.map(x => ({uid:x.id, ...x.data()}))
+          .filter(x => x.rol === 'domiciliario' && x.activo === true &&
+            x.restauranteId === 'la-pizza-de-juanca' && !!x.nombre)
+          .sort((a,b)=>a.nombre.localeCompare(b.nombre, 'es'));
+        mensajeEquipo = 'Todavía no hay domiciliarios activos registrados para La Pizza de Juanca.';
+        pintar(ultimosPedidos);
+      },
+      error => {
+        repartidoresDisponibles = [];
+        mensajeEquipo = 'El listado de domiciliarios todavía no está habilitado (' + (error?.code || 'sin permisos') + '). Es necesario configurar Mi equipo y roles y las reglas de Firestore.';
+        pintar(ultimosPedidos);
+      }
+    );
 
     detenerEscucha = onSnapshot(
       collection(db, 'pedidos'),
