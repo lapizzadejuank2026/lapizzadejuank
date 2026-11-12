@@ -105,6 +105,10 @@
           <label>Teléfono
             <input id="equipo-telefono" type="tel" maxlength="20" autocomplete="off" placeholder="Número de contacto" required>
           </label>
+          <label>Correo electrónico
+            <input id="equipo-correo" type="email" maxlength="160" autocomplete="off" inputmode="email" placeholder="ejemplo@correo.com">
+            <small id="equipo-correo-ayuda" class="hint">Obligatorio para domiciliarios; opcional para los otros cargos. No crea una cuenta de acceso todavía.</small>
+          </label>
           <label>Rol
             <select id="equipo-rol" required>
               <option value="domiciliario">🛵 Domiciliario</option>
@@ -220,6 +224,8 @@
   const equipoId = document.getElementById('equipo-id');
   const equipoNombre = document.getElementById('equipo-nombre');
   const equipoTelefono = document.getElementById('equipo-telefono');
+  const equipoCorreo = document.getElementById('equipo-correo');
+  const equipoCorreoAyuda = document.getElementById('equipo-correo-ayuda');
   const equipoRol = document.getElementById('equipo-rol');
   const equipoGuardar = document.getElementById('equipo-guardar');
   const equipoCancelar = document.getElementById('equipo-cancelar');
@@ -237,10 +243,20 @@
     ? 'Firestore denegó el acceso a personal. Primero configura reglas para que solo el administrador pueda leer y modificar esta colección.'
     : 'No se pudo acceder al equipo (' + String(error?.code || 'error de conexión') + '). Comprueba la conexión y los permisos.';
 
+  function actualizarCorreoObligatorio() {
+    const obligatorio = equipoRol.value === 'domiciliario';
+    equipoCorreo.required = obligatorio;
+    equipoCorreoAyuda.textContent = obligatorio
+      ? 'Obligatorio para domiciliarios. No crea una cuenta de acceso todavía.'
+      : 'Opcional para este cargo. No crea una cuenta de acceso todavía.';
+  }
+  equipoRol.addEventListener('change', actualizarCorreoObligatorio);
+
   function limpiarEquipo() {
     formEquipo.reset();
     equipoId.value = '';
     equipoRol.value = 'domiciliario';
+    actualizarCorreoObligatorio();
     equipoGuardar.textContent = '💾 Guardar y agregar otro';
     equipoTituloForm.textContent = '➕ Registrar integrante';
     equipoCancelar.hidden = true;
@@ -269,6 +285,9 @@
       const telefono = document.createElement('p');
       telefono.className = 'dato';
       telefono.textContent = 'Teléfono: ' + (persona.telefono || 'No registrado');
+      const correo = document.createElement('p');
+      correo.className = 'dato';
+      correo.textContent = 'Correo: ' + (persona.correo || 'Pendiente de registrar');
       const estadoPersona = document.createElement('p');
       estadoPersona.className = 'dato';
       estadoPersona.textContent = persona.activo === false ? 'Estado: Inactivo' : 'Estado: Activo';
@@ -281,7 +300,9 @@
         equipoId.value = persona.id;
         equipoNombre.value = persona.nombre || '';
         equipoTelefono.value = persona.telefono || '';
+        equipoCorreo.value = persona.correo || '';
         equipoRol.value = rolesEquipo.includes(persona.rol) ? persona.rol : 'colaborador';
+        actualizarCorreoObligatorio();
         equipoGuardar.textContent = '💾 Guardar cambios';
         equipoTituloForm.textContent = '✏️ Editar integrante';
         equipoCancelar.hidden = false;
@@ -308,7 +329,7 @@
         }
       });
       acciones.append(editar, activar);
-      tarjeta.append(titulo, rol, telefono, estadoPersona, acciones);
+      tarjeta.append(titulo, rol, telefono, correo, estadoPersona, acciones);
       equipoLista.append(tarjeta);
     }
   }
@@ -344,15 +365,22 @@
     }
     const nombre = equipoNombre.value.trim().replace(/\s+/g,' ');
     const telefono = equipoTelefono.value.trim();
+    const correo = equipoCorreo.value.trim().toLowerCase();
     const rol = equipoRol.value;
     if (nombre.length < 2 || !/^[0-9 +()\-]{7,20}$/.test(telefono) || !rolesEquipo.includes(rol)) {
       equipoMensaje.textContent = 'Revisa nombre, teléfono y rol antes de guardar.';
       return;
     }
+    if ((rol === 'domiciliario' && !correo) ||
+        (correo && (correo.length > 160 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)))) {
+      equipoMensaje.textContent = 'Escribe un correo válido para el domiciliario. Para otros cargos, puedes dejarlo vacío.';
+      equipoCorreo.focus();
+      return;
+    }
     equipoGuardar.disabled = true;
     equipoMensaje.textContent = 'Guardando en Firestore...';
     try {
-      const datos = { nombre, telefono, rol, actualizadoEn: serverTimestamp() };
+      const datos = { nombre, telefono, correo, rol, actualizadoEn: serverTimestamp() };
       if (equipoId.value) {
         await updateDoc(doc(db, 'personal', equipoId.value), datos);
       } else {
