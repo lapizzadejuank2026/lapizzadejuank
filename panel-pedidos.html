@@ -92,9 +92,9 @@
       <div class="caja">
         <h2 class="seccion-titulo">👥 Equipo y roles</h2>
         <p class="hint">Registra a tus domiciliarios y colaboradores. Estos registros son internos; no crean todavía cuentas para entrar a la aplicación de repartidores.</p>
-        <a class="portal-link" href="domiciliarios.html" target="_blank" rel="noopener">🛵 Abrir aplicación de domiciliarios (vista preliminar)</a>
-        <p class="hint-privada">La pantalla del repartidor ya tiene inicio de sesión y navegación. Los pedidos y sus botones están deshabilitados mientras configuramos los permisos de Firebase.</p>
-        <button type="button" id="equipo-nuevo" class="secundario">➕ Nuevo integrante</button>
+        <button type="button" id="equipo-nuevo" class="secundario">➕ Registrar personal y roles</button>
+        <a class="portal-link" href="domiciliarios.html" target="_blank" rel="noopener">🛵 Abrir aplicación de domiciliarios</a>
+        <p class="hint-privada">Primero registra al trabajador aquí. Para entrar en la aplicación de domiciliarios aún hace falta crear y autorizar su cuenta en Firebase Authentication; esa función está pendiente.</p>
         <p class="hint">Después de guardar, el formulario se limpia automáticamente para agregar otra persona.</p>
         <h3 id="equipo-titulo-form" style="margin-bottom:6px">➕ Registrar integrante</h3>
         <form id="form-equipo" class="equipo-form">
@@ -265,6 +265,7 @@
   equipoNuevo.addEventListener('click', () => {
     limpiarEquipo();
     equipoMensaje.textContent = '';
+    formEquipo.scrollIntoView({behavior:'smooth',block:'start'});
     equipoNombre.focus();
   });
   limpiarEquipo();
