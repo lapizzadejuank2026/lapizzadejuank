@@ -20,7 +20,7 @@
     .productos { white-space: pre-wrap; overflow-wrap: anywhere; background: #181818; padding: 12px; border-radius: 8px; }
     .nuevo { border: 2px solid #f6bd42; }
     [hidden] { display: none !important; }
-    .tabs { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin:0 0 18px; position:sticky; top:0; z-index:5; padding:10px 0; background:#121212; }
+    .tabs { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; margin:0 0 18px; position:sticky; top:0; z-index:5; padding:10px 0; background:#121212; }
     .tabs button { margin:0; background:#292929; color:#f2f2f2; border:1px solid #484848; text-align:center; padding:14px 8px; font-size:15px; }
     .tabs button[aria-selected="true"] { color:#1b1410; background:#f6bd42; border-color:#f6bd42; }
     .tabs .cantidad { display:inline-block; border-radius:20px; padding:2px 7px; background:#a71919; color:white; font-size:12px; margin-left:4px; min-width:23px; }
@@ -29,6 +29,19 @@
     .seccion-titulo { font-size:21px; margin:10px 0 4px; }
     .hint { color:#c8c8c8; font-size:14px; line-height:1.45; }
     #marco-productos { display:block; width:100%; height:1100px; border:0; border-radius:13px; background:#111; }
+    .equipo-form { display:grid; gap:7px; }
+    .equipo-form label { display:block; font-weight:bold; margin:5px 0 0; }
+    .equipo-form input,.equipo-form select { display:block; width:100%; margin-top:7px; border:0; border-radius:9px; padding:13px; font-size:16px; background:white; color:#111; }
+    .equipo-form .fila-botones { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+    .equipo-form .fila-botones button { margin:4px 0; }
+    .equipo-tarjeta { background:#191919; padding:15px; margin:10px 0; border:1px solid #474747; border-radius:10px; }
+    .equipo-tarjeta h3 { margin:0 0 9px; font-size:18px; overflow-wrap:anywhere; }
+    .equipo-tarjeta .acciones { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .equipo-tarjeta .acciones button { margin:7px 0 0; }
+    .equipo-tarjeta.inactivo { opacity:.72; }
+    .hint-privada { color:#f6cf78; font-size:14px; line-height:1.5; }
+    .tabs button { min-width:0; }
+    @media(max-width:520px) { .tabs button { font-size:12px!important; padding:13px 3px!important; } }
     button:focus-visible { outline:3px solid #fff; outline-offset:2px; }
     @media(max-width:520px) { header{padding:18px 12px} h1{font-size:23px} main{padding:10px 10px 24px} .caja,.pedido{padding:15px} .tabs{gap:6px} .tabs button{font-size:14px;padding:14px 5px} }
   </style>
@@ -50,6 +63,7 @@
     <nav class="tabs" aria-label="Secciones del administrador">
       <button id="tab-pedidos" type="button" role="tab" aria-controls="vista-pedidos" aria-selected="true">🔔 Pedidos <span id="nuevos-tab" class="cantidad" hidden>0</span></button>
       <button id="tab-productos" type="button" role="tab" aria-controls="vista-productos" aria-selected="false">📦 Productos</button>
+      <button id="tab-equipo" type="button" role="tab" aria-controls="vista-equipo" aria-selected="false">👥 Equipo y roles</button>
     </nav>
     <section id="vista-pedidos" role="tabpanel" aria-labelledby="tab-pedidos">
     <div class="caja">
@@ -67,6 +81,38 @@
         <p class="hint">Agrega productos, cambia precios, organiza categorías y administra fotografías. La recepción y su alarma siguen activas mientras trabajas aquí.</p>
       </div>
       <iframe id="marco-productos" title="Editor de productos" loading="lazy"></iframe>
+    </section>
+    <section id="vista-equipo" role="tabpanel" aria-labelledby="tab-equipo" hidden>
+      <div class="caja">
+        <h2 class="seccion-titulo">👥 Equipo y roles</h2>
+        <p class="hint">Registra a tus domiciliarios y colaboradores. Estos registros son internos; no crean todavía cuentas para entrar a la aplicación de repartidores.</p>
+        <form id="form-equipo" class="equipo-form">
+          <input id="equipo-id" type="hidden">
+          <label>Nombre completo
+            <input id="equipo-nombre" type="text" maxlength="90" autocomplete="off" placeholder="Nombre del trabajador" required>
+          </label>
+          <label>Teléfono
+            <input id="equipo-telefono" type="tel" maxlength="20" autocomplete="off" placeholder="Número de contacto" required>
+          </label>
+          <label>Rol
+            <select id="equipo-rol" required>
+              <option value="domiciliario">🛵 Domiciliario</option>
+              <option value="colaborador">👨‍🍳 Colaborador</option>
+            </select>
+          </label>
+          <div class="fila-botones">
+            <button id="equipo-guardar" type="submit">💾 Guardar</button>
+            <button id="equipo-cancelar" class="secundario" type="button">Cancelar edición</button>
+          </div>
+        </form>
+        <p id="equipo-mensaje" class="alerta" role="status" aria-live="polite"></p>
+        <p class="hint-privada">🔒 La colección <strong>personal</strong> de Firestore debe permitir lectura y escritura solo al administrador. Si no tiene esos permisos, aparecerá un aviso y no se guardarán datos.</p>
+      </div>
+      <div class="caja">
+        <h2 class="seccion-titulo">Personal registrado</h2>
+        <p id="equipo-estado" class="hint" role="status">Abre esta sección para consultar el personal.</p>
+        <div id="equipo-lista"></div>
+      </div>
     </section>
   </section>
 </main>
@@ -96,7 +142,7 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-  import { getFirestore, collection, onSnapshot, doc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+  import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
 
   const firebaseConfig = {
     apiKey: 'AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA',
@@ -123,23 +169,168 @@
 
   const tabPedidos = document.getElementById('tab-pedidos');
   const tabProductos = document.getElementById('tab-productos');
+  const tabEquipo = document.getElementById('tab-equipo');
   const vistaPedidos = document.getElementById('vista-pedidos');
   const vistaProductos = document.getElementById('vista-productos');
+  const vistaEquipo = document.getElementById('vista-equipo');
+  let detenerEquipo = () => {};
+  let equipoCargado = false;
+  let personal = [];
   const marcoProductos = document.getElementById('marco-productos');
 
   function cambiarVista(nombre) {
-    const mostrarPedidos = nombre === 'pedidos';
-    vistaPedidos.hidden = !mostrarPedidos;
-    vistaProductos.hidden = mostrarPedidos;
-    tabPedidos.setAttribute('aria-selected', String(mostrarPedidos));
-    tabProductos.setAttribute('aria-selected', String(!mostrarPedidos));
-    if (!mostrarPedidos && !marcoCargado) {
+    vistaPedidos.hidden = nombre !== 'pedidos';
+    vistaProductos.hidden = nombre !== 'productos';
+    vistaEquipo.hidden = nombre !== 'equipo';
+    tabPedidos.setAttribute('aria-selected', String(nombre === 'pedidos'));
+    tabProductos.setAttribute('aria-selected', String(nombre === 'productos'));
+    tabEquipo.setAttribute('aria-selected', String(nombre === 'equipo'));
+    if (nombre === 'productos' && !marcoCargado) {
       marcoCargado = true;
       marcoProductos.src = 'admin-productos.html?integrado=1&v=edicion-individual-20261109';
     }
+    if (nombre === 'equipo' && auth.currentUser && !equipoCargado) escucharEquipo();
   }
   tabPedidos.addEventListener('click', () => cambiarVista('pedidos'));
   tabProductos.addEventListener('click', () => cambiarVista('productos'));
+  tabEquipo.addEventListener('click', () => cambiarVista('equipo'));
+
+  // La autenticación es compartida con el panel. El control de permisos real debe estar en Firestore.
+  const formEquipo = document.getElementById('form-equipo');
+  const equipoMensaje = document.getElementById('equipo-mensaje');
+  const equipoEstado = document.getElementById('equipo-estado');
+  const equipoLista = document.getElementById('equipo-lista');
+  const equipoId = document.getElementById('equipo-id');
+  const equipoNombre = document.getElementById('equipo-nombre');
+  const equipoTelefono = document.getElementById('equipo-telefono');
+  const equipoRol = document.getElementById('equipo-rol');
+  const equipoGuardar = document.getElementById('equipo-guardar');
+  const equipoCancelar = document.getElementById('equipo-cancelar');
+  const etiquetaRol = rol => rol === 'domiciliario' ? '🛵 Domiciliario' : '👨‍🍳 Colaborador';
+  const mensajeErrorEquipo = error => error?.code === 'permission-denied'
+    ? 'Firestore denegó el acceso a personal. Primero configura reglas para que solo el administrador pueda leer y modificar esta colección.'
+    : 'No se pudo acceder al equipo (' + String(error?.code || 'error de conexión') + '). Comprueba la conexión y los permisos.';
+
+  function limpiarEquipo() {
+    formEquipo.reset();
+    equipoId.value = '';
+    equipoGuardar.textContent = '💾 Guardar';
+    equipoCancelar.hidden = true;
+  }
+  equipoCancelar.addEventListener('click', () => { limpiarEquipo(); equipoMensaje.textContent = ''; });
+  limpiarEquipo();
+
+  function mostrarEquipo() {
+    equipoLista.replaceChildren();
+    equipoEstado.textContent = personal.length
+      ? personal.length + ' integrante(s) registrado(s).'
+      : 'Aún no hay trabajadores registrados.';
+    for (const persona of personal) {
+      const tarjeta = document.createElement('article');
+      tarjeta.className = 'equipo-tarjeta' + (persona.activo === false ? ' inactivo' : '');
+      const titulo = document.createElement('h3');
+      titulo.textContent = persona.nombre || 'Sin nombre';
+      const rol = document.createElement('p');
+      rol.className = 'dato';
+      rol.textContent = 'Rol: ' + etiquetaRol(persona.rol);
+      const telefono = document.createElement('p');
+      telefono.className = 'dato';
+      telefono.textContent = 'Teléfono: ' + (persona.telefono || 'No registrado');
+      const estadoPersona = document.createElement('p');
+      estadoPersona.className = 'dato';
+      estadoPersona.textContent = persona.activo === false ? 'Estado: Inactivo' : 'Estado: Activo';
+      const acciones = document.createElement('div');
+      acciones.className = 'acciones';
+      const editar = document.createElement('button');
+      editar.type = 'button';
+      editar.textContent = '✏️ Editar';
+      editar.addEventListener('click', () => {
+        equipoId.value = persona.id;
+        equipoNombre.value = persona.nombre || '';
+        equipoTelefono.value = persona.telefono || '';
+        equipoRol.value = persona.rol === 'colaborador' ? 'colaborador' : 'domiciliario';
+        equipoGuardar.textContent = '💾 Guardar cambios';
+        equipoCancelar.hidden = false;
+        equipoMensaje.textContent = 'Editando a ' + (persona.nombre || 'integrante');
+        formEquipo.scrollIntoView({ behavior:'smooth', block:'start' });
+        equipoNombre.focus();
+      });
+      const activar = document.createElement('button');
+      activar.type = 'button';
+      activar.className = 'secundario';
+      activar.textContent = persona.activo === false ? '✅ Activar' : '⏸️ Desactivar';
+      activar.addEventListener('click', async () => {
+        if (!auth.currentUser) return;
+        activar.disabled = true;
+        try {
+          await updateDoc(doc(db, 'personal', persona.id), {
+            activo: persona.activo === false,
+            actualizadoEn: serverTimestamp()
+          });
+          equipoMensaje.textContent = '✅ Estado actualizado.';
+        } catch (error) {
+          equipoMensaje.textContent = mensajeErrorEquipo(error);
+          activar.disabled = false;
+        }
+      });
+      acciones.append(editar, activar);
+      tarjeta.append(titulo, rol, telefono, estadoPersona, acciones);
+      equipoLista.append(tarjeta);
+    }
+  }
+
+  function escucharEquipo() {
+    detenerEquipo();
+    equipoCargado = true;
+    equipoEstado.textContent = 'Consultando Firestore...';
+    detenerEquipo = onSnapshot(collection(db, 'personal'),
+      snapshot => {
+        personal = snapshot.docs.map(reg => ({ id: reg.id, ...reg.data() }));
+        personal.sort((a,b) => String(a.nombre||'').localeCompare(String(b.nombre||''), 'es'));
+        equipoMensaje.textContent = '';
+        mostrarEquipo();
+      },
+      error => {
+        equipoCargado = false;
+        personal = [];
+        equipoLista.replaceChildren();
+        equipoEstado.textContent = mensajeErrorEquipo(error);
+      }
+    );
+  }
+
+  formEquipo.addEventListener('submit', async evento => {
+    evento.preventDefault();
+    if (!auth.currentUser) {
+      equipoMensaje.textContent = 'Debes iniciar sesión como administrador.';
+      return;
+    }
+    const nombre = equipoNombre.value.trim().replace(/\s+/g,' ');
+    const telefono = equipoTelefono.value.trim();
+    const rol = equipoRol.value;
+    if (nombre.length < 2 || !/^[0-9 +()\-]{7,20}$/.test(telefono) || !['domiciliario','colaborador'].includes(rol)) {
+      equipoMensaje.textContent = 'Revisa nombre, teléfono y rol antes de guardar.';
+      return;
+    }
+    equipoGuardar.disabled = true;
+    equipoMensaje.textContent = 'Guardando en Firestore...';
+    try {
+      const datos = { nombre, telefono, rol, actualizadoEn: serverTimestamp() };
+      if (equipoId.value) {
+        await updateDoc(doc(db, 'personal', equipoId.value), datos);
+      } else {
+        await addDoc(collection(db, 'personal'), {
+          ...datos, activo: true, creadoEn: serverTimestamp()
+        });
+      }
+      limpiarEquipo();
+      equipoMensaje.textContent = '✅ Registro guardado correctamente.';
+    } catch (error) {
+      equipoMensaje.textContent = mensajeErrorEquipo(error);
+    } finally {
+      equipoGuardar.disabled = false;
+    }
+  });
 
   // El iframe es del mismo sitio. Ajustar su altura evita dos barras de desplazamiento.
   marcoProductos.addEventListener('load', () => {
@@ -359,6 +550,11 @@
 
   onAuthStateChanged(auth, (user) => {
     detenerEscucha();
+    detenerEquipo();
+    equipoCargado = false;
+    personal = [];
+    equipoLista.replaceChildren();
+    limpiarEquipo();
 
     acceso.hidden = !!user;
     panel.hidden = !user;
@@ -377,6 +573,7 @@
       'Sesión: ' + user.email;
 
     estado.textContent = 'Conectando con Firestore...';
+    equipoEstado.textContent = 'Abre Equipo y roles para consultar el personal.';
 
     detenerEscucha = onSnapshot(
       collection(db, 'pedidos'),
