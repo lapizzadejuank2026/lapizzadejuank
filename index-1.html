@@ -609,7 +609,8 @@
     appId: "1:856650093973:web:a4cd3ad8e863617706d29c"
   };
 
-  const app = initializeApp(firebaseConfig);
+  // El menú usa una sesión anónima propia; no reutiliza el login del administrador.
+  const app = initializeApp(firebaseConfig, 'menu-clientes');
     const appCheck = initializeAppCheck(app, {
   provider: new ReCaptchaEnterpriseProvider("6LePJQ8uAAAAAI0QV2VRfwHdOl-_EuMxM6zLNmuE"),
   isTokenAutoRefreshEnabled: true
