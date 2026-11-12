@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#151518">
+<title>Mi equipo y roles | La Pizza de Juanca</title>
+<style>
+:root{color-scheme:dark;--bg:#151518;--panel:#242429;--border:#484851;--text:#fff;--muted:#c9c9d2;--gold:#f1bd48;--red:#c22f48}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:20px 14px 40px}
+h1,h2,h3,p{margin:0 0 12px}h1{font-size:25px}h2{font-size:20px}h3{font-size:17px}
+p{color:var(--muted)}.muted{color:var(--muted)}.small{font-size:13px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:17px;margin:14px 0}
+.note{border-left:4px solid var(--gold);padding:10px 13px;background:#332d21;border-radius:8px;margin:14px 0;color:#f6ddaf;font-size:13px}
+.error{color:#ffabb8;white-space:pre-wrap;font-weight:700;font-size:14px}
+.success{color:#a3edc1;font-weight:700;font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+label{display:block;font-size:13px;font-weight:750;margin:0 0 12px}
+input,select{display:block;width:100%;margin-top:5px;padding:12px;min-height:44px;border-radius:9px;border:1px solid #64646c;background:#303036;color:#fff;font:inherit}
+button{border:0;border-radius:9px;font:inherit;font-weight:800;padding:12px 15px;min-height:44px;cursor:pointer;background:var(--gold);color:#241907}
+button.secondary{background:#3d3d45;color:#fff;border:1px solid #555}
+button.danger{background:#642b37;color:white}
+button:disabled{opacity:.5;cursor:wait}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.actions{display:flex;gap:9px;flex-wrap:wrap}.actions button{flex:1}
+.chip{border-radius:30px;padding:4px 10px;font-size:12px;font-weight:750;background:#503e2b;color:#ffe0a4}
+.chip.inactive{background:#4a3339;color:#ffc0ce}
+.person{border-top:1px solid #53535b;padding:16px 0}.person:first-child{border-top:0}
+.person-head{display:flex;justify-content:space-between;align-items:center;gap:9px}
+.person strong{font-size:18px}.person p{font-size:13px;margin:5px 0 10px;overflow-wrap:anywhere}
+.toolbar{display:flex;justify-content:space-between;gap:10px;align-items:center}
+[hidden]{display:none!important}
+@media(max-width:590px){.grid{grid-template-columns:1fr}.toolbar,.person-head{flex-wrap:wrap}.panel{padding:14px}}
+</style>
+</head>
+<body>
+<main>
+<header><h1>👥 Mi equipo y roles</h1><p>La Pizza de Juanca · Crear cuentas de domiciliarios y gestionar su acceso.</p></header>
+<div class="note"><strong>Módulo en pruebas:</strong> todavía faltan las reglas de seguridad de Firestore y las pruebas de acceso. No activar para trabajadores reales hasta completarlas.</div>
+<section id="session" class="panel">
+  <p id="session-state" role="status">Verificando la sesión del administrador...</p>
+  <p class="small">Inicia sesión primero en el Centro de Control. Solo el administrador autorizado puede gestionar el equipo.</p>
+  <button type="button" id="retry" class="secondary" hidden>Volver a comprobar acceso</button>
+</section>
+<section id="management" hidden>
+  <div class="panel">
+    <h2>Crear cuenta de domiciliario</h2>
+    <p class="small">Desde aquí se crea su usuario de Firebase Authentication y su perfil de equipo. Se enviará un correo para que establezca su propia contraseña; no guardamos ni mostramos contraseñas del trabajador.</p>
+    <form id="person-form" autocomplete="off">
+      <div class="grid">
+        <label>Nombre y apellido
+          <input id="person-name" required maxlength="80" placeholder="Nombre del trabajador">
+        </label>
+        <label>Correo de su cuenta
+          <input id="person-email" type="email" required maxlength="150" placeholder="repartidor@correo.com">
+        </label>
+        <label>Celular
+          <input id="person-phone" type="tel" required minlength="7" maxlength="20" placeholder="Número de contacto">
+        </label>
+        <label>Rol
+          <select id="person-role" disabled>
+            <option value="domiciliario">🛵 Domiciliario</option>
+          </select>
+        </label>
+      </div>
+      <button type="submit" id="add-member">Crear cuenta y enviar invitación</button>
+    </form>
+    <p id="form-status" role="status"></p>
+  </div>
+  <div class="panel">
+    <div class="toolbar"><h2>Mi equipo</h2><span class="chip" id="team-count">0 integrantes</span></div>
+    <p class="small">Desactivar un perfil impedirá el acceso a sus pedidos cuando estén publicadas las reglas por rol. La cuenta de Authentication no se elimina automáticamente.</p>
+    <div id="team-list"><p>Consultando trabajadores...</p></div>
+  </div>
+</section>
+</main>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, setPersistence, inMemoryPersistence, deleteUser } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
+import { getFirestore, doc, collection, onSnapshot, getDoc, setDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+
+const firebaseConfig={
+ apiKey:'AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA',
+ authDomain:'pizzadejuank.firebaseapp.com',projectId:'pizzadejuank',
+ storageBucket:'pizzadejuank.appspot.com',
+ messagingSenderId:'856650093973',
+ appId:'1:856650093973:web:a4cd3ad8e863617706d29c'
+};
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app), db=getFirestore(app), $=id=>document.getElementById(id);
+const cuentasApp=initializeApp(firebaseConfig,'creacion-cuentas-equipo');
+const cuentasAuth=getAuth(cuentasApp);
+const RESTAURANTE_ID='la-pizza-de-juanca';
+let detenerEquipo=()=>{}, version=0, administrador=null, perfiles=[], habilitado=false, creando=false;
+
+function aviso(mensaje,tipo='error') {
+  $('form-status').textContent=mensaje;
+  $('form-status').className=tipo;
+}
+function establecerAcceso(mensaje,permitido) {
+  habilitado=permitido;
+  $('session-state').textContent=mensaje;
+  $('management').hidden=!permitido;
+  $('person-form').querySelector('button[type="submit"]').disabled=!permitido;
+}
+function crearBoton(label,clase,onClick) {
+  const b=document.createElement('button');
+  b.type='button';b.className=clase;b.textContent=label;
+  b.addEventListener('click',onClick);
+  return b;
+}
+function mostrarEquipo() {
+  const contenedor=$('team-list');contenedor.replaceChildren();
+  $('team-count').textContent=perfiles.length+' integrantes';
+  if(!perfiles.length){
+    const p=document.createElement('p');p.textContent='Todavía no hay domiciliarios registrados.';contenedor.append(p);return;
+  }
+  for(const p of perfiles){
+    const item=document.createElement('div');item.className='person';
+    const head=document.createElement('div');head.className='person-head';
+    const name=document.createElement('strong');name.textContent=p.nombre||'Sin nombre';
+    const tag=document.createElement('span');tag.className='chip'+(p.activo?'':' inactive');tag.textContent=p.activo?'Activo':'Inactivo';
+    head.append(name,tag);item.append(head);
+    const detail=document.createElement('p');
+    detail.textContent=(p.correo||'Sin correo')+' · '+(p.celular||'Sin celular')+' · '+(p.rol||'Sin rol');
+    item.append(detail);
+    const actions=document.createElement('div');actions.className='actions';
+    actions.append(crearBoton(p.activo?'Desactivar':'Activar',p.activo?'danger':'secondary',async e=>{
+      if(!habilitado||creando)return;
+      if(!confirm((p.activo?'¿Desactivar':'¿Activar')+' a '+p.nombre+'?'))return;
+      const button=e.currentTarget;
+      button.disabled=true;
+      try {
+        await updateDoc(doc(db,'equipo',p.uid),{activo:!p.activo,actualizadoEn:serverTimestamp()});
+      } catch(err){alert('No se pudo cambiar el acceso ('+(err?.code||'error')+'). Revisa las reglas de Firebase.');}
+      finally {button.disabled=false;}
+    }));
+    actions.append(crearBoton('Reenviar invitación','secondary',async e=>{
+      if(!habilitado||creando||!p.correo)return;
+      const button=e.currentTarget;button.disabled=true;
+      try{
+        await sendPasswordResetEmail(cuentasAuth,p.correo);
+        alert('Se solicitó un correo para crear o restablecer contraseña. Comprueba la bandeja de entrada y spam.');
+      }catch(err){alert('No se pudo enviar el correo ('+(err?.code||'error')+').');}
+      finally{button.disabled=false;}
+    }));
+    item.append(actions);contenedor.append(item);
+  }
+}
+function claveAleatoria() {
+  if(!crypto?.getRandomValues)throw new Error('Se requiere conexión segura para generar credenciales.');
+  const bytes=new Uint8Array(30);
+  crypto.getRandomValues(bytes);
+  const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
+  return Array.from(bytes,n=>chars[n%chars.length]).join('');
+}
+$('person-form').addEventListener('submit',async event=>{
+  event.preventDefault();
+  if(!habilitado||creando||!administrador)return;
+  const nombre=$('person-name').value.trim(),correo=$('person-email').value.trim().toLowerCase(),
+        celular=$('person-phone').value.trim();
+  if(!nombre||!correo||celular.length<7){aviso('Completa nombre, correo y celular.');return;}
+  if(!confirm('¿Crear una cuenta para '+nombre+' ('+correo+')?'))return;
+  creando=true;$('add-member').disabled=true;aviso('Creando la cuenta del domiciliario...','muted');
+  let creado=null,perfilGuardado=false;
+  try{
+    // La sesión del administrador permanece en la aplicación Firebase predeterminada.
+    await setPersistence(cuentasAuth,inMemoryPersistence);
+    const nuevo=await createUserWithEmailAndPassword(cuentasAuth,correo,claveAleatoria());
+    creado=nuevo.user;
+    try{
+      // Solo las reglas de Firestore para el administrador podrán permitir esta escritura.
+      await setDoc(doc(db,'equipo',creado.uid),{
+        nombre,correo,celular,rol:'domiciliario',restauranteId:RESTAURANTE_ID,
+        activo:true,creadoEn:serverTimestamp(),creadoPor:administrador.uid
+      });
+      perfilGuardado=true;
+    }catch(err){
+      try {await deleteUser(creado);creado=null;}catch(rollbackError){
+        throw new Error('No se pudo guardar el perfil ni deshacer la cuenta de Authentication. UID: '+creado.uid+'. Revisar manualmente el usuario antes de repetir.');
+      }
+      throw err;
+    }
+    $('person-form').reset();
+    try{
+      await sendPasswordResetEmail(cuentasAuth,correo);
+      aviso('Cuenta y perfil creados. Se solicitó un correo para que el domiciliario establezca su contraseña. Verifica que lo reciba.','success');
+    }catch(mailError){
+      aviso('Cuenta y perfil creados, pero el correo no se pudo enviar ('+(mailError?.code||'error')+'). Usa “Reenviar invitación” desde la lista.','error');
+    }
+  }catch(error){
+    console.error('No se pudo registrar domiciliario:',error);
+    aviso(error?.code==='auth/email-already-in-use'?'Ese correo ya tiene una cuenta de Firebase Authentication. Revisa el usuario existente antes de repetir.':
+      'No se pudo completar el registro: '+(error?.code||error?.message||'error')+'.');
+  }finally{
+    if(creado){try{await signOut(cuentasAuth);}catch(err){console.warn('No se pudo cerrar la sesión secundaria:',err);}}
+    creando=false;$('add-member').disabled=!habilitado;
+  }
+});
+$('retry').addEventListener('click',()=>location.reload());
+onAuthStateChanged(auth,user=>{
+  version++;const actual=version;
+  detenerEquipo();detenerEquipo=()=>{};
+  administrador=user;perfiles=[];
+  $('team-list').replaceChildren();
+  if(!user||user.isAnonymous){establecerAcceso('Inicia sesión con la cuenta administradora desde el Centro de Control.',false);return;}
+  establecerAcceso('Comprobando permisos para Mi equipo...',false);
+  detenerEquipo=onSnapshot(collection(db,'equipo'),
+    snapshot=>{
+      if(actual!==version)return;
+      perfiles=snapshot.docs.map(d=>({...d.data(),uid:d.id}))
+        .filter(x=>x.restauranteId===RESTAURANTE_ID)
+        .sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre),'es'));
+      establecerAcceso('Sesión autorizada de administrador: '+(user.email||'usuario'),true);
+      mostrarEquipo();
+    },
+    error=>{
+      if(actual!==version)return;
+      establecerAcceso('Acceso a Mi equipo bloqueado ('+(error?.code||'error')+'). Primero hay que configurar las reglas para el UID de administrador; no cambies los permisos del menú ni de los pedidos.',false);
+    }
+  );
+});
+</script>
+</body>
+</html>

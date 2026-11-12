@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111114">
+  <title>Domiciliarios | La Pizza de Juanca</title>
+  <style>
+    :root{color-scheme:dark;--bg:#101014;--surface:#1b1b21;--raised:#27272d;--edge:#41414c;--text:#f8f8fa;--muted:#babac3;--gold:#edbc55;--red:#bf2c48;--green:#a1eac1}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+    [hidden]{display:none!important}
+    main{max-width:800px;margin:auto;padding:20px 16px 90px}
+    h1,h2,h3,p{margin:0 0 12px}h1{font-size:30px}h2{font-size:21px}
+    .muted{color:var(--muted)}.eyebrow{font-size:12px;text-transform:uppercase;color:var(--gold);font-weight:800;letter-spacing:.12em}
+    .header{display:flex;align-items:center;justify-content:space-between;gap:13px;margin-bottom:25px}
+    .brand{font-size:21px;font-weight:850;line-height:1.1}.brand small{display:block;font-size:12px;color:var(--muted);font-weight:400;margin-top:4px}
+    .card{background:var(--surface);padding:19px;border-radius:17px;border:1px solid var(--edge);margin:12px 0}
+    .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:20px 0 26px}
+    .stat{background:var(--raised);padding:11px;border-radius:12px}.stat strong{display:block;font-size:clamp(17px,4vw,24px)}.stat small{display:block;font-size:11px;color:var(--muted);margin-top:5px}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .line{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:1px solid var(--edge);padding:11px 0}
+    .line:last-child{border:0}
+    .pill{background:#49372b;color:#fbd7a3;border-radius:20px;padding:5px 10px;font-size:12px;font-weight:750}
+    .btn{width:100%;border:0;border-radius:11px;padding:12px 14px;min-height:46px;font-weight:800;font:inherit;cursor:pointer}
+    .btn.gold{background:var(--gold);color:#21170b}.btn.red{background:var(--red);color:#fff}.btn.grey{background:var(--raised);color:#fff;border:1px solid var(--edge)}
+    button:disabled{opacity:.45;cursor:wait}
+    input{width:100%;border:1px solid #666;padding:12px;background:#292933;color:#fff;border-radius:10px;font:inherit}
+    label{display:block;font-weight:700;font-size:14px;margin:15px 0}
+    label input{display:block;margin-top:6px}
+    .notice{color:#ffce91;padding:12px;background:#2d2722;border-radius:11px;margin:13px 0}
+    .alert{color:#ffb5c0;font-size:14px;white-space:pre-wrap}
+    .hint{color:var(--muted);font-size:13px}
+    .tabbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0}
+    .tabbar button{background:#2b2b32;border:1px solid #53535e;color:white;border-radius:12px;padding:13px;font-weight:700}
+    .tabbar button[aria-selected=true]{background:#512737;border-color:#c44b61}
+    .order-title{font-size:20px;font-weight:800}
+    .address{color:#fff;font-weight:650}
+    dialog{max-height:90svh;overflow:auto;width:min(480px,calc(100% - 20px));border-radius:17px;border:1px solid #666;background:var(--surface);padding:0;color:#fff}
+    dialog::backdrop{background:#000a}
+    .modal{padding:22px}.modal h2{margin-top:6px}
+    .fineprint{font-size:12px;color:var(--muted)}
+    .sum{font-size:22px;color:var(--gold);font-weight:800}
+    .flex{display:flex;gap:9px;margin-top:16px}.flex .btn{flex:1}
+    @media(max-width:530px){main{padding:15px 12px 80px}.card{padding:16px}.row{align-items:flex-start}.order-title{font-size:18px}}
+  </style>
+</head>
+<body>
+  <main>
+    <header class="header"><div class="brand">🛵 Domiciliarios<small>La Pizza de Juanca</small></div><button id="signout" type="button" class="btn grey" style="width:auto;min-height:40px" hidden>Salir</button></header>
+    <section id="auth-view" class="card">
+      <span class="eyebrow">Cuenta personal</span><h1>Mi jornada</h1>
+      <p class="muted">Inicia sesión con el correo y contraseña que el restaurante registró para ti. No compartas tu cuenta.</p>
+      <form id="login-form">
+        <label>Correo electrónico<input id="email" type="email" autocomplete="username" required></label>
+        <label>Contraseña<input id="password" type="password" autocomplete="current-password" required></label>
+        <button class="btn gold" type="submit" id="login-button">Entrar a mis pedidos</button>
+      </form>
+      <p id="login-error" role="alert" class="alert"></p>
+    </section>
+    <section id="app-view" hidden>
+      <span class="eyebrow" id="team-name">Mi equipo</span>
+      <h1>Mis pedidos</h1>
+      <p class="hint" id="session-status" role="status">Verificando permisos...</p>
+      <div class="tabbar">
+        <button type="button" id="tab-orders" aria-selected="true">📦 Pedidos</button>
+        <button type="button" id="tab-cash" aria-selected="false">💵 Mi caja</button>
+      </div>
+      <section id="orders-section">
+        <div class="stats">
+          <div class="stat"><strong id="pending">0</strong><small>Por entregar</small></div>
+          <div class="stat"><strong id="done">0</strong><small>Entregados</small></div>
+          <div class="stat"><strong id="cash-top">$0</strong><small>Efectivo cobrado</small></div>
+        </div>
+        <div id="orders-list"><div class="card muted">Cargando pedidos asignados...</div></div>
+      </section>
+      <section id="cash-section" hidden>
+        <div class="card"><h2>Mi caja</h2>
+          <p>El efectivo se entrega completo al restaurante. El pago de tus domicilios se maneja por separado.</p>
+          <div class="line"><span>Efectivo cobrado</span><strong id="cash">$0</strong></div>
+          <div class="line"><span>Transferencias registradas</span><strong id="bank">$0</strong></div>
+          <div class="notice">Las transferencias deben ser verificadas por el administrador. Estos totales corresponden a pedidos asignados visibles; todavía no descuentan entregas de efectivo ya confirmadas por el restaurante.</div>
+        </div>
+      </section>
+    </section>
+  </main>
+  <dialog id="payment-dialog" aria-labelledby="pay-heading">
+    <form id="payment-form" class="modal" novalidate>
+      <span class="eyebrow">Confirmar entrega</span><h2 id="pay-heading">Pago del cliente</h2>
+      <p class="muted">Si pagó parte en efectivo y parte por transferencia, registra ambos valores.</p>
+      <div class="line"><span>Valor del pedido</span><strong id="pay-total" class="sum"></strong></div>
+      <label>Efectivo recibido (COP)<input id="pay-cash" type="number" min="0" step="1" inputmode="numeric" required></label>
+      <label>Transferencia recibida (COP)<input id="pay-bank" type="number" min="0" step="1" inputmode="numeric" required></label>
+      <div class="line"><span>Total registrado</span><strong id="pay-sum">$0</strong></div>
+      <p id="pay-error" role="alert" class="alert"></p>
+      <div class="flex"><button type="button" class="btn grey" id="pay-cancel">Volver</button><button type="submit" class="btn red" id="pay-confirm">Marcar entregado</button></div>
+      <p class="fineprint">La transferencia quedará pendiente de revisión por el negocio.</p>
+    </form>
+  </dialog>
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
+    import { getFirestore, collection, query, where, onSnapshot, doc, getDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey:'AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA',
+      authDomain:'pizzadejuank.firebaseapp.com',
+      projectId:'pizzadejuank',
+      storageBucket:'pizzadejuank.appspot.com',
+      messagingSenderId:'856650093973',
+      appId:'1:856650093973:web:a4cd3ad8e863617706d29c'
+    };
+    // Usa autenticación separada del administrador y del menú de clientes.
+    const app=initializeApp(firebaseConfig,'app-domiciliarios');
+    const auth=getAuth(app), db=getFirestore(app), $=id=>document.getElementById(id);
+    const money=n=>new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(Number(n)||0);
+    let detener=()=>{}, pedidos=[],pedidoActual=null, perfil=null, accesoVersion=0;
+    function alertar(texto){$('session-status').textContent=texto;}
+    function texto(texto){const p=document.createElement('p');p.textContent=texto;p.className='hint';return p;}
+    function informacion(label,valor){const d=document.createElement('div');d.className='line';const a=document.createElement('span'),b=document.createElement('strong');a.textContent=label;b.textContent=valor;d.append(a,b);return d;}
+    $('login-form').addEventListener('submit',async e=>{
+      e.preventDefault();$('login-error').textContent='';$('login-button').disabled=true;
+      try{await signInWithEmailAndPassword(auth,$('email').value.trim(),$('password').value);$('password').value='';}
+      catch(error){$('login-error').textContent='No se pudo ingresar ('+(error?.code||'error')+'). Confirma que tu cuenta esté creada y activa.';}
+      finally{$('login-button').disabled=false;}
+    });
+    $('signout').addEventListener('click',()=>signOut(auth));
+    function mostrarVista(vista){
+      const caja=vista==='cash';
+      $('orders-section').hidden=caja;$('cash-section').hidden=!caja;
+      $('tab-orders').setAttribute('aria-selected',String(!caja));
+      $('tab-cash').setAttribute('aria-selected',String(caja));
+    }
+    $('tab-orders').addEventListener('click',()=>mostrarVista('orders'));
+    $('tab-cash').addEventListener('click',()=>mostrarVista('cash'));
+    async function cambiarEstado(id,estadoActual,estadoNuevo){
+      if(!perfil||!auth.currentUser)return;
+      if(!confirm('¿Confirmar '+estadoNuevo.replaceAll('_',' ')+' para este pedido?'))return;
+      try{
+        const ref=doc(db,'pedidos',id);
+        const actual=await getDoc(ref);
+        if(!actual.exists()||actual.data().domiciliarioUid!==auth.currentUser.uid||actual.data().estadoDomicilio!==estadoActual)
+          throw new Error('El pedido cambió; actualiza la lista.');
+        await updateDoc(ref,{estadoDomicilio:estadoNuevo});
+      }catch(error){alert('No se pudo actualizar el pedido ('+(error?.code||error.message)+').');}
+    }
+    function render(){
+      const cobrados=pedidos.filter(p=>p.data.estadoDomicilio==='entregado' && p.data.pagoEntrega);
+      const efectivo=cobrados.reduce((s,p)=>s+Number(p.data.pagoEntrega.efectivo||0),0);
+      const transfer=cobrados.reduce((s,p)=>s+Number(p.data.pagoEntrega.transferencia||0),0);
+      $('pending').textContent=String(pedidos.length-cobrados.length);
+      $('done').textContent=String(cobrados.length);
+      $('cash-top').textContent=money(efectivo);
+      $('cash').textContent=money(efectivo);$('bank').textContent=money(transfer);
+      const holder=$('orders-list');holder.replaceChildren();
+      if(!pedidos.length){holder.append(texto('Todavía no tienes domicilios asignados.'));return;}
+      pedidos.sort((a,b)=>(b.data.asignadoEn?.seconds||0)-(a.data.asignadoEn?.seconds||0));
+      for(const item of pedidos){
+        const d=item.data, estado=d.estadoDomicilio||'asignado';
+        const cliente=d.cliente&&typeof d.cliente==='object'?d.cliente:{};
+        const card=document.createElement('article');card.className='card';
+        const head=document.createElement('div');head.className='row';
+        const label=document.createElement('strong');label.className='order-title';label.textContent='Pedido '+item.id.slice(0,8);
+        const pill=document.createElement('span');pill.className='pill';pill.textContent=estado.replaceAll('_',' ');
+        head.append(label,pill);card.append(head);
+        card.append(texto('Cliente: '+(cliente.nombre||'Sin nombre')));
+        // Los datos solo se consultan después del inicio de sesión y de la verificación de roles.
+        card.append(texto('Teléfono: '+(cliente.telefono||'Sin teléfono')));
+        const direccion=document.createElement('p');direccion.className='address';direccion.textContent='📍 '+(d.municipio||'')+' · '+(d.direccion||'Sin dirección');card.append(direccion);
+        const detalle=Array.isArray(d.productos)?d.productos.map(p=>(p.cantidad||1)+' × '+(p.producto||'Producto')).join(', '):'Pedido';
+        card.append(texto('Productos: '+detalle));card.append(informacion('Total',money(d.total)));
+        let nombreBoton='', nuevoEstado='';
+        if(estado==='asignado'){nombreBoton='Aceptar pedido';nuevoEstado='aceptado';}
+        if(estado==='aceptado'){nombreBoton='Salir a entregar';nuevoEstado='en_camino';}
+        if(estado==='en_camino'){nombreBoton='Registrar pago y entrega';}
+        if(nombreBoton){
+          const btn=document.createElement('button');btn.type='button';btn.className='btn red';btn.style.marginTop='13px';btn.textContent=nombreBoton;
+          btn.addEventListener('click',()=>estado==='en_camino'?mostrarPago(item):cambiarEstado(item.id,estado,nuevoEstado));
+          card.append(btn);
+        }
+        if(estado==='entregado'&&d.pagoEntrega){
+          card.append(texto('Efectivo: '+money(d.pagoEntrega.efectivo)+' · Transferencia: '+money(d.pagoEntrega.transferencia)+' (por verificar).'));
+        }
+        holder.append(card);
+      }
+    }
+    function mostrarPago(item){
+      pedidoActual=item;
+      $('pay-heading').textContent='Pago del pedido '+item.id.slice(0,8);
+      $('pay-total').textContent=money(item.data.total);
+      $('pay-cash').value=String(Number(item.data.total)||0);
+      $('pay-bank').value='0';$('pay-error').textContent='';recalcular();
+      $('payment-dialog').showModal();
+    }
+    function recalcular(){
+      const suma=Number($('pay-cash').value)+Number($('pay-bank').value);
+      $('pay-sum').textContent=money(Number.isFinite(suma)?suma:0);
+    }
+    $('pay-cash').addEventListener('input',recalcular);
+    $('pay-bank').addEventListener('input',recalcular);
+    $('pay-cancel').addEventListener('click',()=>{$('payment-dialog').close();pedidoActual=null;});
+    $('payment-form').addEventListener('submit',async e=>{
+      e.preventDefault();if(!pedidoActual||!auth.currentUser||!perfil)return;
+      const cash=Number($('pay-cash').value),bank=Number($('pay-bank').value),total=Number(pedidoActual.data.total);
+      if(!Number.isSafeInteger(cash)||!Number.isSafeInteger(bank)||cash<0||bank<0||cash+bank!==total){
+        $('pay-error').textContent='Efectivo y transferencia deben sumar exactamente '+money(total)+'.';return;
+      }
+      $('pay-confirm').disabled=true;
+      try{
+        const ref=doc(db,'pedidos',pedidoActual.id);
+        const snap=await getDoc(ref);
+        if(!snap.exists()||snap.data().domiciliarioUid!==auth.currentUser.uid||snap.data().estadoDomicilio!=='en_camino')
+          throw new Error('Este pedido cambió. Revisa su estado antes de cobrar.');
+        await updateDoc(ref,{estadoDomicilio:'entregado',pagoEntrega:{
+          efectivo:cash,transferencia:bank,verificacionTransferencia:'pendiente',registradoEn:serverTimestamp()
+        }});
+        $('payment-dialog').close();pedidoActual=null;
+      }catch(error){$('pay-error').textContent='No se pudo registrar la entrega ('+(error?.code||error?.message||'error')+').';}
+      finally{$('pay-confirm').disabled=false;}
+    });
+    onAuthStateChanged(auth,async user=>{
+      const version=++accesoVersion;
+      detener();detener=()=>{};pedidos=[];perfil=null;
+      $('auth-view').hidden=!!user;$('app-view').hidden=!user;$('signout').hidden=!user;
+      if(!user)return;
+      alertar('Verificando tu cuenta de domiciliario...');
+      try{
+        const cuenta=await getDoc(doc(db,'equipo',user.uid));
+        if(version!==accesoVersion)return;
+        const datos=cuenta.exists()?cuenta.data():null;
+        if(!datos||datos.rol!=='domiciliario'||datos.activo!==true||datos.restauranteId!=='la-pizza-de-juanca'){
+          alertar('Tu cuenta todavía no tiene el rol activo de domiciliario para este restaurante.');
+          return;
+        }
+        perfil=datos;$('team-name').textContent=datos.nombre||'Mi jornada';
+        alertar('Conectado. Solo aparecen los pedidos asignados a tu usuario.');
+        // La regla de Firestore debe permitir exclusivamente la consulta con este filtro.
+        detener=onSnapshot(query(collection(db,'pedidos'),where('domiciliarioUid','==',user.uid)),
+          snap=>{
+            if(version!==accesoVersion)return;
+            pedidos=snap.docs.map(x=>({id:x.id,data:x.data()}));
+            render();
+          },
+          error=>{if(version===accesoVersion)alertar('Firestore no permitió consultar pedidos ('+(error?.code||'error')+'). Verifica los permisos del domiciliario.');}
+        );
+      }catch(error){if(version===accesoVersion)alertar('No se pudo verificar tu equipo ('+(error?.code||'error')+').');}
+    });
+  </script>
+</body>
+</html>
