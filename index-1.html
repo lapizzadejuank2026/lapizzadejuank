@@ -166,7 +166,7 @@
 
   <dialog id="orderDialog" aria-labelledby="orderDialogTitle">
     <div class="dialog-head"><div><span class="eyebrow">Pedido pendiente de envio</span><h2 id="orderDialogTitle">Datos del pedido</h2></div><button class="icon-btn" data-close="orderDialog" aria-label="Cerrar">×</button></div>
-    <form id="orderForm">
+    <form id="orderForm" novalidate>
       <div class="dialog-body">
         <p class="hint">Completa tus datos para enviar el pedido a La Pizza de Juan K. No se realiza ningún cobro automático.</p>
         <fieldset style="border:0;padding:0;margin:15px 0 10px"><legend style="font-weight:800;margin-bottom:8px">¿Cómo recibirías tu pedido?</legend><div class="radio-group"><label><input type="radio" name="delivery" value="domicilio" checked> Domicilio</label><label><input type="radio" name="delivery" value="recoger"> Recoger en el local</label></div></fieldset>
@@ -179,7 +179,7 @@
         </div>
         <p class="warning">Tus datos se guardarán para gestionar tu pedido. no compartas contraseña ni datos bancarios.</p>
       </div>
-      <div class="dialog-footer"><button class="outline-btn" type="button" data-close="orderDialog">Volver</button><button class="primary-btn" type="submit">Generar resumen</button></div>
+      <div class="dialog-footer"><button class="outline-btn" type="button" data-close="orderDialog">Volver</button><button class="primary-btn" type="submit">Generar resumen</button><p id="orderFormError" class="warning" role="alert" hidden style="width:100%;margin:0"></p></div>
     </form>
   </dialog>
 
@@ -440,11 +440,39 @@
         label.querySelector('input,select').required=delivery;
       });
     }
+    function avisarErrorFormulario(mensaje,campo) {
+      const aviso=byId('orderFormError');
+      aviso.textContent=mensaje;
+      aviso.hidden=false;
+      if(campo) {
+        campo.focus();
+        campo.scrollIntoView({block:'center',behavior:'smooth'});
+      }
+    }
     function showSummary(event) {
       event.preventDefault();
+      byId('orderFormError').hidden=true;
+      const formulario=byId('orderForm');
+      const esDomicilio=formulario.elements.delivery.value==='domicilio';
+      const obligatorios=[
+        ['customer','Escribe tu nombre para continuar.'],
+        ['phone','Escribe tu número de teléfono para continuar.']
+      ];
+      if(esDomicilio) obligatorios.push(['address','Escribe la dirección del domicilio para continuar.']);
+      for(const [nombre,mensaje] of obligatorios) {
+        const campo=formulario.elements.namedItem(nombre);
+        if(!campo || !String(campo.value||'').trim()) {
+          avisarErrorFormulario(mensaje,campo);
+          return;
+        }
+      }
       sincronizarCarrito();
-      if(!cart.length || cart.some(item=>!lookup(item))) { renderCart();return; }
-      const f=new FormData(byId('orderForm'));
+      if(!cart.length || cart.some(item=>!lookup(item))) {
+        renderCart();
+        avisarErrorFormulario('Tu carrito está vacío o contiene un producto que ya no está disponible. Vuelve al menú y revisa el carrito.');
+        return;
+      }
+      const f=new FormData(formulario);
       const delivery=f.get('delivery')==='domicilio';
       const productos=cart.map(item=>{
         const p=lookup(item);
@@ -555,7 +583,14 @@
       byId('orderDialog').showModal();
     });
     document.querySelectorAll('input[name="delivery"]').forEach(e=>e.addEventListener('change',deliveryFields));
-    byId('orderForm').addEventListener('submit',showSummary);
+    byId('orderForm').addEventListener('submit',event=>{
+      try { showSummary(event); }
+      catch(error) {
+        event.preventDefault();
+        console.error('Error al generar resumen:',error);
+        avisarErrorFormulario('No pudimos generar el resumen. Actualiza el menú y vuelve a intentarlo.');
+      }
+    });
     byId('closeSummaryButton').addEventListener('click',()=>byId('summaryDialog').close());
     byId('sendOrderButton').addEventListener('click',async()=>{
       if(!pedidoPendiente) return;
