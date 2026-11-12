@@ -572,7 +572,23 @@
         byId('summaryDialog').close();
       } catch(error) {
         console.error('Error al enviar pedido:',error);
-        alert('No se pudo enviar el pedido. Inténtalo nuevamente.');
+        const codigo=String(error?.code||'sin-codigo');
+        const detalle=String(error?.message||'').toLowerCase();
+        let explicacion='El sistema no pudo registrar el pedido. Inténtalo nuevamente o comunícate con el restaurante.';
+        if(codigo==='permission-denied'||codigo==='firestore/permission-denied') {
+          explicacion='Firebase rechazó el permiso para guardar pedidos. Debemos revisar las reglas de Firestore.';
+        } else if(codigo==='auth/operation-not-allowed') {
+          explicacion='El acceso anónimo para clientes está deshabilitado en Firebase Authentication.';
+        } else if(codigo==='auth/unauthorized-domain') {
+          explicacion='El dominio del menú no está autorizado en Firebase Authentication.';
+        } else if(codigo==='auth/network-request-failed'||codigo==='unavailable'||codigo==='firestore/unavailable') {
+          explicacion='No se pudo conectar con Firebase. Revisa tu conexión a Internet.';
+        } else if(codigo.toLowerCase().includes('app-check')||detalle.includes('app check')||detalle.includes('recaptcha')) {
+          explicacion='Falló la verificación de seguridad de Firebase App Check. Debemos revisar su configuración.';
+        } else if(detalle.includes('firebase no está listo')) {
+          explicacion='Firebase no terminó de cargar. Cierra el menú, comprueba tu conexión y vuelve a abrirlo.';
+        }
+        alert('No se pudo enviar el pedido.\n'+explicacion+'\nCódigo: '+codigo+'\nEl carrito se conserva; no se registró este envío.');
         boton.disabled=false;
       }
     });
