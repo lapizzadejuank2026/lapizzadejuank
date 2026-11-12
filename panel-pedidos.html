@@ -435,6 +435,8 @@
   onAuthStateChanged(auth, (user) => {
     detenerEscucha();
     detenerEquipo();
+    repartidoresDisponibles = [];
+    mensajeEquipo = 'Cargando domiciliarios activos...';
 
     acceso.hidden = !!user;
     panel.hidden = !user;
@@ -457,7 +459,7 @@
     // Equipo se consulta solo para asignar pedidos de este restaurante.
     detenerEquipo = onSnapshot(collection(db, 'equipo'),
       snapshot => {
-        repartidoresDisponibles = snapshot.docs.map(x => ({uid:x.id, ...x.data()}))
+        repartidoresDisponibles = snapshot.docs.map(x => ({...x.data(), uid:x.id}))
           .filter(x => x.rol === 'domiciliario' && x.activo === true &&
             x.restauranteId === 'la-pizza-de-juanca' && !!x.nombre)
           .sort((a,b)=>a.nombre.localeCompare(b.nombre, 'es'));
