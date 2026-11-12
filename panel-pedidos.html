@@ -94,6 +94,9 @@
         <p class="hint">Registra a tus domiciliarios y colaboradores. Estos registros son internos; no crean todavía cuentas para entrar a la aplicación de repartidores.</p>
         <a class="portal-link" href="domiciliarios.html" target="_blank" rel="noopener">🛵 Abrir aplicación de domiciliarios (vista preliminar)</a>
         <p class="hint-privada">La pantalla del repartidor ya tiene inicio de sesión y navegación. Los pedidos y sus botones están deshabilitados mientras configuramos los permisos de Firebase.</p>
+        <button type="button" id="equipo-nuevo" class="secundario">➕ Nuevo integrante</button>
+        <p class="hint">Después de guardar, el formulario se limpia automáticamente para agregar otra persona.</p>
+        <h3 id="equipo-titulo-form" style="margin-bottom:6px">➕ Registrar integrante</h3>
         <form id="form-equipo" class="equipo-form">
           <input id="equipo-id" type="hidden">
           <label>Nombre completo
@@ -105,11 +108,14 @@
           <label>Rol
             <select id="equipo-rol" required>
               <option value="domiciliario">🛵 Domiciliario</option>
-              <option value="colaborador">👨‍🍳 Colaborador</option>
+              <option value="mesero">🍽️ Mesero</option>
+              <option value="cocina">👨‍🍳 Cocina</option>
+              <option value="caja">💰 Caja</option>
+              <option value="colaborador">👥 Otro colaborador</option>
             </select>
           </label>
           <div class="fila-botones">
-            <button id="equipo-guardar" type="submit">💾 Guardar</button>
+            <button id="equipo-guardar" type="submit">💾 Guardar y agregar otro</button>
             <button id="equipo-cancelar" class="secundario" type="button">Cancelar edición</button>
           </div>
         </form>
@@ -118,6 +124,7 @@
       </div>
       <div class="caja">
         <h2 class="seccion-titulo">Personal registrado</h2>
+        <p class="hint">Aquí permanecen los integrantes guardados; puedes editarlos o desactivarlos sin eliminarlos.</p>
         <p id="equipo-estado" class="hint" role="status">Abre esta sección para consultar el personal.</p>
         <div id="equipo-lista"></div>
       </div>
@@ -216,7 +223,16 @@
   const equipoRol = document.getElementById('equipo-rol');
   const equipoGuardar = document.getElementById('equipo-guardar');
   const equipoCancelar = document.getElementById('equipo-cancelar');
-  const etiquetaRol = rol => rol === 'domiciliario' ? '🛵 Domiciliario' : '👨‍🍳 Colaborador';
+  const equipoNuevo = document.getElementById('equipo-nuevo');
+  const equipoTituloForm = document.getElementById('equipo-titulo-form');
+  const rolesEquipo = ['domiciliario','mesero','cocina','caja','colaborador'];
+  const etiquetaRol = rol => ({
+    domiciliario:'🛵 Domiciliario',
+    mesero:'🍽️ Mesero',
+    cocina:'👨‍🍳 Cocina',
+    caja:'💰 Caja',
+    colaborador:'👥 Otro colaborador'
+  }[rol] || '👥 Colaborador');
   const mensajeErrorEquipo = error => error?.code === 'permission-denied'
     ? 'Firestore denegó el acceso a personal. Primero configura reglas para que solo el administrador pueda leer y modificar esta colección.'
     : 'No se pudo acceder al equipo (' + String(error?.code || 'error de conexión') + '). Comprueba la conexión y los permisos.';
@@ -224,10 +240,17 @@
   function limpiarEquipo() {
     formEquipo.reset();
     equipoId.value = '';
-    equipoGuardar.textContent = '💾 Guardar';
+    equipoRol.value = 'domiciliario';
+    equipoGuardar.textContent = '💾 Guardar y agregar otro';
+    equipoTituloForm.textContent = '➕ Registrar integrante';
     equipoCancelar.hidden = true;
   }
   equipoCancelar.addEventListener('click', () => { limpiarEquipo(); equipoMensaje.textContent = ''; });
+  equipoNuevo.addEventListener('click', () => {
+    limpiarEquipo();
+    equipoMensaje.textContent = '';
+    equipoNombre.focus();
+  });
   limpiarEquipo();
 
   function mostrarEquipo() {
@@ -258,8 +281,9 @@
         equipoId.value = persona.id;
         equipoNombre.value = persona.nombre || '';
         equipoTelefono.value = persona.telefono || '';
-        equipoRol.value = persona.rol === 'colaborador' ? 'colaborador' : 'domiciliario';
+        equipoRol.value = rolesEquipo.includes(persona.rol) ? persona.rol : 'colaborador';
         equipoGuardar.textContent = '💾 Guardar cambios';
+        equipoTituloForm.textContent = '✏️ Editar integrante';
         equipoCancelar.hidden = false;
         equipoMensaje.textContent = 'Editando a ' + (persona.nombre || 'integrante');
         formEquipo.scrollIntoView({ behavior:'smooth', block:'start' });
@@ -297,7 +321,6 @@
       snapshot => {
         personal = snapshot.docs.map(reg => ({ id: reg.id, ...reg.data() }));
         personal.sort((a,b) => String(a.nombre||'').localeCompare(String(b.nombre||''), 'es'));
-        equipoMensaje.textContent = '';
         personalDisponible = true;
         mostrarEquipo();
         pintar(pedidosCache);
@@ -322,7 +345,7 @@
     const nombre = equipoNombre.value.trim().replace(/\s+/g,' ');
     const telefono = equipoTelefono.value.trim();
     const rol = equipoRol.value;
-    if (nombre.length < 2 || !/^[0-9 +()\-]{7,20}$/.test(telefono) || !['domiciliario','colaborador'].includes(rol)) {
+    if (nombre.length < 2 || !/^[0-9 +()\-]{7,20}$/.test(telefono) || !rolesEquipo.includes(rol)) {
       equipoMensaje.textContent = 'Revisa nombre, teléfono y rol antes de guardar.';
       return;
     }
@@ -337,8 +360,12 @@
           ...datos, activo: true, creadoEn: serverTimestamp()
         });
       }
+      const eraEdicion = Boolean(equipoId.value);
       limpiarEquipo();
-      equipoMensaje.textContent = '✅ Registro guardado correctamente.';
+      equipoMensaje.textContent = eraEdicion
+        ? '✅ Cambios guardados. Ya puedes registrar otra persona.'
+        : '✅ Integrante guardado. Escribe los datos del siguiente.';
+      equipoNombre.focus();
     } catch (error) {
       equipoMensaje.textContent = mensajeErrorEquipo(error);
     } finally {
