@@ -91,10 +91,10 @@
     <section id="vista-equipo" role="tabpanel" aria-labelledby="tab-equipo" hidden>
       <div class="caja">
         <h2 class="seccion-titulo">👥 Equipo y roles</h2>
-        <p class="hint">Registra a tus domiciliarios y colaboradores. Estos registros son internos; no crean todavía cuentas para entrar a la aplicación de repartidores.</p>
+        <p class="hint">Registra a tus domiciliarios y colaboradores. Desde aquí puedes registrar y dar acceso individual a cada domiciliario, después de publicar las reglas de Firebase.</p>
         <button type="button" id="equipo-nuevo" class="secundario">➕ Registrar personal y roles</button>
         <a class="portal-link" href="domiciliarios.html" target="_blank" rel="noopener">🛵 Abrir aplicación de domiciliarios</a>
-        <p class="hint-privada">Primero registra al trabajador aquí. Para entrar en la aplicación de domiciliarios aún hace falta crear y autorizar su cuenta en Firebase Authentication; esa función está pendiente.</p>
+        <p class="hint-privada">Registra al domiciliario y pulsa Crear cuenta de acceso en su tarjeta. Para usarlo hacen falta las reglas de seguridad de Firebase.</p>
         <p class="hint">Después de guardar, el formulario se limpia automáticamente para agregar otra persona.</p>
         <h3 id="equipo-titulo-form" style="margin-bottom:6px">➕ Registrar integrante</h3>
         <form id="form-equipo" class="equipo-form">
@@ -160,8 +160,8 @@
 </script>
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
-  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-  import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, deleteUser, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
+  import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, writeBatch, serverTimestamp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
 
   const firebaseConfig = {
     apiKey: 'AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA',
@@ -174,6 +174,8 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
+  const authAltas = getAuth(initializeApp(firebaseConfig, "altas-personal"));
+
 
     const acceso = document.getElementById('acceso');
   const panel = document.getElementById('panel');
@@ -270,6 +272,32 @@
   });
   limpiarEquipo();
 
+  async function crearCuenta(persona,boton) {
+    if (!auth.currentUser || persona.uid || persona.activo === false || persona.rol !== 'domiciliario') return;
+    const clave = prompt('Contraseña provisional para '+persona.nombre+' (mínimo 6 caracteres). Entrégala en privado.');
+    if(clave===null)return;
+    if(clave.length<6){equipoMensaje.textContent='Usa al menos 6 caracteres.';return}
+    if(!confirm('Crear cuenta para '+persona.nombre+' con correo '+persona.correo+'?'))return;
+    boton.disabled=true;
+    let creado=null;
+    try{
+      creado=await createUserWithEmailAndPassword(authAltas,persona.correo,clave);
+      const batch=writeBatch(db);
+      batch.update(doc(db,'personal',persona.id),{uid:creado.user.uid,actualizadoEn:serverTimestamp()});
+      batch.set(doc(db,'accesosDomiciliarios',creado.user.uid),{
+        personalId:persona.id,nombre:persona.nombre,correo:persona.correo,
+        rol:'domiciliario',activo:true,creadoEn:serverTimestamp()
+      });
+      await batch.commit();
+      equipoMensaje.textContent='✅ Cuenta vinculada. Entrega la clave provisional solo al trabajador.';
+    }catch(e){
+      let advertencia='';
+      if(creado?.user){try{await deleteUser(creado.user)}catch(_){advertencia=' Verifica si quedó una cuenta creada sin vincular en Authentication.'}}
+      equipoMensaje.textContent='No se pudo crear la cuenta ('+(e.code||'error')+').'+advertencia;
+      boton.disabled=false;
+    }finally{try{await signOut(authAltas)}catch(_){}}
+  }
+
   function mostrarEquipo() {
     equipoLista.replaceChildren();
     equipoEstado.textContent = personal.length
@@ -319,16 +347,26 @@
         if (!auth.currentUser) return;
         activar.disabled = true;
         try {
-          await updateDoc(doc(db, 'personal', persona.id), {
-            activo: persona.activo === false,
-            actualizadoEn: serverTimestamp()
+          const activo=persona.activo===false;
+          const batch=writeBatch(db);
+          batch.update(doc(db,'personal',persona.id),{activo,actualizadoEn:serverTimestamp()});
+          if(persona.uid)batch.update(doc(db,'accesosDomiciliarios',persona.uid),{
+            activo:activo&&persona.rol==='domiciliario',actualizadoEn:serverTimestamp()
           });
+          await batch.commit();
           equipoMensaje.textContent = '✅ Estado actualizado.';
         } catch (error) {
           equipoMensaje.textContent = mensajeErrorEquipo(error);
           activar.disabled = false;
         }
       });
+      if(persona.rol==='domiciliario'){
+        const btn=document.createElement('button');btn.type='button';
+        btn.textContent=persona.uid?'🔐 Cuenta vinculada':'🔐 Crear cuenta de acceso';
+        btn.disabled=!!persona.uid||persona.activo===false;
+        btn.addEventListener('click',()=>crearCuenta(persona,btn));
+        tarjeta.append(btn);
+      }
       acciones.append(editar, activar);
       tarjeta.append(titulo, rol, telefono, correo, estadoPersona, acciones);
       equipoLista.append(tarjeta);
@@ -383,7 +421,16 @@
     try {
       const datos = { nombre, telefono, correo, rol, actualizadoEn: serverTimestamp() };
       if (equipoId.value) {
-        await updateDoc(doc(db, 'personal', equipoId.value), datos);
+        const anterior=personal.find(p=>p.id===equipoId.value);
+        if(anterior?.uid){
+          if(anterior.correo!==correo)throw new Error('No cambies el correo de una cuenta vinculada sin actualizar Authentication.');
+          const batch=writeBatch(db);
+          batch.update(doc(db,'personal',equipoId.value),datos);
+          batch.update(doc(db,'accesosDomiciliarios',anterior.uid),{
+            nombre,correo,rol,activo:anterior.activo!==false&&rol==='domiciliario',actualizadoEn:serverTimestamp()
+          });
+          await batch.commit();
+        }else await updateDoc(doc(db, 'personal', equipoId.value), datos);
       } else {
         await addDoc(collection(db, 'personal'), {
           ...datos, activo: true, creadoEn: serverTimestamp()
@@ -606,7 +653,7 @@
         vacio.value = '';
         vacio.textContent = 'Selecciona un domiciliario';
         selector.append(vacio);
-        const disponibles = personal.filter(p => p.rol === 'domiciliario' && p.activo !== false);
+        const disponibles = personal.filter(p => p.rol === 'domiciliario' && p.activo !== false && p.uid);
         for (const repartidor of disponibles) {
           const opcion = document.createElement('option');
           opcion.value = repartidor.id;
@@ -644,6 +691,8 @@
             await updateDoc(doc(db,'pedidos',id), {
               domiciliarioId:repartidor.id,
               domiciliarioNombre:repartidor.nombre,
+              domiciliarioUid:repartidor.uid,
+              estadoEntrega:'pendiente',
               domiciliarioAsignadoEn:serverTimestamp()
             });
             estadoAsignacion.textContent = '✅ Asignado a ' + repartidor.nombre;
