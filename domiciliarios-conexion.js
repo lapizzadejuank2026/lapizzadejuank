@@ -9,7 +9,7 @@ const app=initializeApp({
     storageBucket:'pizzadejuank.firebasestorage.app',
     messagingSenderId:'856650093973',
     appId:'1:856650093973:web:a4cd3ad8e863617706d29c'
-  });
+  }, 'portal-domiciliarios');
 const auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);
 let dejarAcceso=()=>{},dejarPedidos=()=>{},uidAutorizado='';
 const tabs=['pedidos','historial','cuenta'];
@@ -82,7 +82,6 @@ onAuthStateChanged(auth,user=>{
     if(!persona||persona.activo!==true||persona.rol!=='domiciliario'){
       bloquear('Acceso sin autorización. El administrador debe activar tu cuenta en Equipo y roles.');return;
     }
-    $('cuenta-correo').textContent='Correo: '+(user.email||'');
     $('vista-cuenta').replaceChildren(texto('Nombre: '+(persona.nombre||'Domiciliario')),texto('Correo: '+(user.email||'')));
     if(uidAutorizado===uid)return;
     uidAutorizado=uid;
