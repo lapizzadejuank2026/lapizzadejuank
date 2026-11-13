@@ -60,14 +60,14 @@
       <button id="entrar" class="principal" type="submit">🔐 Iniciar sesión</button>
     </form>
     <p id="mensaje-acceso" class="estado" role="status" aria-live="polite">Preparando el acceso...</p>
-    <p class="aviso">🔒 El administrador debe crear y autorizar la cuenta del domiciliario en Firebase antes de usar pedidos reales. Este portal está en preparación.</p>
+    <p class="aviso">🔒 La cuenta debe estar activada por el administrador. Cada repartidor solo tendrá acceso a sus propios pedidos.</p>
   </section>
   <section id="portal" hidden>
     <div class="caja cabecera">
       <div><h2>Mi jornada</h2><p id="correo-sesion" class="ayuda"></p></div>
       <button class="secundario" id="salir" type="button">Salir</button>
     </div>
-    <p class="aviso" role="status">🛡️ Sesión autenticada. La asignación de pedidos seguirá deshabilitada hasta vincular tu cuenta al rol de domiciliario y configurar las reglas de seguridad de Firebase.</p>
+    <p class="aviso" role="status">🛡️ Acceso exclusivo: tus pedidos se consultan mediante tu cuenta autorizada. Las ofertas generales todavía no están habilitadas.</p>
     <nav class="pestanas" aria-label="Secciones de la aplicación">
       <button type="button" id="tab-pedidos" aria-selected="true">📦 Mis pedidos</button>
       <button type="button" id="tab-historial" aria-selected="false">🕘 Historial</button>
@@ -113,61 +113,6 @@
     }
   },true);
 </script>
-<script type="module">
-  import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
-  import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-  const app=initializeApp({
-    apiKey:'AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA',
-    authDomain:'pizzadejuank.firebaseapp.com',
-    projectId:'pizzadejuank',
-    storageBucket:'pizzadejuank.firebasestorage.app',
-    messagingSenderId:'856650093973',
-    appId:'1:856650093973:web:a4cd3ad8e863617706d29c'
-  });
-  const auth=getAuth(app);
-  const $=id=>document.getElementById(id);
-  const vistas=['pedidos','historial','cuenta'];
-  function seleccionarVista(nombre){
-    for(const n of vistas){
-      $('vista-'+n).hidden=n!==nombre;
-      $('tab-'+n).setAttribute('aria-selected',String(n===nombre));
-    }
-  }
-  for(const nombre of vistas)$('tab-'+nombre).addEventListener('click',()=>seleccionarVista(nombre));
-  $('login').addEventListener('submit',async e=>{
-    e.preventDefault();
-    $('entrar').disabled=true;
-    $('mensaje-acceso').textContent='Comprobando cuenta...';
-    try{
-      await signInWithEmailAndPassword(auth,$('correo').value.trim(),$('clave').value);
-      $('clave').value='';
-    }catch(error){
-      const codigo=error?.code||'';
-      $('mensaje-acceso').textContent={
-        'auth/invalid-credential':'Correo o contraseña incorrectos.',
-        'auth/too-many-requests':'Demasiados intentos. Intenta más tarde.',
-        'auth/network-request-failed':'Revisa tu conexión a Internet.',
-        'auth/operation-not-allowed':'El acceso por correo no está habilitado.',
-        'auth/unauthorized-domain':'Falta autorizar este dominio en Firebase.'
-      }[codigo]||'No fue posible iniciar sesión ('+codigo+').';
-    }finally{
-      $('entrar').disabled=false;
-    }
-  });
-  $('salir').addEventListener('click',()=>signOut(auth));
-  onAuthStateChanged(auth,user=>{
-    $('acceso').hidden=!!user;
-    $('portal').hidden=!user;
-    $('correo-sesion').textContent=user?.email||'';
-    $('cuenta-correo').textContent=user?'Correo: '+(user.email||'No disponible'):'';
-    if(!user){
-      $('mensaje-acceso').textContent='Tu encargado debe activar tu acceso.';
-      seleccionarVista('pedidos');
-    }
-  },error=>{
-    $('mensaje-acceso').textContent='No se pudo verificar la sesión ('+(error.code||'error')+').';
-  });
-  window.__domiciliariosListo=true;
-</script>
+<script type="module" src="domiciliarios-conexion.js"></script>
 </body>
 </html>
