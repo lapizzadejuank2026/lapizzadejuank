@@ -44,6 +44,7 @@
     .equipo-tarjeta h3 { margin:0 0 9px; font-size:18px; overflow-wrap:anywhere; }
     .equipo-tarjeta .acciones { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .equipo-tarjeta .acciones button { margin:7px 0 0; }
+    .equipo-tarjeta .acciones .peligro { background:#7f2323;color:white; }
     .equipo-tarjeta.inactivo { opacity:.72; }
     .hint-privada { color:#f6cf78; font-size:14px; line-height:1.5; }
     .tabs button { min-width:0; }
@@ -136,7 +137,8 @@
       </div>
       <div class="caja">
         <h2 class="seccion-titulo">Personal registrado</h2>
-        <p class="hint">Aquí permanecen los integrantes guardados; puedes editarlos o desactivarlos sin eliminarlos.</p>
+        <p class="hint">Puedes editar, desactivar o eliminar un integrante. Para eliminar, primero debe estar inactivo y sin entregas pendientes. Sus pedidos históricos no se borran.</p>
+        <p class="hint-privada">Eliminar la ficha y su autorización de Firestore no elimina automáticamente al usuario de Firebase Authentication. Si tiene cuenta vinculada, después debes eliminar ese usuario en Firebase Console → Authentication → Usuarios.</p>
         <p id="equipo-estado" class="hint" role="status">Abre esta sección para consultar el personal.</p>
         <div id="equipo-lista"></div>
       </div>
@@ -207,6 +209,7 @@
   let personal = [];
   let personalDisponible = false;
   let pedidosCache = [];
+  let pedidosCargados = false;
   const marcoProductos = document.getElementById('marco-productos');
 
   function cambiarVista(nombre) {
@@ -395,7 +398,62 @@
           activar.disabled = false;
         }
       });
-      acciones.append(editar, activar);
+      const eliminar = document.createElement('button');
+      eliminar.type = 'button';
+      eliminar.className = 'peligro';
+      eliminar.textContent = '🗑️ Eliminar';
+      eliminar.addEventListener('click', async () => {
+        if (!auth.currentUser) {
+          equipoMensaje.textContent = 'Debes iniciar sesión como administrador.';
+          return;
+        }
+        if (persona.activo !== false) {
+          equipoMensaje.textContent = 'Primero desactiva a ' + (persona.nombre || 'este integrante') + '. Así se suspende su acceso antes de eliminar.';
+          return;
+        }
+        if (!pedidosCargados || !personalDisponible) {
+          equipoMensaje.textContent = 'Antes de eliminar, debe estar conectada la lista de pedidos y personal de Firebase. Actualiza y comprueba los permisos.';
+          return;
+        }
+        // No borrar mientras existan repartos asignados que no se han cerrado.
+        const estadosFinales = new Set(['entregado','entregada','completado','completada','finalizado','finalizada','cancelado','cancelada','anulado','anulada']);
+        const asignacionesAbiertas = pedidosCache.filter(p => {
+          const d = p.d || {};
+          if (String(d.domiciliarioId || '') !== String(persona.id)) return false;
+          const estado = String(d.estadoEntrega || d.estadoDomicilio || d.estado || '').toLowerCase().trim();
+          return !estadosFinales.has(estado);
+        });
+        if (asignacionesAbiertas.length) {
+          equipoMensaje.textContent = 'No se puede eliminar: tiene ' + asignacionesAbiertas.length +
+            ' pedido(s) asignado(s) sin cerrar. Reasigna o finaliza esas entregas antes de eliminar.';
+          return;
+        }
+        const aviso = '¿Eliminar definitivamente la ficha de ' + (persona.nombre || 'este integrante') +
+          ' y su autorización de Firestore? Los pedidos históricos se conservarán. ' +
+          (persona.authUid ? 'IMPORTANTE: luego debes eliminar manualmente su cuenta en Firebase Authentication. ' : '') +
+          'Esta acción no se puede deshacer.';
+        if (!window.confirm(aviso)) return;
+        eliminar.disabled = true;
+        editar.disabled = true;
+        activar.disabled = true;
+        equipoMensaje.textContent = 'Eliminando ficha y permisos en Firebase...';
+        try {
+          const lote = writeBatch(db);
+          if (persona.authUid) lote.delete(doc(db, 'accesosDomiciliarios', persona.authUid));
+          lote.delete(doc(db, 'personal', persona.id));
+          await lote.commit();
+          if (equipoId.value === persona.id) limpiarEquipo();
+          equipoMensaje.textContent = persona.authUid
+            ? '✅ Ficha y permisos de Firestore eliminados. PENDIENTE: elimina su usuario en Firebase Authentication → Usuarios. UID a buscar: ' + persona.authUid + '. Conserva ese UID para localizar la cuenta.'
+            : '✅ Ficha eliminada de Firestore. Los pedidos históricos se conservaron.';
+        } catch (error) {
+          equipoMensaje.textContent = mensajeErrorEquipo(error);
+          eliminar.disabled = false;
+          editar.disabled = false;
+          activar.disabled = false;
+        }
+      });
+      acciones.append(editar, activar, eliminar);
       tarjeta.append(titulo, rol, telefono, correo, estadoPersona, accesoPersona, acciones);
       equipoLista.append(tarjeta);
     }
@@ -887,6 +945,7 @@
     personalDisponible = false;
     personal = [];
     pedidosCache = [];
+    pedidosCargados = false;
     equipoLista.replaceChildren();
     limpiarEquipo();
 
@@ -912,13 +971,15 @@
 
     detenerEscucha = onSnapshot(
       collection(db, 'pedidos'),
-      (snapshot) => pintar(
-        snapshot.docs.map(x => ({
+      (snapshot) => {
+        pedidosCargados = true;
+        pintar(snapshot.docs.map(x => ({
           id: x.id,
           d: x.data()
-        }))
-      ),
+        })));
+      },
       () => {
+        pedidosCargados = false;
         hayNuevos = false;
         estado.textContent =
           'Acceso a pedidos bloqueado. Falta configurar reglas de Firestore para tu usuario administrador.';
