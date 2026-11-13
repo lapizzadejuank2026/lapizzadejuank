@@ -180,7 +180,7 @@
   // Authentication ya existe, Firebase envía un correo para fijar/restablecerla.
   $('recuperar-clave').addEventListener('click',async()=>{
     const email=$('correo').value.trim();
-    if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
       $('mensaje-acceso').textContent='Escribe primero el correo del domiciliario.';
       $('correo').focus();
       return;
