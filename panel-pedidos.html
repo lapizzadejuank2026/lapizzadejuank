@@ -109,6 +109,10 @@
             <input id="equipo-correo" type="email" maxlength="160" autocomplete="off" inputmode="email" placeholder="ejemplo@correo.com">
             <small id="equipo-correo-ayuda" class="hint">Obligatorio para domiciliarios; opcional para los otros cargos. No crea una cuenta de acceso todavía.</small>
           </label>
+          <label id="equipo-clave-caja">Contraseña inicial del domiciliario
+            <input id="equipo-clave" type="password" minlength="6" maxlength="128" autocomplete="new-password" placeholder="Mínimo 6 caracteres">
+            <small class="hint">Opcional: al escribirla se intentará crear la cuenta de acceso. Nunca se guarda en Firestore.</small>
+          </label>
           <label>Rol
             <select id="equipo-rol" required>
               <option value="domiciliario">🛵 Domiciliario</option>
@@ -227,6 +231,8 @@
   const equipoCorreo = document.getElementById('equipo-correo');
   const equipoCorreoAyuda = document.getElementById('equipo-correo-ayuda');
   const equipoRol = document.getElementById('equipo-rol');
+  const equipoClave = document.getElementById('equipo-clave');
+  const equipoClaveCaja = document.getElementById('equipo-clave-caja');
   const equipoGuardar = document.getElementById('equipo-guardar');
   const equipoCancelar = document.getElementById('equipo-cancelar');
   const equipoNuevo = document.getElementById('equipo-nuevo');
@@ -246,6 +252,8 @@
   function actualizarCorreoObligatorio() {
     const obligatorio = equipoRol.value === 'domiciliario';
     equipoCorreo.required = obligatorio;
+    equipoClaveCaja.hidden = !obligatorio;
+    equipoClave.disabled = !obligatorio;
     equipoCorreoAyuda.textContent = obligatorio
       ? 'Obligatorio para domiciliarios. No crea una cuenta de acceso todavía.'
       : 'Opcional para este cargo. No crea una cuenta de acceso todavía.';
@@ -255,6 +263,8 @@
   function limpiarEquipo() {
     formEquipo.reset();
     equipoId.value = '';
+    equipoClave.value = '';
+    equipoClave.disabled = false;
     equipoRol.value = 'domiciliario';
     actualizarCorreoObligatorio();
     equipoGuardar.textContent = '💾 Guardar y agregar otro';
@@ -302,6 +312,7 @@
         equipoNombre.value = persona.nombre || '';
         equipoTelefono.value = persona.telefono || '';
         equipoCorreo.value = persona.correo || '';
+        equipoClave.value = '';
         equipoRol.value = rolesEquipo.includes(persona.rol) ? persona.rol : 'colaborador';
         actualizarCorreoObligatorio();
         equipoGuardar.textContent = '💾 Guardar cambios';
