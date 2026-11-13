@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111114">
+  <meta name="description" content="Acceso de domiciliarios de La Pizza de Juanca.">
+  <title>Domiciliarios | La Pizza de Juanca</title>
+  <style>
+    :root{color-scheme:dark;--bg:#101014;--surface:#1a1a20;--edge:#383841;--text:#f8f8fa;--muted:#b5b5c0;--gold:#edbc55}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+    .shell{max-width:920px;min-height:100svh;margin:auto;padding:16px 13px 90px}
+    .welcome{max-width:560px;margin:10vh auto 0}
+    .symbol{display:grid;place-items:center;width:78px;height:78px;border-radius:14px;background:#41212a;font-size:44px;margin-bottom:25px}
+    .eyebrow{display:block;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.12em;font-weight:800}
+    h1{font-size:clamp(32px,6vw,40px);line-height:1.15;letter-spacing:-.03em;margin:14px 0 25px}
+    h2{font-size:19px;margin:0 0 12px}
+    p{color:var(--muted);margin:0 0 15px}
+    .card{background:var(--surface);border:1px solid var(--edge);border-radius:18px;padding:24px;margin:30px 0}
+    .btn{display:block;text-align:center;text-decoration:none;background:var(--gold);color:#21170b;border:0;border-radius:11px;padding:15px 17px;font-weight:800;font-size:18px;margin-top:25px;min-height:50px}
+    .btn:focus-visible{outline:3px solid white;outline-offset:4px}
+    .tiny{font-size:13px;margin:12px 0 0}
+    @media(max-width:510px){.card{padding:18px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="welcome" aria-labelledby="titulo">
+      <div class="symbol" aria-hidden="true">🛵</div>
+      <span class="eyebrow">La Pizza de Juanca</span>
+      <h1 id="titulo">Tu ruta, tus pedidos, tus cuentas.</h1>
+      <p>Un acceso personal para cada domiciliario. Consulta únicamente las entregas asignadas por el administrador.</p>
+      <div class="card">
+        <h2>Vista inicial del domiciliario</h2>
+        <p>Inicia sesión para consultar tus pedidos, direcciones de entrega, datos de los clientes y estado de tu jornada.</p>
+        <a class="btn" href="domiciliarios.html">🔐 Iniciar sesión</a>
+        <p class="tiny">Tu cuenta y contraseña las crea el administrador en Equipo y roles. Aquí no se permiten registros nuevos.</p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
