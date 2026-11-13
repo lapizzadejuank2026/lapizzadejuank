@@ -266,12 +266,17 @@
 
   function actualizarCorreoObligatorio() {
     const obligatorio = equipoRol.value === 'domiciliario';
+    const existente = personal.find(p => p.id === equipoId.value);
+    const vinculada = Boolean(existente?.authUid);
     equipoCorreo.required = obligatorio;
-    equipoClaveCaja.hidden = !obligatorio;
-    equipoClave.disabled = !obligatorio;
-    equipoCorreoAyuda.textContent = obligatorio
-      ? 'Escribe una contraseña para crear su acceso o déjala vacía para guardar solo la ficha.'
-      : 'Opcional para este cargo.';
+    equipoClaveCaja.hidden = !obligatorio || vinculada;
+    equipoClave.disabled = !obligatorio || vinculada;
+    equipoCorreo.readOnly = vinculada;
+    equipoCorreoAyuda.textContent = vinculada
+      ? 'Cuenta vinculada. El correo o contraseña se cambia desde Firebase Authentication.'
+      : obligatorio
+        ? 'Escribe una contraseña para crear su acceso o déjala vacía para guardar solo la ficha.'
+        : 'Opcional para este cargo.';
   }
   equipoRol.addEventListener('change', actualizarCorreoObligatorio);
 
