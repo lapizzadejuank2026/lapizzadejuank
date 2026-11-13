@@ -415,36 +415,112 @@
     const telefono = equipoTelefono.value.trim();
     const correo = equipoCorreo.value.trim().toLowerCase();
     const rol = equipoRol.value;
+    const claveInicial = rol === 'domiciliario' ? equipoClave.value : '';
+    const idExistente = equipoId.value;
+    const anterior = idExistente ? personal.find(p => p.id === idExistente) : null;
+
     if (nombre.length < 2 || !/^[0-9 +()\-]{7,20}$/.test(telefono) || !rolesEquipo.includes(rol)) {
       equipoMensaje.textContent = 'Revisa nombre, teléfono y rol antes de guardar.';
       return;
     }
     if ((rol === 'domiciliario' && !correo) ||
         (correo && (correo.length > 160 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)))) {
-      equipoMensaje.textContent = 'Escribe un correo válido para el domiciliario. Para otros cargos, puedes dejarlo vacío.';
+      equipoMensaje.textContent = 'Escribe un correo válido para el domiciliario.';
       equipoCorreo.focus();
       return;
     }
+    if (idExistente && !anterior) {
+      equipoMensaje.textContent = 'Este integrante no se encuentra en la lista actual. Actualiza el panel e inténtalo de nuevo.';
+      return;
+    }
+    if (anterior?.authUid && anterior.correo !== correo) {
+      equipoMensaje.textContent = 'El correo está vinculado a Firebase Authentication; para cambiarlo, actualiza primero esa cuenta.';
+      return;
+    }
+    if (anterior?.authUid && claveInicial) {
+      equipoMensaje.textContent = 'Esta cuenta ya existe. Para cambiar la contraseña utiliza la recuperación de Firebase Authentication.';
+      return;
+    }
+    if (claveInicial && claveInicial.length < 6) {
+      equipoMensaje.textContent = 'La contraseña inicial debe tener mínimo 6 caracteres.';
+      return;
+    }
+    if (claveInicial && personal.some(p => p.id !== idExistente && p.correo === correo)) {
+      equipoMensaje.textContent = 'Ya existe otro integrante registrado con ese correo. No duplicamos su cuenta.';
+      return;
+    }
+
     equipoGuardar.disabled = true;
-    equipoMensaje.textContent = 'Guardando en Firestore...';
+    equipoMensaje.textContent = claveInicial ? 'Creando acceso en Firebase...' : 'Guardando en Firestore...';
+    let credencialNueva = null;
+    let enlaceConfirmado = false;
     try {
       const datos = { nombre, telefono, correo, rol, actualizadoEn: serverTimestamp() };
-      if (equipoId.value) {
-        await updateDoc(doc(db, 'personal', equipoId.value), datos);
+      if (claveInicial && !anterior?.authUid) {
+        // Usar una sesión temporal separada evita desconectar al administrador.
+        // La contraseña solo se envía a Firebase Authentication, nunca a Firestore.
+        await setPersistence(authAlta, inMemoryPersistence);
+        const resultado = await createUserWithEmailAndPassword(authAlta, correo, claveInicial);
+        credencialNueva = resultado.user;
+        const idPersonal = idExistente || doc(collection(db, 'personal')).id;
+        const lote = writeBatch(db);
+        if (idExistente) {
+          lote.update(doc(db, 'personal', idPersonal), {
+            ...datos, authUid:credencialNueva.uid
+          });
+        } else {
+          lote.set(doc(db, 'personal', idPersonal), {
+            ...datos, activo:true, authUid:credencialNueva.uid,
+            creadoEn:serverTimestamp()
+          });
+        }
+        lote.set(doc(db, 'accesosDomiciliarios', credencialNueva.uid), {
+          personalId:idPersonal,
+          nombre, correo, rol:'domiciliario',
+          activo:idExistente ? anterior.activo !== false : true,
+          creadoEn:serverTimestamp(),
+          actualizadoEn:serverTimestamp()
+        });
+        await lote.commit();
+        enlaceConfirmado = true;
+      } else if (idExistente) {
+        const lote = writeBatch(db);
+        lote.update(doc(db, 'personal', idExistente), datos);
+        if (anterior?.authUid) {
+          lote.update(doc(db, 'accesosDomiciliarios', anterior.authUid), {
+            nombre, rol,
+            activo: anterior.activo !== false && rol === 'domiciliario',
+            actualizadoEn: serverTimestamp()
+          });
+        }
+        await lote.commit();
       } else {
         await addDoc(collection(db, 'personal'), {
-          ...datos, activo: true, creadoEn: serverTimestamp()
+          ...datos, activo:true, creadoEn:serverTimestamp()
         });
       }
-      const eraEdicion = Boolean(equipoId.value);
+
       limpiarEquipo();
-      equipoMensaje.textContent = eraEdicion
-        ? '✅ Cambios guardados. Ya puedes registrar otra persona.'
-        : '✅ Integrante guardado. Escribe los datos del siguiente.';
+      equipoMensaje.textContent = enlaceConfirmado
+        ? '✅ Cuenta creada y vinculada. El domiciliario puede iniciar sesión cuando las reglas estén publicadas.'
+        : idExistente ? '✅ Cambios guardados.' : '✅ Integrante guardado. Puedes agregar otro.';
       equipoNombre.focus();
     } catch (error) {
-      equipoMensaje.textContent = mensajeErrorEquipo(error);
+      let reversion = '';
+      if (credencialNueva && !enlaceConfirmado && error?.code === 'permission-denied') {
+        try {
+          await deleteUser(credencialNueva);
+          reversion = ' No se conservó la cuenta nueva.';
+        } catch (_) {
+          reversion = ' Revisa Firebase Authentication: la cuenta pudo quedar creada sin vínculo.';
+        }
+      }
+      equipoMensaje.textContent = mensajeAltaDomiciliario(error) + reversion;
     } finally {
+      equipoClave.value = '';
+      if (credencialNueva) {
+        try { await signOut(authAlta); } catch (_) {}
+      }
       equipoGuardar.disabled = false;
     }
   });
