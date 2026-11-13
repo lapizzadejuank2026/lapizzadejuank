@@ -248,8 +248,21 @@
     colaborador:'👥 Otro colaborador'
   }[rol] || '👥 Colaborador');
   const mensajeErrorEquipo = error => error?.code === 'permission-denied'
-    ? 'Firestore denegó el acceso a personal. Primero configura reglas para que solo el administrador pueda leer y modificar esta colección.'
-    : 'No se pudo acceder al equipo (' + String(error?.code || 'error de conexión') + '). Comprueba la conexión y los permisos.';
+    ? 'Firestore denegó el acceso. Revisa las reglas de personal y accesosDomiciliarios para el administrador.'
+    : 'No se pudo completar la operación (' + String(error?.code || 'error de conexión') + '). Comprueba la conexión y los permisos.';
+
+  function mensajeAltaDomiciliario(error){
+    const codigo = String(error?.code || '');
+    const mensajes = {
+      'auth/email-already-in-use':'Ese correo ya tiene cuenta en Firebase Authentication. No la duplicamos. Revisa el usuario en Firebase.',
+      'auth/weak-password':'La contraseña es demasiado débil. Utiliza una más segura.',
+      'auth/invalid-email':'El correo del domiciliario no es válido.',
+      'auth/network-request-failed':'Sin conexión con Firebase. Comprueba Internet antes de reintentar.',
+      'auth/too-many-requests':'Demasiados intentos de registro. Inténtalo más tarde.',
+      'permission-denied':'Firebase todavía no permite guardar los permisos del domiciliario. Configura las reglas de accesosDomiciliarios.',
+    };
+    return mensajes[codigo] || 'No se pudo crear el acceso ('+(codigo||'error')+'). Verifica el estado en Firebase antes de repetir.';
+  }
 
   function actualizarCorreoObligatorio() {
     const obligatorio = equipoRol.value === 'domiciliario';
@@ -267,6 +280,7 @@
     equipoId.value = '';
     equipoClave.value = '';
     equipoClave.disabled = false;
+    equipoCorreo.readOnly = false;
     equipoRol.value = 'domiciliario';
     actualizarCorreoObligatorio();
     equipoGuardar.textContent = '💾 Guardar y agregar otro';
@@ -304,6 +318,10 @@
       const estadoPersona = document.createElement('p');
       estadoPersona.className = 'dato';
       estadoPersona.textContent = persona.activo === false ? 'Estado: Inactivo' : 'Estado: Activo';
+      const accesoPersona = document.createElement('p');
+      accesoPersona.className = 'dato';
+      accesoPersona.textContent = persona.rol !== 'domiciliario' ? ''
+        : persona.authUid ? '🔐 Cuenta vinculada a Firebase' : '🔒 Acceso pendiente: pulsa Editar y asigna una contraseña';
       const acciones = document.createElement('div');
       acciones.className = 'acciones';
       const editar = document.createElement('button');
@@ -317,6 +335,12 @@
         equipoClave.value = '';
         equipoRol.value = rolesEquipo.includes(persona.rol) ? persona.rol : 'colaborador';
         actualizarCorreoObligatorio();
+        equipoClaveCaja.hidden = Boolean(persona.authUid) || persona.rol !== 'domiciliario';
+        equipoClave.disabled = Boolean(persona.authUid) || persona.rol !== 'domiciliario';
+        equipoCorreo.readOnly = Boolean(persona.authUid);
+        equipoCorreoAyuda.textContent = persona.authUid
+          ? 'La cuenta ya está vinculada: el correo se cambia desde Firebase Authentication.'
+          : equipoCorreoAyuda.textContent;
         equipoGuardar.textContent = '💾 Guardar cambios';
         equipoTituloForm.textContent = '✏️ Editar integrante';
         equipoCancelar.hidden = false;
@@ -332,18 +356,28 @@
         if (!auth.currentUser) return;
         activar.disabled = true;
         try {
-          await updateDoc(doc(db, 'personal', persona.id), {
-            activo: persona.activo === false,
-            actualizadoEn: serverTimestamp()
+          const activo = persona.activo === false;
+          const lote = writeBatch(db);
+          lote.update(doc(db, 'personal', persona.id), {
+            activo, actualizadoEn: serverTimestamp()
           });
-          equipoMensaje.textContent = '✅ Estado actualizado.';
+          if (persona.authUid) {
+            lote.update(doc(db, 'accesosDomiciliarios', persona.authUid), {
+              activo: activo && persona.rol === 'domiciliario',
+              actualizadoEn: serverTimestamp()
+            });
+          }
+          await lote.commit();
+          equipoMensaje.textContent = activo
+            ? '✅ Personal activado.'
+            : '✅ Personal desactivado y acceso suspendido.';
         } catch (error) {
           equipoMensaje.textContent = mensajeErrorEquipo(error);
           activar.disabled = false;
         }
       });
       acciones.append(editar, activar);
-      tarjeta.append(titulo, rol, telefono, correo, estadoPersona, acciones);
+      tarjeta.append(titulo, rol, telefono, correo, estadoPersona, accesoPersona, acciones);
       equipoLista.append(tarjeta);
     }
   }
