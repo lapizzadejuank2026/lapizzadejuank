@@ -67,7 +67,8 @@
       <div><h2>Mi jornada</h2><p id="correo-sesion" class="ayuda"></p></div>
       <button class="secundario" id="salir" type="button">Salir</button>
     </div>
-    <p class="aviso" role="status">🛡️ Acceso exclusivo: tus pedidos se consultan mediante tu cuenta autorizada. Las ofertas generales todavía no están habilitadas.</p>
+    <p class="aviso" role="status" id="estado-autorizacion">Verificando tu autorización en Firebase...</p>
+    <div id="contenido-autorizado" hidden>
     <nav class="pestanas" aria-label="Secciones de la aplicación">
       <button type="button" id="tab-pedidos" aria-selected="true">📦 Mis pedidos</button>
       <button type="button" id="tab-historial" aria-selected="false">🕘 Historial</button>
@@ -101,6 +102,7 @@
       <p id="cuenta-correo"></p>
       <p class="ayuda">La información de tu cuenta y las entregas se muestran solo después de verificar tu autorización en Firebase.</p>
     </section>
+    </div>
   </section>
   <p class="ayuda" style="text-align:center"><a href="index.html">← Volver a La Pizza de Juanca</a></p>
 </main>
