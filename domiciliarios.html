@@ -59,6 +59,7 @@
       </label>
       <button id="entrar" class="principal" type="submit">🔐 Iniciar sesión</button>
     </form>
+    <button id="recuperar-clave" type="button" class="secundario" style="width:100%;margin-top:8px">✉️ No tengo contraseña / Recuperar acceso</button>
     <p id="mensaje-acceso" class="estado" role="status" aria-live="polite">Escribe el correo y la contraseña que te entregó el administrador.</p>
     <p class="ayuda">Solo pueden ingresar domiciliarios activos autorizados por La Pizza de Juanca. No uses la cuenta del administrador.</p>
   </section>
@@ -115,7 +116,7 @@
 </script>
 <script type="module">
   import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
-  import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
+  import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut,sendPasswordResetEmail} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
   import {getFirestore,doc,onSnapshot} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
 
   // Nombre independiente: la sesión del domiciliario no reemplaza la del administrador
@@ -172,6 +173,34 @@
       }[codigo]||'No fue posible iniciar sesión ('+codigo+').';
     }finally{
       $('entrar').disabled=false;
+    }
+  });
+
+  // El registro en Equipo y roles no crea contraseñas. Cuando una cuenta de
+  // Authentication ya existe, Firebase envía un correo para fijar/restablecerla.
+  $('recuperar-clave').addEventListener('click',async()=>{
+    const email=$('correo').value.trim();
+    if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){
+      $('mensaje-acceso').textContent='Escribe primero el correo del domiciliario.';
+      $('correo').focus();
+      return;
+    }
+    const boton=$('recuperar-clave');
+    boton.disabled=true;
+    $('mensaje-acceso').textContent='Solicitando enlace de recuperación...';
+    try {
+      await sendPasswordResetEmail(auth,email);
+      $('mensaje-acceso').textContent='Si ese correo tiene una cuenta de contraseña en Firebase, recibirá un enlace para establecer una nueva contraseña. Revisa también Spam.';
+    }catch(error){
+      const codigo=error?.code||'';
+      $('mensaje-acceso').textContent={
+        'auth/invalid-email':'Revisa el formato del correo electrónico.',
+        'auth/too-many-requests':'Hay demasiados intentos. Vuelve a intentarlo más tarde.',
+        'auth/network-request-failed':'Revisa tu conexión a Internet.',
+        'auth/operation-not-allowed':'La recuperación por correo no está disponible en Firebase.'
+      }[codigo]||'No pudimos enviar el enlace. Comprueba el correo y el método de acceso configurado en Firebase.';
+    }finally{
+      boton.disabled=false;
     }
   });
 
