@@ -113,6 +113,10 @@
             <input id="equipo-clave" type="password" minlength="6" maxlength="128" autocomplete="new-password" placeholder="Mínimo 6 caracteres">
             <small class="hint">Opcional: al escribirla se intentará crear la cuenta de acceso. Nunca se guarda en Firestore.</small>
           </label>
+          <label id="equipo-uid-caja" hidden>Vincular cuenta que ya existe en Firebase (UID)
+            <input id="equipo-uid" type="text" maxlength="128" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Pega aquí el UID que copiaste de Authentication">
+            <small class="hint">Solo para una cuenta ya existente. Comprueba en Firebase Authentication que su correo coincida exactamente con el del trabajador. Deja vacía la contraseña.</small>
+          </label>
           <label>Rol
             <select id="equipo-rol" required>
               <option value="domiciliario">🛵 Domiciliario</option>
@@ -165,7 +169,7 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, setPersistence, inMemoryPersistence, deleteUser } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-  import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+  import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, updateDoc, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
 
   const firebaseConfig = {
     apiKey: 'AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA',
@@ -235,6 +239,8 @@
   const equipoRol = document.getElementById('equipo-rol');
   const equipoClave = document.getElementById('equipo-clave');
   const equipoClaveCaja = document.getElementById('equipo-clave-caja');
+  const equipoUidCaja = document.getElementById('equipo-uid-caja');
+  const equipoUid = document.getElementById('equipo-uid');
   const equipoGuardar = document.getElementById('equipo-guardar');
   const equipoCancelar = document.getElementById('equipo-cancelar');
   const equipoNuevo = document.getElementById('equipo-nuevo');
@@ -259,7 +265,8 @@
       'auth/invalid-email':'El correo del domiciliario no es válido.',
       'auth/network-request-failed':'Sin conexión con Firebase. Comprueba Internet antes de reintentar.',
       'auth/too-many-requests':'Demasiados intentos de registro. Inténtalo más tarde.',
-      'permission-denied':'Firebase todavía no permite guardar los permisos del domiciliario. Configura las reglas de accesosDomiciliarios.',
+      'permission-denied':'Firebase todavía no permite guardar los permisos del domiciliario. Revisa las reglas de accesosDomiciliarios.',
+      'uid-vinculado':'Ese UID ya pertenece a otro integrante. No se cambió ninguna vinculación.',
     };
     return mensajes[codigo] || 'No se pudo crear el acceso ('+(codigo||'error')+'). Verifica el estado en Firebase antes de repetir.';
   }
@@ -271,6 +278,8 @@
     equipoCorreo.required = obligatorio;
     equipoClaveCaja.hidden = !obligatorio || vinculada;
     equipoClave.disabled = !obligatorio || vinculada;
+    equipoUidCaja.hidden = !obligatorio || vinculada || !equipoId.value;
+    equipoUid.disabled = equipoUidCaja.hidden;
     equipoCorreo.readOnly = vinculada;
     equipoCorreoAyuda.textContent = vinculada
       ? 'Cuenta vinculada. El correo o contraseña se cambia desde Firebase Authentication.'
@@ -284,6 +293,7 @@
     formEquipo.reset();
     equipoId.value = '';
     equipoClave.value = '';
+    equipoUid.value = '';
     equipoClave.disabled = false;
     equipoCorreo.readOnly = false;
     equipoRol.value = 'domiciliario';
@@ -326,7 +336,8 @@
       const accesoPersona = document.createElement('p');
       accesoPersona.className = 'dato';
       accesoPersona.textContent = persona.rol !== 'domiciliario' ? ''
-        : persona.authUid ? '🔐 Cuenta vinculada a Firebase' : '🔒 Acceso pendiente: pulsa Editar y asigna una contraseña';
+        : persona.authUid ? '🔐 Cuenta vinculada a Firebase'
+          : '🔒 Acceso pendiente: pulsa Editar y crea la cuenta o vincula el UID de una existente';
       const acciones = document.createElement('div');
       acciones.className = 'acciones';
       const editar = document.createElement('button');
@@ -338,10 +349,13 @@
         equipoTelefono.value = persona.telefono || '';
         equipoCorreo.value = persona.correo || '';
         equipoClave.value = '';
+        equipoUid.value = '';
         equipoRol.value = rolesEquipo.includes(persona.rol) ? persona.rol : 'colaborador';
         actualizarCorreoObligatorio();
         equipoClaveCaja.hidden = Boolean(persona.authUid) || persona.rol !== 'domiciliario';
         equipoClave.disabled = Boolean(persona.authUid) || persona.rol !== 'domiciliario';
+        equipoUidCaja.hidden = Boolean(persona.authUid) || persona.rol !== 'domiciliario';
+        equipoUid.disabled = equipoUidCaja.hidden;
         equipoCorreo.readOnly = Boolean(persona.authUid);
         equipoCorreoAyuda.textContent = persona.authUid
           ? 'La cuenta ya está vinculada: el correo se cambia desde Firebase Authentication.'
@@ -421,6 +435,7 @@
     const correo = equipoCorreo.value.trim().toLowerCase();
     const rol = equipoRol.value;
     const claveInicial = rol === 'domiciliario' ? equipoClave.value : '';
+    const uidExistente = rol === 'domiciliario' ? equipoUid.value.trim() : '';
     const idExistente = equipoId.value;
     const anterior = idExistente ? personal.find(p => p.id === idExistente) : null;
 
@@ -446,6 +461,18 @@
       equipoMensaje.textContent = 'Esta cuenta ya existe. Para cambiar la contraseña utiliza la recuperación de Firebase Authentication.';
       return;
     }
+    if (uidExistente && claveInicial) {
+      equipoMensaje.textContent = 'Para vincular una cuenta existente, deja vacía la contraseña inicial.';
+      return;
+    }
+    if (uidExistente && (!idExistente || anterior?.authUid || !/^[^\\s/]{6,128}$/.test(uidExistente))) {
+      equipoMensaje.textContent = 'Selecciona Editar en el domiciliario sin cuenta y pega un UID válido.';
+      return;
+    }
+    if (uidExistente && personal.some(p => p.id !== idExistente && p.authUid === uidExistente)) {
+      equipoMensaje.textContent = 'Este UID ya está vinculado a otro integrante. No se puede utilizar otra vez.';
+      return;
+    }
     if (claveInicial && claveInicial.length < 6) {
       equipoMensaje.textContent = 'La contraseña inicial debe tener mínimo 6 caracteres.';
       return;
@@ -456,12 +483,31 @@
     }
 
     equipoGuardar.disabled = true;
-    equipoMensaje.textContent = claveInicial ? 'Creando acceso en Firebase...' : 'Guardando en Firestore...';
+    equipoMensaje.textContent = uidExistente ? 'Vinculando cuenta existente...' : claveInicial ? 'Creando acceso en Firebase...' : 'Guardando en Firestore...';
     let credencialNueva = null;
     let enlaceConfirmado = false;
     try {
       const datos = { nombre, telefono, correo, rol, actualizadoEn: serverTimestamp() };
-      if (claveInicial && !anterior?.authUid) {
+      if (uidExistente && anterior && !anterior.authUid) {
+        // El UID debe copiarse de Authentication, verificando visualmente que corresponde al mismo correo.
+        // El navegador no tiene permisos para enumerar cuentas de Firebase Authentication.
+        const accesoRef = doc(db, 'accesosDomiciliarios', uidExistente);
+        const accesoPrevio = await getDoc(accesoRef);
+        if (accesoPrevio.exists() && accesoPrevio.data().personalId !== idExistente) {
+          throw {code:'uid-vinculado'};
+        }
+        const lote = writeBatch(db);
+        lote.update(doc(db, 'personal', idExistente), {...datos, authUid:uidExistente});
+        lote.set(accesoRef, {
+          personalId:idExistente,
+          nombre, correo, rol:'domiciliario',
+          activo:anterior.activo !== false,
+          actualizadoEn:serverTimestamp(),
+          ...(accesoPrevio.exists() ? {} : {creadoEn:serverTimestamp()})
+        }, {merge:true});
+        await lote.commit();
+        enlaceConfirmado = true;
+      } else if (claveInicial && !anterior?.authUid) {
         // Usar una sesión temporal separada evita desconectar al administrador.
         // La contraseña solo se envía a Firebase Authentication, nunca a Firestore.
         await setPersistence(authAlta, inMemoryPersistence);
@@ -507,7 +553,8 @@
 
       limpiarEquipo();
       equipoMensaje.textContent = enlaceConfirmado
-        ? '✅ Cuenta creada y vinculada. El domiciliario puede iniciar sesión cuando las reglas estén publicadas.'
+        ? (uidExistente ? '✅ Cuenta existente vinculada. Ya puedes probar su acceso con la contraseña que tiene en Authentication.'
+          : '✅ Cuenta creada y vinculada. Ya puedes probar el inicio de sesión.')
         : idExistente ? '✅ Cambios guardados.' : '✅ Integrante guardado. Puedes agregar otro.';
       equipoNombre.focus();
     } catch (error) {
@@ -523,6 +570,7 @@
       equipoMensaje.textContent = mensajeAltaDomiciliario(error) + reversion;
     } finally {
       equipoClave.value = '';
+      equipoUid.value = '';
       if (credencialNueva) {
         try { await signOut(authAlta); } catch (_) {}
       }
