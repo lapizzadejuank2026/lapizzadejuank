@@ -20,6 +20,8 @@ function avisar(mensaje){const p=document.createElement('p');p.className='aviso'
 function dinero(x){return Number.isFinite(Number(x))?'$'+Number(x).toLocaleString('es-CO'):'Por confirmar'}
 function bloquear(mensaje){
   dejarPedidos();dejarPedidos=()=>{};uidAutorizado='';
+  $('contenido-autorizado').hidden=true;
+  $('estado-autorizacion').textContent=mensaje;
   $('vista-pedidos').replaceChildren(avisar(mensaje));
   $('vista-historial').replaceChildren();
   $('vista-cuenta').replaceChildren();
@@ -83,6 +85,8 @@ onAuthStateChanged(auth,user=>{
       bloquear('Acceso sin autorización. El administrador debe activar tu cuenta en Equipo y roles.');return;
     }
     $('vista-cuenta').replaceChildren(texto('Nombre: '+(persona.nombre||'Domiciliario')),texto('Correo: '+(user.email||'')));
+    $('estado-autorizacion').textContent='✅ Cuenta autorizada: '+(persona.nombre||'domiciliario');
+    $('contenido-autorizado').hidden=false;
     if(uidAutorizado===uid)return;
     uidAutorizado=uid;
     $('vista-pedidos').replaceChildren(avisar('Buscando únicamente tus pedidos asignados...'));
