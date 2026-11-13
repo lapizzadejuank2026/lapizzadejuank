@@ -91,10 +91,10 @@
     <section id="vista-equipo" role="tabpanel" aria-labelledby="tab-equipo" hidden>
       <div class="caja">
         <h2 class="seccion-titulo">👥 Equipo y roles</h2>
-        <p class="hint">Registra a tus domiciliarios y colaboradores. Estos registros son internos; no crean todavía cuentas para entrar a la aplicación de repartidores.</p>
+        <p class="hint">Registra a tus domiciliarios y colaboradores. En el formulario puedes asignar una contraseña inicial para vincular una cuenta independiente.</p>
         <button type="button" id="equipo-nuevo" class="secundario">➕ Registrar personal y roles</button>
         <a class="portal-link" href="domiciliarios.html" target="_blank" rel="noopener">🛵 Abrir aplicación de domiciliarios</a>
-        <p class="hint-privada">Primero registra al trabajador aquí. Para entrar en la aplicación de domiciliarios aún hace falta crear y autorizar su cuenta en Firebase Authentication; esa función está pendiente.</p>
+        <p class="hint-privada">Antes de crear accesos, Firebase necesita las reglas de accesosDomiciliarios. Si faltan, se mostrará un error y no se autorizará la cuenta.</p>
         <p class="hint">Después de guardar, el formulario se limpia automáticamente para agregar otra persona.</p>
         <h3 id="equipo-titulo-form" style="margin-bottom:6px">➕ Registrar integrante</h3>
         <form id="form-equipo" class="equipo-form">
@@ -107,7 +107,7 @@
           </label>
           <label>Correo electrónico
             <input id="equipo-correo" type="email" maxlength="160" autocomplete="off" inputmode="email" placeholder="ejemplo@correo.com">
-            <small id="equipo-correo-ayuda" class="hint">Obligatorio para domiciliarios; opcional para los otros cargos. No crea una cuenta de acceso todavía.</small>
+            <small id="equipo-correo-ayuda" class="hint">Obligatorio para domiciliarios. La contraseña se escribe debajo y no se almacena en la ficha.</small>
           </label>
           <label id="equipo-clave-caja">Contraseña inicial del domiciliario
             <input id="equipo-clave" type="password" minlength="6" maxlength="128" autocomplete="new-password" placeholder="Mínimo 6 caracteres">
@@ -164,8 +164,8 @@
 </script>
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
-  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-  import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, setPersistence, inMemoryPersistence, deleteUser } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
+  import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
 
   const firebaseConfig = {
     apiKey: 'AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA',
@@ -178,6 +178,8 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
+  const altaApp = initializeApp(firebaseConfig, 'alta-domiciliarios');
+  const authAlta = getAuth(altaApp);
 
     const acceso = document.getElementById('acceso');
   const panel = document.getElementById('panel');
@@ -255,8 +257,8 @@
     equipoClaveCaja.hidden = !obligatorio;
     equipoClave.disabled = !obligatorio;
     equipoCorreoAyuda.textContent = obligatorio
-      ? 'Obligatorio para domiciliarios. No crea una cuenta de acceso todavía.'
-      : 'Opcional para este cargo. No crea una cuenta de acceso todavía.';
+      ? 'Escribe una contraseña para crear su acceso o déjala vacía para guardar solo la ficha.'
+      : 'Opcional para este cargo.';
   }
   equipoRol.addEventListener('change', actualizarCorreoObligatorio);
 
