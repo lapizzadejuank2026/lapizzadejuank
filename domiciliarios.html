@@ -224,13 +224,31 @@
 
     // No consultar la colección personal completa ni pedidos de otros trabajadores.
     // La autorización se comprueba leyendo exclusivamente el documento con SU UID.
-    detenerVerificacion=onSnapshot(doc(db,'accesosDomiciliarios',user.uid),snapshot=>{
+    detenerVerificacion=onSnapshot(doc(db,'accesosDomiciliarios',user.uid),
+    {includeMetadataChanges:true},snapshot=>{
       if(auth.currentUser?.uid!==user.uid)return;
+      // Una respuesta de la caché no demuestra que la cuenta esté revocada.
+      // Esperar a la confirmación del servidor antes de bloquear el acceso.
+      if(snapshot.metadata.fromCache){
+        $('mensaje-acceso').textContent='Confirmando autorización con Firebase...';
+        return;
+      }
       const datos=snapshot.data();
-      if(!snapshot.exists() || datos?.rol!=='domiciliario' || datos?.activo!==true ||
-          !datos?.personalId || String(datos?.correo||'').toLowerCase()!==
-            String(user.email||'').toLowerCase()){
-        bloquearAcceso('Tu cuenta no está autorizada como domiciliario activo. Comunícate con el administrador.');
+      const correoNormalizado=valor=>String(valor||'').trim().toLowerCase();
+      let motivo='';
+      if(!snapshot.exists()){
+        motivo='No encontramos una autorización para este usuario. Comprueba en Equipo y roles que el UID vinculado coincida con el de Authentication.';
+      }else if(datos?.rol!=='domiciliario'){
+        motivo='El rol registrado en los permisos de Firebase no es domiciliario.';
+      }else if(datos?.activo!==true){
+        motivo='Tu acceso figura inactivo. Pide al administrador que revise el estado en Equipo y roles.';
+      }else if(!datos?.personalId){
+        motivo='La autorización existe, pero no está vinculada a la ficha de personal.';
+      }else if(correoNormalizado(datos?.correo)!==correoNormalizado(user.email)){
+        motivo='El correo de la cuenta no coincide con el registrado para el domiciliario. El administrador debe revisar la vinculación.';
+      }
+      if(motivo){
+        bloquearAcceso(motivo);
         return;
       }
       mensajeBloqueo='';
