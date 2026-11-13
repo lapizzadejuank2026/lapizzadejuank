@@ -465,7 +465,7 @@
       equipoMensaje.textContent = 'Para vincular una cuenta existente, deja vacía la contraseña inicial.';
       return;
     }
-    if (uidExistente && (!idExistente || anterior?.authUid || !/^[^\\s/]{6,128}$/.test(uidExistente))) {
+    if (uidExistente && (!idExistente || anterior?.authUid || !/^[^\s/]{6,128}$/.test(uidExistente))) {
       equipoMensaje.textContent = 'Selecciona Editar en el domiciliario sin cuenta y pega un UID válido.';
       return;
     }
