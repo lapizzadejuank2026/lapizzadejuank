@@ -51,6 +51,7 @@
       <p class="peque">Puedes agregar nuevas comandas y los consumos anteriores permanecerán registrados.</p>
       <div id="cuentaActual"></div><div id="ordenes"></div>
       <p class="total" id="totalCuenta"></p>
+      <button id="imprimirCuenta" class="sec" disabled style="width:100%;margin:9px 0 0">🖨️ Imprimir cuenta para cocina / cliente</button>
       <button id="pagarCuenta" disabled>💵 Cobrar y liberar mesa (prueba)</button>
       <p id="estadoCuenta" class="estado-form" role="status"></p>
     </div>
@@ -60,6 +61,7 @@
 <dialog class="dialogo" id="dialogPizza"><h2 id="tituloPizza"></h2><p class="peque" id="instruccionPizza"></p><div id="saboresPizza" class="sabores"></div><div class="pie"><button id="cancelarPizza" class="sec">Cancelar</button><button id="confirmarPizza">Agregar pizza</button></div></dialog>
 <dialog class="dialogo" id="dialogCobrar"><h2>Cobrar cuenta de prueba</h2><p id="cobrarTotal" class="total"></p><label>Método<select id="metodoPago"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="mixto">Mixto</option></select></label><label>Efectivo (COP)<input id="pagoEfectivo" type="number" min="0" step="1"></label><label>Transferencia (COP)<input id="pagoTransferencia" type="number" min="0" step="1"></label><p id="sumaPago" class="estado-form"></p><div class="pie"><button id="cancelarPago" class="sec">Cancelar</button><button id="confirmarPago">Cerrar mesa (prueba)</button></div></dialog>
 </main>
+<script src="impresion-ticket.js"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -152,6 +154,7 @@ function dibujarCuenta(){
   }
   $('totalCuenta').textContent='Cuenta: '+pesos(totalCuenta(c));
   $('pagarCuenta').disabled=!c;
+  $('imprimirCuenta').disabled=!c;
 }
 function dibujarBorrador(){
   const div=$('borrador');limpia(div);
@@ -301,6 +304,17 @@ function sumarPago(){
 $('pagoEfectivo').oninput=sumarPago;
 $('pagoTransferencia').oninput=sumarPago;
 $('metodoPago').onchange=ajustarPago;
+$('imprimirCuenta').onclick=()=>{
+  const c=cuenta();
+  const m=estado.mesas.find(x=>x.id===seleccion);
+  if(!c || !m)return;
+  const impresora=window.ImpresionJuanca;
+  if(!impresora){
+    alert('No cargó el formato de impresión. Actualiza la página.');
+    return;
+  }
+  impresora.abrirTicket(impresora.prepararCuentaMesa(m.nombre,c));
+};
 $('pagarCuenta').onclick=()=>{$('cobrarTotal').textContent='Total: '+pesos(totalCuenta(cuenta()));ajustarPago();$('dialogCobrar').showModal();};
 $('cancelarPago').onclick=()=>$('dialogCobrar').close();
 $('confirmarPago').onclick=()=>{
