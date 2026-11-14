@@ -97,20 +97,30 @@ export function mostrarCobroDomiciliario(padre, pedidoId, d, db, auth) {
   if (resumenReporte(section,d)) return;
   const estado = String(d.estadoEntrega || '').toLowerCase();
   if (estado === 'entregado') {
-    parrafo(section,'Esta entrega se cerró antes de activar el registro de cobros. Consulta con caja.','cobro-error');
+    parrafo(section,'⚠️ Entrega ya cerrada sin reporte de pago. El administrador debe revisar y registrar manualmente este cobro en caja, si corresponde.','cobro-error');
     return;
   }
   if (estado !== 'en_camino') {
-    parrafo(section,'Podrás registrar el cobro después de pulsar «Voy en camino».');
+    parrafo(section,'💵 El botón «Registrar forma de pago» aparecerá cuando marques «Voy en camino».');
     return;
   }
   if (productos === null || domicilio === null) {
-    parrafo(section,'⚠️ Solicita que el administrador confirme el valor del domicilio antes de cobrar.','cobro-error');
+    parrafo(section,'⚠️ No se puede cobrar todavía: el administrador debe guardar el valor del domicilio (puede ser $0 si es gratis). Después aparecerá «Registrar forma de pago».','cobro-error');
     return;
   }
 
   const total = productos+domicilio;
+  // El repartidor abre el pago con un botón visible cuando está en camino.
+  const abrirFormulario = boton(section, '💰 Registrar forma de pago');
+  abrirFormulario.className = 'abrir-cobro';
   const form = document.createElement('form');
+  form.hidden = true;
+  abrirFormulario.addEventListener('click', () => {
+    form.hidden = !form.hidden;
+    abrirFormulario.textContent = form.hidden
+      ? '💰 Registrar forma de pago'
+      : '⬆️ Ocultar opciones de pago';
+  });
   const label = document.createElement('label');
   label.textContent = '¿Cómo pagó el cliente?';
   const metodo = document.createElement('select');
