@@ -34,6 +34,9 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .registro:last-child{border:0}.registro p{margin:5px 0}
 .fuerte{font-weight:bold;color:#ffdc8e}
 .resumen{font-weight:bold;font-size:19px;color:var(--gold)}
+.verificado{padding:10px 12px;background:#1e3129;border:1px solid #50785d;border-radius:10px}
+.verificado input{width:auto;display:inline-block;vertical-align:middle;margin:0 8px 0 0}
+.verificado label{display:block;margin:0;font-weight:normal}
 .enlaces{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:15px}
 [hidden]{display:none!important}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid white;outline-offset:3px}
@@ -110,6 +113,9 @@ Los movimientos de esta pantalla se guardarán en Firestore solamente cuando se 
 <label>Valor transferencia (COP)<input id="transferenciaCaja" type="number" min="0" step="1" inputmode="numeric"></label>
 </div>
 <p id="sumaCaja" class="estado" role="status"></p>
+<div class="verificado" id="verificarTransferenciaCaja" hidden>
+<label><input type="checkbox" id="confirmoTransferenciaCaja">He comprobado personalmente que la transferencia llegó a la cuenta del negocio.</label>
+</div>
 <label>Concepto o detalle<input id="conceptoCaja" maxlength="140" placeholder="Ejemplo: venta pedido ABC12345" required></label>
 <button type="submit" id="guardarMovimiento" disabled>💾 Registrar movimiento</button>
 </form>
