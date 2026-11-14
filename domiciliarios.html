@@ -36,6 +36,13 @@
     .pasos button:disabled{opacity:.65;cursor:not-allowed}
     .vacio{padding:26px 16px;border:1px dashed #777;border-radius:12px;text-align:center;color:#ddd}
     .vacio .icono{font-size:45px;display:block;margin-bottom:9px}
+    .entrega{padding:16px;background:#191919;border:1px solid #555;border-radius:12px;margin:12px 0}
+    .entrega h3{margin:0 0 12px;font-size:18px}
+    .entrega p{margin:7px 0;overflow-wrap:anywhere}
+    .entrega .etiqueta{color:#ffda83;font-weight:bold}
+    .entrega .productos{white-space:pre-wrap;background:#101010;padding:10px;border-radius:8px}
+    .entrega button{width:100%;margin-top:12px}
+    .entrega a{overflow-wrap:anywhere}
     [hidden]{display:none!important}
     a{color:#ffe09b}
     button:focus-visible,input:focus-visible{outline:3px solid white;outline-offset:2px}
@@ -68,34 +75,23 @@
       <div><h2>Mi jornada</h2><p id="correo-sesion" class="ayuda"></p></div>
       <button class="secundario" id="salir" type="button">Salir</button>
     </div>
-    <p class="aviso" role="status">🔒 Acceso personal verificado. La consulta de pedidos y las entregas se habilitarán cuando se publiquen las reglas específicas de Firebase para cada repartidor.</p>
+    <p class="aviso" id="aviso-entregas" role="status">🔒 Cuenta individual verificada. Solo se consultarán los pedidos asignados a este domiciliario.</p>
     <nav class="pestanas" aria-label="Secciones de la aplicación">
       <button type="button" id="tab-pedidos" aria-selected="true">📦 Mis pedidos</button>
       <button type="button" id="tab-historial" aria-selected="false">🕘 Historial</button>
       <button type="button" id="tab-cuenta" aria-selected="false">👤 Mi cuenta</button>
     </nav>
     <section class="caja" id="vista-pedidos">
-      <h2>Entregas asignadas</h2>
-      <div class="vacio"><span class="icono">🛵</span><strong>Los pedidos todavía no están conectados</strong><p class="ayuda">Cuando se habiliten las reglas, aquí aparecerán únicamente tus entregas autorizadas.</p></div>
-      <h2 style="margin-top:22px">📣 Ofertas disponibles para todos</h2>
-      <div class="vacio">
-        <span class="icono">📣</span>
-        <strong>Próximamente: tomar domicilio</strong>
-        <p class="ayuda">Cuando el administrador envíe un domicilio a todos los repartidores activos, aquí aparecerá la oferta. Solo el primero que la acepte podrá quedarse con el pedido.</p>
-        <button type="button" class="principal" disabled>✅ Aceptar oferta (próximamente)</button>
-      </div>
-      <h2 style="margin-top:22px">Estado de entrega</h2>
-      <p class="ayuda">Estos botones se activarán cuando haya un pedido real asignado.</p>
-      <div class="pasos">
-        <button type="button" disabled>✅ Aceptar</button>
-        <button type="button" disabled>🍕 Recogido</button>
-        <button type="button" disabled>🛵 En camino</button>
-        <button type="button" disabled>🏠 Entregado</button>
-      </div>
+      <h2>📦 Mis entregas asignadas</h2>
+      <p class="ayuda">Los pedidos aparecen en tiempo real mientras la aplicación esté abierta. No se mostrarán entregas de otros domiciliarios.</p>
+      <p id="estado-entregas" class="estado" role="status">Conectando...</p>
+      <div id="lista-entregas"><div class="vacio">Aún no tienes entregas asignadas.</div></div>
+      <h2 style="margin-top:22px">📣 Ofertas para todos</h2>
+      <p class="ayuda">La función para ofrecer un pedido a todos y adjudicarlo al primero que acepte se habilitará posteriormente.</p>
     </section>
     <section class="caja" id="vista-historial" hidden>
-      <h2>Historial de domicilios</h2>
-      <div class="vacio"><span class="icono">🕘</span>El historial se mostrará cuando estén activadas las entregas.</div>
+      <h2>🕘 Mi historial de entregas</h2>
+      <div id="lista-historial"><div class="vacio">Todavía no hay entregas finalizadas.</div></div>
     </section>
     <section class="caja" id="vista-cuenta" hidden>
       <h2>Mi cuenta</h2>
@@ -117,7 +113,7 @@
 <script type="module">
   import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
   import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut,sendPasswordResetEmail} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-  import {getFirestore,doc,onSnapshot} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+  import {getFirestore,doc,onSnapshot,collection,query,where,updateDoc,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
 
   // Nombre independiente: la sesión del domiciliario no reemplaza la del administrador
   // cuando ambas pantallas se abren desde el mismo dispositivo.
@@ -134,7 +130,126 @@
   const $=id=>document.getElementById(id);
   const vistas=['pedidos','historial','cuenta'];
   let detenerVerificacion=()=>{};
+  let detenerPedidos=()=>{};
+  let pedidosPropios=[];
+  let escuchandoPedidos=false;
   let mensajeBloqueo='';
+
+  const estadosFinales=new Set(['entregado','cancelado']);
+  const pasosEntrega=[
+    {desde:'asignado',hacia:'aceptado',boton:'✅ Aceptar entrega'},
+    {desde:'aceptado',hacia:'recogido',boton:'🍕 Pedido recogido'},
+    {desde:'recogido',hacia:'en_camino',boton:'🛵 Voy en camino'},
+    {desde:'en_camino',hacia:'entregado',boton:'🏠 Confirmar entregado'}
+  ];
+  const nombresEstado={
+    asignado:'Asignado por el restaurante', aceptado:'Aceptado',
+    recogido:'Recogido', en_camino:'En camino', entregado:'Entregado',
+    cancelado:'Cancelado'
+  };
+  function texto(parent,texto,clase=''){
+    const p=document.createElement('p');
+    if(clase) p.className=clase;
+    p.textContent=texto;
+    parent.append(p);
+    return p;
+  }
+  function detalleProductos(datos){
+    const items=datos.productos||datos.items||[];
+    if(!Array.isArray(items)) return 'Verificar productos con el restaurante';
+    return items.map(item=>{
+      const nombre=String(item.producto||item.pizza||item.nombre||'Producto');
+      const cantidad=Number(item.cantidad||1);
+      const sabores=Array.isArray(item.sabores)&&item.sabores.length?' · '+item.sabores.join(', '):'';
+      return cantidad+' × '+nombre+sabores;
+    }).join('\n')||'Sin detalles de productos';
+  }
+  function tarjetaEntrega(pedido){
+    const d=pedido.d;
+    const estado=String(d.estadoEntrega||'asignado').toLowerCase();
+    const card=document.createElement('article');
+    card.className='entrega';
+    const titulo=document.createElement('h3');
+    titulo.textContent='Pedido '+pedido.id.slice(0,8).toUpperCase();
+    card.append(titulo);
+    texto(card,'Estado: '+(nombresEstado[estado]||estado),'etiqueta');
+    const cliente=d.cliente&&typeof d.cliente==='object'?d.cliente:{};
+    texto(card,'Cliente: '+(cliente.nombre||d.nombre||'Sin nombre'));
+    const numero=String(cliente.telefono||d.telefono||'').trim();
+    if(numero){
+      texto(card,'Teléfono: '+numero);
+      const telefono=document.createElement('a');
+      telefono.href='tel:'+numero.replace(/[^0-9+]/g,'');
+      telefono.textContent='📞 Llamar al cliente';
+      card.append(telefono);
+    }
+    texto(card,'Dirección: '+(d.direccion||cliente.direccion||'Sin dirección'));
+    texto(card,'Municipio: '+(d.municipio||cliente.municipio||'Sin municipio'));
+    if(d.observaciones) texto(card,'Observaciones: '+d.observaciones);
+    texto(card,'Productos:\n'+detalleProductos(d),'productos');
+    if(Number.isFinite(Number(d.total))) texto(card,'Valor de productos: $'+Number(d.total).toLocaleString('es-CO')+' · Domicilio por confirmar');
+    const paso=pasosEntrega.find(p=>p.desde===estado);
+    if(paso){
+      const boton=document.createElement('button');
+      boton.type='button';
+      boton.className='principal';
+      boton.textContent=paso.boton;
+      const mensaje=texto(card,'','estado');
+      boton.addEventListener('click',async()=>{
+        if(auth.currentUser?.uid!==d.domiciliarioUid)return;
+        boton.disabled=true;
+        mensaje.textContent='Guardando el estado...';
+        try{
+          await updateDoc(doc(db,'pedidos',pedido.id),{
+            estadoEntrega:paso.hacia,estadoEntregaActualizadoEn:serverTimestamp()
+          });
+          mensaje.textContent='✅ Estado actualizado.';
+        }catch(error){
+          mensaje.textContent=error?.code==='permission-denied'
+            ?'Firebase no permite actualizar este pedido. Hay que revisar las reglas de seguridad.'
+            :'No se pudo actualizar. Comprueba la conexión y vuelve a intentarlo.';
+          boton.disabled=false;
+        }
+      });
+      card.append(boton);
+    }
+    return card;
+  }
+  function mostrarPedidos(){
+    const abiertos=pedidosPropios.filter(p=>!estadosFinales.has(String(p.d.estadoEntrega||'asignado').toLowerCase()));
+    const historial=pedidosPropios.filter(p=>estadosFinales.has(String(p.d.estadoEntrega||'asignado').toLowerCase()));
+    const lista=$('lista-entregas');
+    const historico=$('lista-historial');
+    lista.replaceChildren();
+    historico.replaceChildren();
+    for(const p of abiertos)lista.append(tarjetaEntrega(p));
+    for(const p of historial)historico.append(tarjetaEntrega(p));
+    if(!abiertos.length)lista.innerHTML='<div class="vacio">🛵 Aún no tienes entregas pendientes.</div>';
+    if(!historial.length)historico.innerHTML='<div class="vacio">No hay entregas finalizadas.</div>';
+    $('tab-pedidos').textContent='📦 Mis pedidos ('+abiertos.length+')';
+    $('tab-historial').textContent='🕘 Historial ('+historial.length+')';
+    $('estado-entregas').textContent=abiertos.length
+      ?'✅ '+abiertos.length+' entrega(s) pendiente(s).'
+      :'No tienes entregas pendientes.';
+  }
+  function escucharPedidos(user){
+    detenerPedidos();
+    pedidosPropios=[];
+    $('estado-entregas').textContent='Buscando tus pedidos en Firebase...';
+    const q=query(collection(db,'pedidos'),where('domiciliarioUid','==',user.uid));
+    detenerPedidos=onSnapshot(q,snapshot=>{
+      if(auth.currentUser?.uid!==user.uid)return;
+      pedidosPropios=snapshot.docs.map(x=>({id:x.id,d:x.data()}));
+      pedidosPropios.sort((a,b)=>(b.d.creadoEn?.seconds||0)-(a.d.creadoEn?.seconds||0));
+      mostrarPedidos();
+    },error=>{
+      pedidosPropios=[];
+      mostrarPedidos();
+      $('estado-entregas').textContent=error?.code==='permission-denied'
+        ?'Firebase bloqueó la lectura de pedidos. El administrador debe habilitar reglas privadas para domiciliarios.'
+        :'No se pudo consultar tus pedidos. Comprueba Internet y vuelve a iniciar sesión.';
+    });
+  }
 
   function seleccionarVista(nombre){
     for(const n of vistas){
@@ -145,6 +260,10 @@
   for(const nombre of vistas)$('tab-'+nombre).addEventListener('click',()=>seleccionarVista(nombre));
 
   async function bloquearAcceso(mensaje){
+    detenerPedidos();
+    detenerPedidos=()=>{};
+    escuchandoPedidos=false;
+    pedidosPropios=[];
     mensajeBloqueo=mensaje;
     $('portal').hidden=true;
     $('acceso').hidden=false;
@@ -210,6 +329,10 @@
   });
 
   onAuthStateChanged(auth,user=>{
+    detenerPedidos();
+    detenerPedidos=()=>{};
+    escuchandoPedidos=false;
+    pedidosPropios=[];
     detenerVerificacion();
     detenerVerificacion=()=>{};
     $('portal').hidden=true;
@@ -257,6 +380,10 @@
       $('cuenta-nombre').textContent='Nombre: '+(datos.nombre||'No registrado');
       $('acceso').hidden=true;
       $('portal').hidden=false;
+      if(!escuchandoPedidos){
+        escuchandoPedidos=true;
+        escucharPedidos(user);
+      }
     },error=>{
       const mensaje=error?.code==='permission-denied'
         ? 'La cuenta existe, pero Firebase todavía no permite validar los permisos del domiciliario.'
