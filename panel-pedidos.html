@@ -40,6 +40,42 @@
     .asignacion select { display:block; width:100%; font:inherit; background:#fff; color:#111; border:0; border-radius:9px; padding:13px; margin:8px 0; }
     .asignacion .ayuda { color:#ddd; font-size:13px; }
     .asignacion .estado-asignacion { font-size:14px; color:#ffda83; }
+
+    /* Monitor de domicilios: solo lectura, actualizado por el listener de pedidos */
+    .monitor { border:1px solid #554c38; background:#201e1a; }
+    .monitor h2 { margin:0 0 7px; font-size:22px; }
+    .monitor .monitor-intro { color:#d8d2c4; font-size:14px; line-height:1.5; margin:5px 0 15px; }
+    .monitor-metricas { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:14px 0; }
+    .monitor-metrica { background:#141414; border:1px solid #484133; border-radius:10px; padding:12px 8px; text-align:center; }
+    .monitor-metrica strong { display:block; color:#ffd26f; font-size:25px; }
+    .monitor-metrica span { display:block; font-size:12px; color:#eee; margin-top:4px; }
+    .monitor-filtros { display:flex; gap:9px; margin:15px 0 10px; }
+    .monitor-filtros button { flex:1; min-width:0; margin:0; padding:12px 7px; font-size:14px; color:#eee; background:#343434; border:1px solid #656565; }
+    .monitor-filtros button[aria-pressed="true"] { color:#1b1309; background:#f6bd42; border-color:#f6bd42; }
+    .monitor-aviso { border-left:4px solid #f6bd42; background:#3a3020; padding:12px; border-radius:8px; color:#ffe4aa; font-size:14px; margin:10px 0; }
+    .monitor-tarjeta { display:block; text-align:left; width:100%; margin:9px 0; padding:13px; background:#151515; color:#fff; border:1px solid #585858; border-radius:11px; }
+    .monitor-tarjeta .monitor-cabecera { display:flex; flex-wrap:wrap; justify-content:space-between; gap:5px; align-items:center; }
+    .monitor-tarjeta .monitor-nombre { display:block; font-size:15px; font-weight:bold; }
+    .monitor-tarjeta .monitor-detalle { display:block; color:#d2d2d2; margin-top:8px; font-size:13px; font-weight:normal; }
+    .monitor-tarjeta:focus-visible { outline:3px solid white; outline-offset:2px; }
+    .estado-etiqueta { display:inline-block; font-weight:bold; font-size:13px; border-radius:999px; padding:6px 9px; background:#5a4523; color:#ffe1a5; }
+    .estado-etiqueta.aceptado, .estado-etiqueta.recogido { background:#263a50; color:#bde0ff; }
+    .estado-etiqueta.en_camino { background:#30442b; color:#cff3bf; }
+    .estado-etiqueta.entregado { background:#1c4c36; color:#b6ffd3; }
+    .estado-etiqueta.cancelado { background:#4b2d2d; color:#ffd4d4; }
+    .monitor-vacio { color:#d6d6d6; padding:13px; background:#161616; border-radius:10px; font-size:14px; }
+    .seguimiento-detalle { margin:13px 0; background:#181818; padding:14px; border-radius:10px; border:1px solid #444; }
+    .seguimiento-detalle h3 { font-size:17px; margin:0 0 10px; }
+    .seguimiento-detalle .actualizacion { color:#ccc; font-size:13px; margin:10px 0 0; }
+    .seguimiento-pasos { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:5px; margin:11px 0; }
+    .seguimiento-paso { min-width:0; border-radius:8px; background:#292929; border:1px solid #444; padding:8px 3px; color:#aaa; font-size:11px; text-align:center; overflow-wrap:break-word; }
+    .seguimiento-paso.completado { background:#28402f; border-color:#51795d; color:#d4f8dc; }
+    .seguimiento-paso.actual { background:#65491b; border-color:#f6bd42; color:#fff1c9; font-weight:bold; }
+    @media(max-width:520px) {
+      .monitor-metricas { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .monitor-filtros button { font-size:13px; }
+      .seguimiento-paso { font-size:10px; padding:8px 2px; }
+    }
     .equipo-tarjeta { background:#191919; padding:15px; margin:10px 0; border:1px solid #474747; border-radius:10px; }
     .equipo-tarjeta h3 { margin:0 0 9px; font-size:18px; overflow-wrap:anywhere; }
     .equipo-tarjeta .acciones { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
@@ -80,6 +116,23 @@
       <p id="estado" class="alerta" role="status">Conectando con Firestore...</p>
       <p id="contador"></p>
     </div>
+
+    <section class="caja monitor" aria-labelledby="monitor-titulo">
+      <h2 id="monitor-titulo">🛵 Monitor de domicilios</h2>
+      <p class="monitor-intro">Sigue en tiempo real las entregas asignadas. Pulsa un pedido para ir a sus detalles; la alarma de pedidos nuevos funciona por separado.</p>
+      <div class="monitor-metricas" aria-label="Resumen de entregas">
+        <div class="monitor-metrica"><strong id="monitor-pendientes">0</strong><span>Por aceptar</span></div>
+        <div class="monitor-metrica"><strong id="monitor-proceso">0</strong><span>Aceptados / recogidos</span></div>
+        <div class="monitor-metrica"><strong id="monitor-ruta">0</strong><span>En camino</span></div>
+        <div class="monitor-metrica"><strong id="monitor-entregados">0</strong><span>Entregados</span></div>
+      </div>
+      <p id="monitor-aviso" class="monitor-aviso" role="status" aria-live="polite" hidden></p>
+      <div class="monitor-filtros" aria-label="Filtrar seguimiento">
+        <button id="monitor-tab-activos" type="button" aria-pressed="true">En curso</button>
+        <button id="monitor-tab-finalizados" type="button" aria-pressed="false">Finalizados</button>
+      </div>
+      <div id="monitor-lista" aria-live="off"><p class="monitor-vacio">Conectando con pedidos...</p></div>
+    </section>
     <div id="lista"></div>
     </section>
     <section id="vista-productos" role="tabpanel" aria-labelledby="tab-productos" hidden>
@@ -735,8 +788,175 @@
     return p;
   }
 
+
+  // Solo lectura: aprovecha la suscripción a Firestore ya usada para la alarma.
+  const monitorLista = document.getElementById('monitor-lista');
+  const monitorAviso = document.getElementById('monitor-aviso');
+  let monitorFiltro = 'activos';
+  let monitorInicializado = false;
+  let estadosVistos = new Map();
+  const estadosEntrega = {
+    pendiente: { texto:'Pendiente de aceptar', icono:'📋' },
+    asignado: { texto:'Asignación anterior', icono:'📋' },
+    aceptado: { texto:'Aceptado', icono:'✅' },
+    recogido: { texto:'Recogido', icono:'🍕' },
+    en_camino: { texto:'En camino', icono:'🛵' },
+    entregado: { texto:'Entregado', icono:'🏠' },
+    cancelado: { texto:'Cancelado', icono:'⛔' }
+  };
+  const entregaFinalizada = estado => ['entregado','cancelado','cancelada'].includes(estado);
+  const estadoDe = pedido => String(pedido.estadoEntrega || 'pendiente').trim().toLowerCase();
+  function fechaDe(valor) {
+    if (!valor) return null;
+    const fecha = typeof valor.toDate === 'function' ? valor.toDate()
+      : typeof valor.seconds === 'number' ? new Date(valor.seconds * 1000) : null;
+    return fecha && !isNaN(fecha.getTime()) ? fecha : null;
+  }
+  function horaMovimiento(pedido) {
+    const fecha = fechaDe(pedido.entregaActualizadaEn) || fechaDe(pedido.domiciliarioAsignadoEn);
+    return fecha ? fecha.toLocaleString('es-CO', {
+      day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'
+    }) : 'Sin hora de cambio registrada';
+  }
+  function ordenMovimiento(pedido) {
+    return (fechaDe(pedido.entregaActualizadaEn) ||
+      fechaDe(pedido.domiciliarioAsignadoEn) ||
+      fechaDe(pedido.creadoEn))?.getTime() || 0;
+  }
+  function crearEtiqueta(estadoActual) {
+    const etiqueta = document.createElement('span');
+    const info = estadosEntrega[estadoActual] || {texto:estadoActual,icono:'📦'};
+    etiqueta.className = 'estado-etiqueta ' + (estadosEntrega[estadoActual] ? estadoActual : '');
+    etiqueta.textContent = info.icono + ' ' + info.texto;
+    return etiqueta;
+  }
+  function dibujarSeguimiento(datos) {
+    const estadoActual = estadoDe(datos);
+    const contenedor = document.createElement('div');
+    contenedor.className = 'seguimiento-detalle';
+    const titulo = document.createElement('h3');
+    titulo.textContent = '📍 Estado de la entrega';
+    contenedor.append(titulo, crearEtiqueta(estadoActual));
+    const pasos = document.createElement('div');
+    pasos.className = 'seguimiento-pasos';
+    pasos.setAttribute('aria-label','Etapas de la entrega');
+    const etapas = [
+      {id:'pendiente',nombre:'Asignado'},
+      {id:'aceptado',nombre:'Aceptado'},
+      {id:'recogido',nombre:'Recogido'},
+      {id:'en_camino',nombre:'En camino'},
+      {id:'entregado',nombre:'Entregado'}
+    ];
+    const actual = estadoActual === 'asignado' ? 0 : etapas.findIndex(p=>p.id===estadoActual);
+    for (const [i,etapa] of etapas.entries()) {
+      const paso = document.createElement('div');
+      paso.className = 'seguimiento-paso' + (actual>=0 && i<=actual ? ' completado' : '')
+        + (i===actual ? ' actual' : '');
+      paso.textContent = (actual>=0 && i<actual ? '✓ ' : i===actual ? '● ' : '○ ') + etapa.nombre;
+      if (i===actual) paso.setAttribute('aria-current','step');
+      pasos.append(paso);
+    }
+    const hora = document.createElement('p');
+    hora.className = 'actualizacion';
+    hora.textContent = 'Última actualización: ' + horaMovimiento(datos);
+    contenedor.append(pasos,hora);
+    return contenedor;
+  }
+  function actualizarAvisoMovimiento(documentos) {
+    if (!pedidosCargados) return;
+    const actuales = new Map();
+    const cambios = [];
+    for (const {id,d} of documentos) {
+      if (String(d.estado || '').toLowerCase() === 'prueba') continue;
+      const actual = d.domiciliarioUid ? estadoDe(d) : 'sin_asignar';
+      actuales.set(id,actual);
+      if (monitorInicializado && estadosVistos.has(id) && estadosVistos.get(id)!==actual) {
+        const etiqueta = estadosEntrega[actual]?.texto || 'asignado';
+        cambios.push('Pedido '+id.slice(0,8).toUpperCase()+
+          ' · '+(d.domiciliarioNombre || 'Domiciliario')+' · '+etiqueta);
+      }
+    }
+    estadosVistos = actuales;
+    monitorInicializado = true;
+    if (cambios.length) {
+      monitorAviso.hidden = false;
+      monitorAviso.textContent = '🛵 Último movimiento recibido: ' + cambios[cambios.length - 1];
+    }
+  }
+  function dibujarMonitor(documentos) {
+    monitorLista.replaceChildren();
+    if (!pedidosCargados) {
+      const mensaje = document.createElement('p');
+      mensaje.className = 'monitor-vacio';
+      mensaje.textContent = 'Conectando con Firebase...';
+      monitorLista.append(mensaje);
+      return;
+    }
+    const asignados = documentos.filter(x=>
+      x.d.domiciliarioUid && String(x.d.estado || '').toLowerCase() !== 'prueba');
+    const actualizados = asignados.map(x=>({...x,estadoEntrega:estadoDe(x.d)}));
+    const total = tipo => actualizados.filter(x=>tipo(x.estadoEntrega)).length;
+    document.getElementById('monitor-pendientes').textContent =
+      total(s=>s==='pendiente'||s==='asignado');
+    document.getElementById('monitor-proceso').textContent =
+      total(s=>s==='aceptado'||s==='recogido');
+    document.getElementById('monitor-ruta').textContent = total(s=>s==='en_camino');
+    document.getElementById('monitor-entregados').textContent = total(s=>s==='entregado');
+    document.getElementById('monitor-tab-activos').setAttribute('aria-pressed',String(monitorFiltro==='activos'));
+    document.getElementById('monitor-tab-finalizados').setAttribute('aria-pressed',String(monitorFiltro==='finalizados'));
+    const seleccion = actualizados.filter(x=>
+      (monitorFiltro==='activos') !== entregaFinalizada(x.estadoEntrega));
+    seleccion.sort((a,b)=>ordenMovimiento(b.d)-ordenMovimiento(a.d));
+    if (!seleccion.length) {
+      const vacio = document.createElement('p');
+      vacio.className = 'monitor-vacio';
+      vacio.textContent = monitorFiltro === 'activos'
+        ? 'No hay domicilios asignados en curso.'
+        : 'Todavía no hay domicilios finalizados.';
+      monitorLista.append(vacio);
+      return;
+    }
+    for (const pedido of seleccion.slice(0,20)) {
+      const boton = document.createElement('button');
+      boton.type = 'button';
+      boton.className = 'monitor-tarjeta';
+      boton.title = 'Ver detalles del pedido';
+      const cabecera = document.createElement('span');
+      cabecera.className = 'monitor-cabecera';
+      const nombre = document.createElement('span');
+      nombre.className = 'monitor-nombre';
+      nombre.textContent = 'Pedido ' + pedido.id.slice(0,8).toUpperCase();
+      cabecera.append(nombre,crearEtiqueta(pedido.estadoEntrega));
+      const descripcion = document.createElement('span');
+      descripcion.className = 'monitor-detalle';
+      descripcion.textContent = '🛵 '+(pedido.d.domiciliarioNombre||'Repartidor') +
+        ' · '+horaMovimiento(pedido.d);
+      boton.append(cabecera,descripcion);
+      boton.addEventListener('click',()=>{
+        document.getElementById('pedido-'+pedido.id)?.scrollIntoView({behavior:'smooth',block:'start'});
+      });
+      monitorLista.append(boton);
+    }
+    if (seleccion.length>20) {
+      const aviso = document.createElement('p');
+      aviso.className = 'hint';
+      aviso.textContent = 'Se muestran los 20 movimientos más recientes; el resto está en la lista de pedidos.';
+      monitorLista.append(aviso);
+    }
+  }
+  document.getElementById('monitor-tab-activos').addEventListener('click',()=>{
+    monitorFiltro='activos';
+    dibujarMonitor(pedidosCache);
+  });
+  document.getElementById('monitor-tab-finalizados').addEventListener('click',()=>{
+    monitorFiltro='finalizados';
+    dibujarMonitor(pedidosCache);
+  });
+
   function pintar(documentos) {
     pedidosCache = documentos;
+    actualizarAvisoMovimiento(documentos);
+    dibujarMonitor(documentos);
     lista.replaceChildren();
 
     const pedidos = documentos.filter(
@@ -778,6 +998,7 @@
 
       const tarjeta = document.createElement('article');
       tarjeta.className = 'pedido' + (nuevo ? ' nuevo' : '');
+      tarjeta.id = 'pedido-' + id;
 
       const titulo = document.createElement('h2');
       titulo.textContent =
@@ -892,10 +1113,7 @@
         });
         asignacion.append(etiqueta,selector,estadoAsignacion,botonAsignar);
         if (d.domiciliarioId) {
-          asignacion.append(linea('Seguimiento de entrega: ' + ({
-            pendiente:'Pendiente de aceptar', asignado:'Asignación anterior', aceptado:'Aceptado', recogido:'Recogido',
-            en_camino:'En camino', entregado:'Entregado'
-          }[d.estadoEntrega || 'pendiente'] || d.estadoEntrega || 'Pendiente de aceptar')));
+          asignacion.append(dibujarSeguimiento(d));
         }
         // Función preparada visualmente. No enviar ofertas hasta autorizar a cada
         // domiciliario y garantizar una única aceptación por pedido en Firebase.
@@ -954,6 +1172,11 @@
     personal = [];
     pedidosCache = [];
     pedidosCargados = false;
+    monitorInicializado = false;
+    estadosVistos.clear();
+    monitorAviso.hidden = true;
+    monitorAviso.textContent = '';
+    dibujarMonitor([]);
     equipoLista.replaceChildren();
     limpiarEquipo();
 
