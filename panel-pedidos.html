@@ -840,7 +840,7 @@
         vacio.value = '';
         vacio.textContent = 'Selecciona un domiciliario';
         selector.append(vacio);
-        const disponibles = personal.filter(p => p.rol === 'domiciliario' && p.activo !== false);
+        const disponibles = personal.filter(p => p.rol === 'domiciliario' && p.activo !== false && !!p.authUid);
         for (const repartidor of disponibles) {
           const opcion = document.createElement('option');
           opcion.value = repartidor.id;
@@ -877,7 +877,9 @@
           try {
             await updateDoc(doc(db,'pedidos',id), {
               domiciliarioId:repartidor.id,
+              domiciliarioUid:repartidor.authUid,
               domiciliarioNombre:repartidor.nombre,
+              estadoEntrega:'asignado',
               domiciliarioAsignadoEn:serverTimestamp()
             });
             estadoAsignacion.textContent = '✅ Asignado a ' + repartidor.nombre;
@@ -889,6 +891,12 @@
           }
         });
         asignacion.append(etiqueta,selector,estadoAsignacion,botonAsignar);
+        if (d.domiciliarioId) {
+          asignacion.append(linea('Seguimiento de entrega: ' + ({
+            asignado:'Asignado', aceptado:'Aceptado', recogido:'Recogido',
+            en_camino:'En camino', entregado:'Entregado'
+          }[d.estadoEntrega || 'asignado'] || d.estadoEntrega || 'Asignado')));
+        }
         // Función preparada visualmente. No enviar ofertas hasta autorizar a cada
         // domiciliario y garantizar una única aceptación por pedido en Firebase.
         const botonTodos = document.createElement('button');
@@ -905,7 +913,7 @@
           ayuda.className = 'ayuda';
           ayuda.textContent = !personalDisponible
             ? 'Falta autorizar la colección personal en Firebase.'
-            : 'Primero registra un domiciliario activo en Equipo y roles.';
+            : 'Primero registra un domiciliario activo con cuenta Firebase vinculada en Equipo y roles.';
           asignacion.append(ayuda);
         }
         tarjeta.append(asignacion);
