@@ -60,17 +60,20 @@ function limpiarSubs(){
   servidor=false;control=null;turno=null;turnos=[];movimientos=[];turnoEscuchado='';
 }
 function pintarResumen(){
-  const abierta=control?.estado==='abierta'&&turno?.estado==='abierta'&&control.turnoId===turno.id;
-  $('seccionApertura').hidden=abierta;
+  const ocupada=control?.estado==='abierta';
+  const abierta=ocupada&&turno?.estado==='abierta'&&control.turnoId===turno.id;
+  $('seccionApertura').hidden=ocupada;
   $('seccionTurno').hidden=!abierta;
   $('seccionMovimiento').hidden=!abierta;
   $('seccionArqueo').hidden=!abierta;
   $('seccionLista').hidden=!abierta;
   const puede=abierta&&servidor&&!cargando;
-  $('abrirCajaBoton').disabled=!usuario||!servidor||abierta||cargando;
+  $('abrirCajaBoton').disabled=!usuario||!servidor||ocupada||cargando;
   $('guardarMovimiento').disabled=!puede;
   $('cerrarCajaBoton').disabled=!puede;
-  if(!abierta){$('controlActivo').textContent='No hay una caja abierta.';pintarHistorial();return;}
+  if(!abierta){$('controlActivo').textContent=ocupada
+    ? '⏳ Cargando el turno abierto...'
+    : 'No hay una caja abierta.';pintarHistorial();return;}
   $('controlActivo').textContent='Turno abierto · '+(turno.responsable||'Responsable')+' · '+fecha(turno.aperturaEn)+' · Base: '+pesos(saldoBase(turno));
   $('resumenEfectivo').textContent=pesos(efectivoEsperado(turno));
   $('resumenEfectivoEntradas').textContent=pesos(enteroRegistro(turno.efectivoIngresos));
@@ -203,6 +206,8 @@ function configurarMetodo(){
   if(metodo==='efectivo'){$('efectivoCaja').value=total===null?'':String(total);$('transferenciaCaja').value='0';}
   else if(metodo==='transferencia'){$('efectivoCaja').value='0';$('transferenciaCaja').value=total===null?'':String(total);}
   else{$('efectivoCaja').value='';$('transferenciaCaja').value='';}
+  $('verificarTransferenciaCaja').hidden=metodo==='efectivo'||opciones[$('categoriaCaja').value]?.tipo!=='ingreso';
+  if($('verificarTransferenciaCaja').hidden)$('confirmoTransferenciaCaja').checked=false;
   revisarSuma();
 }
 function revisarSuma(){
@@ -237,6 +242,10 @@ $('formMovimientoCaja').addEventListener('submit',async e=>{
     (cfg.ref&&!/^[A-Z0-9._-]{3,80}$/.test(referencia))){
     $('estadoMovimientoCaja').textContent='Revisa valores, concepto y referencia. Una venta necesita ID del pedido (3–80 caracteres sin espacios).';return;
   }
+  if(transferencia>0 && cfg.tipo==='ingreso' && !$('confirmoTransferenciaCaja').checked){
+    $('estadoMovimientoCaja').textContent='Antes de registrar un ingreso por transferencia, confirma que verificaste el abono en tu cuenta.';
+    return;
+  }
   if(!confirm((cfg.tipo==='ingreso'?'¿Registrar entrada':'¿Registrar salida')+' de '+pesos(total)+'? Solo registra dinero realmente recibido o pagado.'))return;
   const b=$('guardarMovimiento');b.disabled=true;cargando=true;
   $('estadoMovimientoCaja').textContent='Registrando movimiento...';
@@ -245,7 +254,8 @@ $('formMovimientoCaja').addEventListener('submit',async e=>{
   try{
     validarOnline();
     const refMov=doc(db,'movimientosCaja',movId);
-    const refUnico=cfg.ref?doc(db,'referenciasCaja',categoria+'__'+referencia):null;
+    // Una sola venta por referencia, aunque se cambie la categoría por error.
+    const refUnico=cfg.ref?doc(db,'referenciasCaja','venta__'+referencia):null;
     await runTransaction(db,async tx=>{
       const snapControl=await tx.get(ctrlRef);
       if(!snapControl.exists()||snapControl.data().estado!=='abierta')throw Error('No hay una caja abierta.');
@@ -267,7 +277,8 @@ $('formMovimientoCaja').addEventListener('submit',async e=>{
       tx.update(rTurno,fields);
       tx.set(refMov,{
         turnoId:id,categoria,tipo:cfg.tipo,metodo,total,efectivo,transferencia,
-        concepto,referencia,creadoEn:serverTimestamp(),responsable:usuario.email||'Administrador',
+        concepto,referencia,transferenciaVerificada:cfg.tipo==='ingreso'&&transferencia>0,
+        creadoEn:serverTimestamp(),responsable:usuario.email||'Administrador',
         creadoPor:usuario.uid
       });
       if(refUnico)tx.set(refUnico,{
@@ -276,6 +287,7 @@ $('formMovimientoCaja').addEventListener('submit',async e=>{
     });
     $('estadoMovimientoCaja').textContent='✅ Movimiento guardado. Revisa el historial de caja.';
     $('montoCaja').value='';$('conceptoCaja').value='';$('referenciaCaja').value='';
+    $('confirmoTransferenciaCaja').checked=false;
     intentoMovimiento=null;configurarMetodo();
   }catch(error){
     $('estadoMovimientoCaja').textContent='No se registró: '+(error.message||error.code)+
