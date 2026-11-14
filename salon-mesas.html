@@ -18,7 +18,7 @@
 </style></head><body>
 <header><h1>🍽️ Mesas y barra · La Pizza de Juanca</h1><p style="margin:8px 0 0">Diseño del módulo de salón</p></header>
 <main>
-<p class="nota"><strong>VISTA DE PRUEBA, no conectada a recepción ni caja real.</strong> Las comandas, mesas y pagos de esta pantalla se guardan únicamente en este navegador. No generan ventas ni hacen sonar la alarma. Así podemos probar el flujo sin alterar los pedidos de clientes.</p>
+<p class="nota" id="notaDemo"><strong>VISTA DE PRUEBA, no conectada a recepción ni caja real.</strong> Las comandas, mesas y pagos de esta pantalla se guardan únicamente en este navegador. No generan ventas ni hacen sonar la alarma. Así podemos probar el flujo sin alterar los pedidos de clientes.</p>
 <p class="fila" id="enlaces-principales"><a href="panel-pedidos.html">← Volver a recepción</a><a href="caja.html">💰 Ver diseño de caja</a></p>
 <section id="vista-salon">
 <section class="caja"><h2>Distribución del salón</h2>
@@ -92,6 +92,7 @@ function mostrarPantalla(pantalla){
   pantallaActiva=pantalla;
   $('vista-salon').hidden=pantalla!=='mesas';
   $('vista-comanda').hidden=pantalla!=='comanda';
+  $('notaDemo').hidden=pantalla!=='mesas';
   $('enlaces-principales').hidden=pantalla!=='mesas';
   window.scrollTo(0,0);
 }
