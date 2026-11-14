@@ -1,0 +1,151 @@
+<!doctype html><html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#a71919">
+<title>Mesas y barra conectadas · La Pizza de Juanca</title>
+<style>
+:root{color-scheme:dark;--oro:#f6bd42;--linea:#555}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:#111;color:#fff;font-family:Arial,Helvetica,sans-serif}
+header{background:#a71919;text-align:center;padding:18px 12px}
+header h1{font-size:26px;margin:0 0 8px}header p{margin:0}
+main{max-width:1000px;margin:0 auto;padding:14px 14px 50px}
+.caja{background:#232323;border-radius:13px;padding:17px;margin:15px 0}
+.nota{border-left:4px solid var(--oro);background:#433017;color:#ffdf9c;padding:14px;border-radius:9px;line-height:1.5}
+h2{font-size:22px;margin:0 0 12px}h3{font-size:18px}
+p{line-height:1.5}
+button{border:0;border-radius:9px;background:var(--oro);color:#1d1712;font:inherit;font-weight:bold;padding:13px 12px;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.secundario{background:#e8e8e8;color:#171717}
+.fila{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.fila>*{flex:1}
+a{color:#ffe4aa}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid white;outline-offset:2px}
+input,select,textarea{font:inherit;width:100%;padding:12px;margin:8px 0;border:0;border-radius:8px;color:#111;background:#fff}
+label{display:block;font-weight:bold;margin:10px 0}
+label input[type=checkbox]{width:auto;margin:0 8px 0 0}
+.mensaje{font-size:15px;color:#fada8f;min-height:15px}
+.mensaje.error{color:#ffaaa3}
+.pequeno{font-size:13px;color:#ddd}
+.mesas{display:grid;grid-template-columns:repeat(auto-fit,minmax(123px,1fr));gap:10px;margin:14px 0}
+.mesa{background:#27382d;color:#fff;border:2px solid #4a8057;min-height:108px}
+.mesa.ocupada{background:#503c26;border-color:#d5a344}
+.mesa small{display:block;font-weight:normal;margin-top:10px;font-size:12px}
+.dos{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px}
+.comanda,.item{border-bottom:1px solid var(--linea);padding:10px 0;overflow-wrap:anywhere}
+.comanda div{font-size:14px;margin:4px 0}.comanda small{display:block;color:#ccc}
+.item{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.item span{flex:1}.item button{flex:none;font-size:13px;padding:8px}
+.miniresumen{color:var(--oro);font-size:24px;font-weight:bold}
+.categorias{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.categorias button{background:#333;color:white;border:1px solid #666;flex:none}
+.categorias button.seleccionada{background:var(--oro);color:#171717}
+.productos{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px}
+.producto{border:1px solid #555;background:#171717;padding:13px;border-radius:10px}
+.producto strong{display:block;min-height:36px}
+.producto span{display:block;color:#ffdf8a;margin:10px 0}
+.producto button{width:100%}
+.cabeceraMesa{position:sticky;top:0;background:#1c1c1c;z-index:3;border-radius:12px;border:1px solid #5e4a29;padding:11px;display:flex;align-items:center;gap:10px}
+.cabeceraMesa strong{font-size:18px;color:#ffdb90;flex:1;text-align:center}
+.dialogo{max-width:min(95vw,500px);width:100%;background:#252525;border:1px solid #d2b56d;border-radius:13px;padding:20px;color:white}
+.dialogo::backdrop{background:#000c}
+.opcionesSabores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.opcionesSabores label{background:#333;padding:10px;border-radius:8px;font-weight:normal;margin:0}
+.dialogo .fila{margin-top:13px}
+.cobroTotal{font-size:23px;color:var(--oro);font-weight:bold}
+.check{background:#273d32;border:1px solid #557d65;padding:12px;border-radius:9px}
+.check label{font-weight:normal}
+@media(max-width:680px){
+ .dos{grid-template-columns:1fr}
+ .mesas{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .mesa{min-height:90px;font-size:14px}
+ .opcionesSabores{grid-template-columns:1fr}
+}
+</style></head>
+<body><header><h1>🍽️ Mesas y barra · La Pizza de Juanca</h1><p>Comandas, cuentas y cobros conectados a caja</p></header>
+<main>
+<p class="nota"><strong>Fase de pruebas con Firebase.</strong> Aquí las comandas y los pagos sí se enviarán a Firestore cuando estén autorizadas las reglas. Todavía no está validado para ventas reales. Prueba con valores ficticios, revisa los permisos y no mezcles los movimientos de prueba con las ventas del negocio.</p>
+<p class="fila"><a href="panel-pedidos.html">← Recepción</a><a href="caja-operativa.html">💰 Ver caja</a><a href="salon-mesas.html">🧪 Mesas de demostración</a></p>
+<section id="vistaLogin" class="caja">
+<h2>🔒 Ingreso del administrador</h2>
+<p>El salón conectado requiere el usuario administrador. El personal no autorizado no podrá modificar cuentas ni caja.</p>
+<form id="login">
+<label>Correo electrónico<input id="email" type="email" autocomplete="username" required></label>
+<label>Contraseña<input id="clave" type="password" autocomplete="current-password" required></label>
+<button type="submit" id="entrar">Entrar a mesas</button>
+</form><p id="estadoLogin" class="mensaje" role="status"></p></section>
+<section id="pantallaAdmin" hidden>
+<div class="caja"><div class="fila"><div>Sesión: <strong id="usuario"></strong></div><button class="secundario" type="button" id="salir">Cerrar sesión</button></div>
+<p id="mensaje" class="mensaje" role="status"></p></div>
+<section id="vistaMesas">
+ <div class="caja"><h2>🪑 Distribución del salón</h2>
+ <p class="pequeno">Selecciona una mesa para abrir el menú. Los cambios se sincronizan entre dispositivos.</p>
+ <div id="mesas" class="mesas"></div>
+ <button id="iniciarMesas" type="button" hidden>➕ Crear seis mesas y barra en Firebase</button>
+ <div class="fila" style="margin-top:13px">
+  <button id="agregarMesa" type="button">➕ Añadir mesa</button>
+  <button id="editarMesa" type="button" class="secundario">✏️ Renombrar</button>
+  <button id="ocultarMesa" type="button" class="secundario">Ocultar</button>
+ </div>
+ <div class="fila" style="margin-top:10px">
+  <select id="reactivarMesa" aria-label="Mesas ocultas"><option value="">Seleccionar mesa oculta</option></select>
+  <button id="activarMesa" type="button" class="secundario">Reactivar mesa</button>
+ </div>
+ <p class="pequeno">Para editar u ocultar una mesa, selecciónala primero. No podrás ocultar una mesa con cuenta abierta.</p>
+ </div>
+</section>
+<section id="vistaDetalle" hidden>
+ <div class="cabeceraMesa"><button id="volverMesas" class="secundario">← Mesas</button><strong id="nombreMesa">Mesa</strong></div>
+ <div class="dos">
+  <div class="caja">
+   <h2>🍕 Menú para comanda</h2>
+   <p class="pequeno">Los precios y productos vienen del mismo catálogo que utiliza el menú de clientes.</p>
+   <div id="categorias" class="categorias"></div>
+   <div id="productos" class="productos"></div>
+   <h3>🧾 Nueva comanda</h3>
+   <div id="borrador"></div>
+   <p id="totalNuevo" class="miniresumen">$0</p>
+   <button type="button" id="enviarComanda">➕ Enviar comanda a recepción</button>
+   <p class="pequeno">Cada comanda nueva llegará al mismo panel de recepción con su identificación de mesa y activará la alarma de pedidos nuevos.</p>
+  </div>
+  <div class="caja">
+   <h2>📋 Cuenta de la mesa</h2>
+   <p id="estadoCuenta">Libre</p>
+   <div id="comandas"></div>
+   <p class="miniresumen">Total acumulado: <span id="totalCuenta">$0</span></p>
+   <button id="imprimirCuenta" type="button" class="secundario">🖨️ Imprimir precuenta</button>
+   <p class="mensaje" id="estadoCajaMesa"></p>
+   <button id="abrirCobro" type="button">💰 Cobrar y liberar mesa</button>
+   <p class="pequeno">El botón cobra una sola vez: suma el dinero a caja y libera la mesa en la misma operación. Necesitas una caja abierta.</p>
+   <p id="avisoMesa" class="mensaje" role="status"></p>
+  </div>
+ </div>
+ <button id="volverMesasAbajo" class="secundario" style="width:100%">← Volver a las mesas</button>
+</section>
+</section>
+<dialog id="dialogPizza" class="dialogo">
+<h2 id="tituloPizza"></h2><p id="ayudaPizza"></p><div id="saboresPizza" class="opcionesSabores"></div>
+<p id="errorPizza" class="mensaje" role="status"></p>
+<div class="fila"><button id="cancelarPizza" class="secundario" type="button">Cancelar</button><button id="agregarPizza" type="button">Añadir pizza</button></div>
+</dialog>
+<dialog id="dialogCobrar" class="dialogo">
+<h2>💰 Cobrar y liberar mesa</h2>
+<p class="cobroTotal" id="montoCobro">$0</p>
+<label>Forma de pago<select id="metodoPago">
+ <option value="efectivo">💵 Efectivo</option>
+ <option value="transferencia">📱 Transferencia</option>
+ <option value="mixto">💵📱 Mixto</option>
+</select></label>
+<label>Valor recibido en efectivo (COP)<input id="efectivoPago" type="number" inputmode="numeric" min="0" step="1"></label>
+<label>Valor recibido por transferencia (COP)<input id="transferenciaPago" type="number" inputmode="numeric" min="0" step="1"></label>
+<p id="sumaPago" class="mensaje" role="status"></p>
+<div id="verificarTransferencia" class="check" hidden>
+<label><input id="confirmaTransferencia" type="checkbox">Confirmo que comprobé el abono de la transferencia en la cuenta del negocio.</label>
+</div>
+<p class="pequeno">Al confirmar, la caja abierta se actualizará automáticamente y esta mesa quedará libre. No se hace ningún cobro bancario desde la aplicación.</p>
+<p id="errorCobro" class="mensaje" role="status"></p>
+<div class="fila"><button id="cancelarCobro" class="secundario" type="button">Cancelar</button><button id="confirmarCobro" type="button">✅ Cobrar y liberar mesa</button></div>
+</dialog>
+</main>
+<script src="impresion-ticket.js"></script>
+<script type="module" src="salon-operativo.js"></script>
+</body></html>
