@@ -228,6 +228,7 @@
     }, 3500);
   });
 </script>
+<script src="impresion-ticket.js"></script>
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, setPersistence, inMemoryPersistence, deleteUser } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
@@ -1058,6 +1059,22 @@
           ? 'Por confirmar'
           : '$' + Number(d.total).toLocaleString('es-CO'))
       ));
+
+      // Un solo ticket compacto que sirve para cocina y para el cliente.
+      // La impresión es manual y no cambia el pedido, su alarma ni los cobros.
+      const botonImprimir=document.createElement('button');
+      botonImprimir.type='button';
+      botonImprimir.className='secundario';
+      botonImprimir.textContent='🖨️ Imprimir pedido · cocina / cliente';
+      botonImprimir.addEventListener('click',()=>{
+        const impresora=window.ImpresionJuanca;
+        if(!impresora){
+          alert('No pudo cargar el formato de impresión. Actualiza la página e inténtalo de nuevo.');
+          return;
+        }
+        impresora.abrirTicket(impresora.prepararPedido(id,d));
+      });
+      tarjeta.append(botonImprimir);
 
       // Asignación manual de pedidos a domiciliarios: el estado y la alarma no cambian.
       const tipoEntrega = String(d.modalidad || d.tipoEntrega || '').toLowerCase();
