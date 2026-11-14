@@ -225,6 +225,7 @@
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, setPersistence, inMemoryPersistence, deleteUser } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
   import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, updateDoc, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+  import {mostrarCobroAdmin} from './cobros-domicilios.js';
 
   const firebaseConfig = {
     apiKey: 'AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA',
@@ -1086,9 +1087,19 @@
         const botonAsignar = document.createElement('button');
         botonAsignar.type = 'button';
         botonAsignar.textContent = '💾 Guardar asignación';
-        botonAsignar.disabled = !personalDisponible || !disponibles.length;
+        // Evitar reiniciar una entrega aceptada o un cobro ya reportado.
+        const estadoReparto=String(d.estadoEntrega||'pendiente').toLowerCase();
+        const puedeReasignar=['pendiente','asignado'].includes(estadoReparto) && !d.cobroReportado;
+        botonAsignar.disabled = !personalDisponible || !disponibles.length || !puedeReasignar;
+        if(!puedeReasignar) {
+          estadoAsignacion.textContent += ' · Reasignación bloqueada: entrega en curso o finalizada.';
+        }
         botonAsignar.addEventListener('click', async()=>{
           const repartidor = disponibles.find(p => p.id === selector.value);
+          if (!puedeReasignar) {
+            estadoAsignacion.textContent = 'No se puede reasignar una entrega en curso o cobrada.';
+            return;
+          }
           if (!repartidor || !auth.currentUser) {
             estadoAsignacion.textContent = 'Selecciona un domiciliario activo.';
             return;
@@ -1115,6 +1126,7 @@
         if (d.domiciliarioId) {
           asignacion.append(dibujarSeguimiento(d));
         }
+        mostrarCobroAdmin(asignacion,id,d,db);
         // Función preparada visualmente. No enviar ofertas hasta autorizar a cada
         // domiciliario y garantizar una única aceptación por pedido en Firebase.
         const botonTodos = document.createElement('button');
