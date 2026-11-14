@@ -29,6 +29,9 @@
     .seccion-titulo { font-size:21px; margin:10px 0 4px; }
     .hint { color:#c8c8c8; font-size:14px; line-height:1.45; }
     #marco-productos { display:block; width:100%; height:1100px; border:0; border-radius:13px; background:#111; }
+    .enlaces-local { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-bottom:12px; }
+    .enlaces-local a { text-decoration:none; text-align:center; background:#373028; border:1px solid #765b26; color:#ffda84; border-radius:10px; padding:13px 8px; font-size:15px; font-weight:bold; }
+    .enlaces-local a:focus-visible {outline:3px solid #fff; outline-offset:3px}
     .portal-link { display:block; background:#f6bd42; color:#1d1505; text-align:center; border-radius:10px; font-weight:bold; padding:14px 12px; margin:13px 0 18px; text-decoration:none; }
     .equipo-form { display:grid; gap:7px; }
     .equipo-form label { display:block; font-weight:bold; margin:5px 0 0; }
@@ -107,6 +110,10 @@
       <button id="tab-pedidos" type="button" role="tab" aria-controls="vista-pedidos" aria-selected="true">🔔 Pedidos <span id="nuevos-tab" class="cantidad" hidden>0</span></button>
       <button id="tab-productos" type="button" role="tab" aria-controls="vista-productos" aria-selected="false">📦 Productos</button>
       <button id="tab-equipo" type="button" role="tab" aria-controls="vista-equipo" aria-selected="false">👥 Equipo y roles</button>
+    </nav>
+    <nav class="enlaces-local" aria-label="Herramientas de salón y caja">
+      <a href="salon-mesas.html">🍽️ Mesas y barra · diseño</a>
+      <a href="caja.html">💰 Abrir caja · diseño</a>
     </nav>
     <section id="vista-pedidos" role="tabpanel" aria-labelledby="tab-pedidos">
     <div class="caja">
@@ -1002,10 +1009,14 @@
       tarjeta.id = 'pedido-' + id;
 
       const titulo = document.createElement('h2');
+      const modalidadPedido = String(d.modalidad || d.tipoEntrega || '').trim().toLowerCase();
+      const lugarPedido = modalidadPedido === 'mesa' || d.mesaId
+        ? '🍽️ ' + (d.mesaNombre || d.mesaId || 'Mesa')
+        : modalidadPedido.includes('domicilio') ? '🛵 Domicilio'
+        : modalidadPedido.includes('recoger') || modalidadPedido.includes('llevar') ? '🛍️ Para llevar'
+        : '📦 Pedido';
       titulo.textContent =
-        `Pedido ${id.slice(0, 8)} · ${
-          nuevo ? 'NUEVO' : d.estado || 'Pendiente'
-        }`;
+        `Pedido ${id.slice(0, 8)} · ${nuevo ? 'NUEVO' : (d.estado || 'Pendiente')} · ${lugarPedido}`;
       tarjeta.append(titulo);
 
       const cliente =
@@ -1023,7 +1034,7 @@
       ));
 
       tarjeta.append(linea(
-        'Entrega: ' + (d.modalidad || d.tipoEntrega || 'Sin especificar')
+        'Tipo de pedido: ' + lugarPedido
       ));
 
       tarjeta.append(linea(
