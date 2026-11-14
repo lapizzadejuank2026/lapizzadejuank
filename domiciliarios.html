@@ -76,6 +76,7 @@
       <button class="secundario" id="salir" type="button">Salir</button>
     </div>
     <p class="aviso" id="aviso-entregas" role="status">🔒 Cuenta individual verificada. Solo se consultarán los pedidos asignados a este domiciliario.</p>
+    <p class="ayuda" style="padding:0 4px">💰 Al marcar «Voy en camino», registra cómo pagó el cliente (efectivo, transferencia o mixto) antes de cerrar la entrega. El restaurante confirma las transferencias.</p>
     <nav class="pestanas" aria-label="Secciones de la aplicación">
       <button type="button" id="tab-pedidos" aria-selected="true">📦 Mis pedidos</button>
       <button type="button" id="tab-historial" aria-selected="false">🕘 Historial</button>
@@ -114,7 +115,7 @@
   import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
   import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut,sendPasswordResetEmail} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
   import {getFirestore,doc,onSnapshot,collection,query,where,updateDoc,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
-  import {mostrarCobroDomiciliario} from './cobros-domicilios.js';
+  import {mostrarCobroDomiciliario} from './cobros-domicilios.js?v=cobro20261113b';
 
   // Nombre independiente: la sesión del domiciliario no reemplaza la del administrador
   // cuando ambas pantallas se abren desde el mismo dispositivo.
@@ -196,6 +197,11 @@
       boton.className='principal';
       boton.textContent=paso.boton;
       const mensaje=texto(card,'','estado');
+      if(paso.hacia==='entregado' && !d.cobroReportado){
+        boton.disabled=true;
+        boton.title='Primero registra la forma de pago';
+        mensaje.textContent='🔒 Primero selecciona «💰 Registrar forma de pago» y guarda el reporte. Si ese botón no aparece, verifica que administración haya confirmado el costo del domicilio.';
+      }
       boton.addEventListener('click',async()=>{
         if(auth.currentUser?.uid!==d.domiciliarioUid)return;
         if(paso.hacia==='entregado' && !d.cobroReportado){
