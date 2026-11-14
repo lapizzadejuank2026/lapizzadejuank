@@ -879,7 +879,7 @@
               domiciliarioId:repartidor.id,
               domiciliarioUid:repartidor.authUid,
               domiciliarioNombre:repartidor.nombre,
-              estadoEntrega:'asignado',
+              estadoEntrega:'pendiente',
               domiciliarioAsignadoEn:serverTimestamp()
             });
             estadoAsignacion.textContent = '✅ Asignado a ' + repartidor.nombre;
@@ -893,9 +893,9 @@
         asignacion.append(etiqueta,selector,estadoAsignacion,botonAsignar);
         if (d.domiciliarioId) {
           asignacion.append(linea('Seguimiento de entrega: ' + ({
-            asignado:'Asignado', aceptado:'Aceptado', recogido:'Recogido',
+            pendiente:'Pendiente de aceptar', asignado:'Asignación anterior', aceptado:'Aceptado', recogido:'Recogido',
             en_camino:'En camino', entregado:'Entregado'
-          }[d.estadoEntrega || 'asignado'] || d.estadoEntrega || 'Asignado')));
+          }[d.estadoEntrega || 'pendiente'] || d.estadoEntrega || 'Pendiente de aceptar')));
         }
         // Función preparada visualmente. No enviar ofertas hasta autorizar a cada
         // domiciliario y garantizar una única aceptación por pedido en Firebase.
