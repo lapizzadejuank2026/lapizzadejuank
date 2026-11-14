@@ -12,7 +12,8 @@
 <section class="caja"><h2>Distribución del salón</h2>
 <p class="peque">Comenzamos con seis mesas y una barra. Puedes cambiar nombres, agregar o desactivar puestos sin borrar cuentas ocupadas.</p>
 <div id="mesas" class="mesas"></div>
-<div class="fila" style="margin-top:13px"><button id="agregarMesa">➕ Agregar mesa</button><button id="renombrar" class="sec">✏️ Cambiar nombre</button><button id="desactivar" class="sec">Ocultar / Mostrar</button></div>
+<div class="fila" style="margin-top:13px"><button id="agregarMesa">➕ Agregar mesa</button><button id="renombrar" class="sec">✏️ Cambiar nombre</button><button id="desactivar" class="sec">Ocultar mesa</button></div>
+<div class="fila" style="margin-top:10px"><select id="ocultas" aria-label="Puestos ocultos"><option value="">Mesas ocultas</option></select><button id="reactivar" class="sec">Reactivar puesto</button></div>
 <p id="avisoMesas" class="estado-form" role="status"></p></section>
 <section class="dos">
   <div class="caja"><h2 id="nombreSeleccionada">Selecciona una mesa</h2><p class="peque">Abre una cuenta y toma comandas adicionales sin perder consumos anteriores.</p>
@@ -69,6 +70,15 @@ function dibujarMesas(){
   if(!estado.mesas.some(m=>m.id===seleccion&&m.activa)){
     seleccion=estado.mesas.find(m=>m.activa)?.id||null;
   }
+  const ocultas=$('ocultas');limpia(ocultas);
+  const porDefecto=document.createElement('option');
+  porDefecto.value='';porDefecto.textContent='Seleccionar mesa oculta';
+  ocultas.append(porDefecto);
+  for(const m of estado.mesas.filter(m=>!m.activa)){
+    const opt=document.createElement('option');
+    opt.value=m.id;opt.textContent=m.nombre;ocultas.append(opt);
+  }
+  $('reactivar').disabled=estado.mesas.every(m=>m.activa);
 }
 function dibujarCuenta(){
   const m=estado.mesas.find(m=>m.id===seleccion);
@@ -176,8 +186,15 @@ $('desactivar').onclick=()=>{
   const m=estado.mesas.find(m=>m.id===seleccion);if(!m)return;
   if(cuenta()){$('avisoMesas').textContent='No puedes ocultar una mesa con cuenta abierta.';return;}
   m.activa=false;seleccion=estado.mesas.find(x=>x.activa)?.id||null;
-  $('avisoMesas').textContent='Mesa oculta. Para reactivarla, reinicia solo este diseño o añadiremos un editor de puestos ocultos.';
+  $('avisoMesas').textContent='Mesa oculta. Puedes volver a activarla en la lista de puestos ocultos.';
   persist();dibujarTodo();
+};
+$('reactivar').onclick=()=>{
+  const id=$('ocultas').value;
+  const m=estado.mesas.find(m=>m.id===id);
+  if(!m){$('avisoMesas').textContent='Selecciona una mesa oculta.';return;}
+  m.activa=true;seleccion=id;persist();dibujarTodo();
+  $('avisoMesas').textContent=m.nombre+' reactivada.';
 };
 $('enviarComanda').onclick=()=>{
   if(!seleccion||!borrador.length){$('estadoCuenta').textContent='Selecciona mesa y agrega productos.';return;}
