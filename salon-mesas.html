@@ -3,30 +3,60 @@
 <title>Mesas y barra · La Pizza de Juanca (diseño)</title>
 <style>
 :root{color-scheme:dark;--rojo:#a71919;--oro:#f6bd42;--negro:#121212;--panel:#222;--linea:#494949}
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--negro);color:#fff}header{background:var(--rojo);padding:20px;text-align:center}h1{font-size:25px;margin:0}main{max-width:1080px;margin:auto;padding:15px}h2{font-size:21px;margin:0 0 12px}h3{font-size:17px;margin:0 0 10px}.nota{line-height:1.55;color:#f9d992;background:#423117;border-left:4px solid var(--oro);padding:12px;border-radius:9px}.caja{background:var(--panel);border-radius:13px;padding:17px;margin:15px 0}button,input,select{font:inherit}button{cursor:pointer;border:0;background:var(--oro);color:#171717;font-weight:bold;border-radius:9px;padding:12px}button:disabled{opacity:.5;cursor:not-allowed}.sec{background:#eee}.peligro{background:#913030;color:#fff}.fila{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.fila>*{flex:1}.mesas{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:11px}.mesa{min-height:108px;background:#273326;border:2px solid #538050;color:white;text-align:center}.mesa.ocupada{background:#493820;border-color:#d5a148}.mesa.elegida{outline:3px solid white;outline-offset:2px}.mesa .estado{font-size:13px;display:block;margin-top:8px;color:#f9e0ae}.dos{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.catalogo{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px}.producto{border:1px solid #555;background:#151515;padding:12px;border-radius:10px}.producto strong{display:block;margin-bottom:7px}.producto span{display:block;font-size:14px;color:#ffdc97;margin:6px 0}.producto button{width:100%;font-size:14px}.categoria{background:#333;color:#fff;border:1px solid #777}.categoria.activa{background:var(--oro);color:#171717}.linea{border-bottom:1px solid #4d4d4d;padding:10px 0;line-height:1.5}.linea:last-child{border:0}.precio{color:#ffdd93;font-weight:bold}.peque{font-size:13px;color:#cfcfcf;line-height:1.5}.estado-form{color:#f6ca72;min-height:20px}input,select{padding:11px;border:0;border-radius:8px;background:#fff;color:#111;width:100%}label{display:block;margin:10px 0;font-weight:bold}label input{margin-top:6px}.total{font-size:22px;color:#f6bd42;font-weight:bold}.dialogo{border:1px solid #c4a66a;background:#202020;color:white;border-radius:13px;width:min(95vw,500px);padding:20px}.dialogo::backdrop{background:#000a}.dialogo .sabores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.dialogo label{font-weight:normal;background:#333;padding:9px;border-radius:8px}.dialogo input[type=checkbox]{width:auto}.pie{margin-top:20px;display:flex;gap:8px}.pie button{flex:1}a{color:#ffe1a0}#catEstado{margin:5px 0 12px}#ordenes{max-height:360px;overflow:auto}@media(max-width:650px){.dos{grid-template-columns:1fr}.mesas{grid-template-columns:repeat(3,minmax(0,1fr))}.mesa{min-height:90px;font-size:13px}.dialogo .sabores{grid-template-columns:1fr}}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--negro);color:#fff}header{background:var(--rojo);padding:20px;text-align:center}h1{font-size:25px;margin:0}main{max-width:1080px;margin:auto;padding:15px}h2{font-size:21px;margin:0 0 12px}h3{font-size:17px;margin:0 0 10px}.nota{line-height:1.55;color:#f9d992;background:#423117;border-left:4px solid var(--oro);padding:12px;border-radius:9px}.caja{background:var(--panel);border-radius:13px;padding:17px;margin:15px 0}button,input,select{font:inherit}button{cursor:pointer;border:0;background:var(--oro);color:#171717;font-weight:bold;border-radius:9px;padding:12px}button:disabled{opacity:.5;cursor:not-allowed}.sec{background:#eee}.peligro{background:#913030;color:#fff}.fila{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.fila>*{flex:1}.mesas{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:11px}.mesa{min-height:108px;background:#273326;border:2px solid #538050;color:white;text-align:center}.mesa.ocupada{background:#493820;border-color:#d5a148}.mesa.elegida{outline:3px solid white;outline-offset:2px}.mesa .estado{font-size:13px;display:block;margin-top:8px;color:#f9e0ae}.dos{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.catalogo{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px}.producto{border:1px solid #555;background:#151515;padding:12px;border-radius:10px}.producto strong{display:block;margin-bottom:7px}.producto span{display:block;font-size:14px;color:#ffdc97;margin:6px 0}.producto button{width:100%;font-size:14px}.categoria{background:#333;color:#fff;border:1px solid #777}.categoria.activa{background:var(--oro);color:#171717}.linea{border-bottom:1px solid #4d4d4d;padding:10px 0;line-height:1.5}.linea:last-child{border:0}.precio{color:#ffdd93;font-weight:bold}.peque{font-size:13px;color:#cfcfcf;line-height:1.5}.estado-form{color:#f6ca72;min-height:20px}input,select{padding:11px;border:0;border-radius:8px;background:#fff;color:#111;width:100%}label{display:block;margin:10px 0;font-weight:bold}label input{margin-top:6px}.total{font-size:22px;color:#f6bd42;font-weight:bold}.dialogo{border:1px solid #c4a66a;background:#202020;color:white;border-radius:13px;width:min(95vw,500px);padding:20px}.dialogo::backdrop{background:#000a}.dialogo .sabores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.dialogo label{font-weight:normal;background:#333;padding:9px;border-radius:8px}.dialogo input[type=checkbox]{width:auto}.pie{margin-top:20px;display:flex;gap:8px}.pie button{flex:1}a{color:#ffe1a0}
+[hidden]{display:none!important}
+.pantalla-cabecera{position:sticky;top:0;z-index:4;background:#181818;border:1px solid #564726;border-radius:12px;padding:11px 13px;box-shadow:0 4px 15px #0007;margin:0 0 15px}
+.pantalla-cabecera .fila{gap:12px}
+.pantalla-cabecera button{flex:none}
+.pantalla-cabecera strong{flex:1;font-size:18px;color:#ffe3a2;text-align:center}
+#vista-comanda .dos{display:flex;flex-direction:column;gap:0}
+#vista-comanda .dos>.caja{margin:0 0 15px}
+#vista-comanda .menu-principal{order:1}
+#vista-comanda .detalle-cuenta{order:2}
+#vista-comanda .menu-principal h2{margin-bottom:7px}
+#catEstado{margin:5px 0 12px}#ordenes{max-height:360px;overflow:auto}@media(max-width:650px){.dos{grid-template-columns:1fr}.mesas{grid-template-columns:repeat(3,minmax(0,1fr))}.mesa{min-height:90px;font-size:13px}.dialogo .sabores{grid-template-columns:1fr}}
 </style></head><body>
 <header><h1>🍽️ Mesas y barra · La Pizza de Juanca</h1><p style="margin:8px 0 0">Diseño del módulo de salón</p></header>
 <main>
 <p class="nota"><strong>VISTA DE PRUEBA, no conectada a recepción ni caja real.</strong> Las comandas, mesas y pagos de esta pantalla se guardan únicamente en este navegador. No generan ventas ni hacen sonar la alarma. Así podemos probar el flujo sin alterar los pedidos de clientes.</p>
-<p class="fila"><a href="panel-pedidos.html">← Volver a recepción</a><a href="caja.html">💰 Ver diseño de caja</a></p>
+<p class="fila" id="enlaces-principales"><a href="panel-pedidos.html">← Volver a recepción</a><a href="caja.html">💰 Ver diseño de caja</a></p>
+<section id="vista-salon">
 <section class="caja"><h2>Distribución del salón</h2>
 <p class="peque">Comenzamos con seis mesas y una barra. Puedes cambiar nombres, agregar o desactivar puestos sin borrar cuentas ocupadas.</p>
 <div id="mesas" class="mesas"></div>
 <div class="fila" style="margin-top:13px"><button id="agregarMesa">➕ Agregar mesa</button><button id="renombrar" class="sec">✏️ Cambiar nombre</button><button id="desactivar" class="sec">Ocultar mesa</button></div>
 <div class="fila" style="margin-top:10px"><select id="ocultas" aria-label="Puestos ocultos"><option value="">Mesas ocultas</option></select><button id="reactivar" class="sec">Reactivar puesto</button></div>
 <p id="avisoMesas" class="estado-form" role="status"></p></section>
-<section class="dos">
-  <div class="caja"><h2 id="nombreSeleccionada">Selecciona una mesa</h2><p class="peque">Abre una cuenta y toma comandas adicionales sin perder consumos anteriores.</p>
-  <div id="cuentaActual"></div><div id="ordenes"></div>
-  <p class="total" id="totalCuenta"></p>
-  <button id="pagarCuenta" disabled>💵 Cobrar y liberar mesa (prueba)</button>
-  <p id="estadoCuenta" class="estado-form" role="status"></p></div>
-  <div class="caja"><h2>Menú para comanda</h2><p class="peque" id="catEstado">Cargando catálogo...</p>
-  <div class="fila" id="categorias"></div><div class="catalogo" id="catalogo"></div>
-  <h3 style="margin-top:17px">Nueva comanda</h3><div id="borrador"></div>
-  <p class="total" id="totalBorrador">$0</p><button id="enviarComanda">➕ Agregar comanda a la mesa (prueba)</button></div>
-</section>
 <section class="caja"><h2>Historial local de prueba</h2><div id="historial"></div><button id="resetDemo" class="peligro">Borrar TODOS los datos de prueba de este navegador</button></section>
+</section>
+<section id="vista-comanda" hidden>
+  <nav class="pantalla-cabecera" aria-label="Navegación de mesa">
+    <div class="fila">
+      <button type="button" class="sec" id="volverMesas">← Mesas</button>
+      <strong id="mesaAbiertaTitulo">Mesa seleccionada</strong>
+    </div>
+  </nav>
+  <div class="dos">
+    <div class="caja menu-principal">
+      <h2>🍕 Menú para la mesa</h2>
+      <p class="peque" id="catEstado">Cargando catálogo...</p>
+      <div class="fila" id="categorias"></div>
+      <div class="catalogo" id="catalogo"></div>
+      <h3 style="margin-top:20px">🧾 Nueva comanda</h3><div id="borrador"></div>
+      <p class="total" id="totalBorrador">$0</p>
+      <button id="enviarComanda">➕ Agregar comanda a la mesa (prueba)</button>
+    </div>
+    <div class="caja detalle-cuenta">
+      <h2 id="nombreSeleccionada">Cuenta de la mesa</h2>
+      <p class="peque">Puedes agregar nuevas comandas y los consumos anteriores permanecerán registrados.</p>
+      <div id="cuentaActual"></div><div id="ordenes"></div>
+      <p class="total" id="totalCuenta"></p>
+      <button id="pagarCuenta" disabled>💵 Cobrar y liberar mesa (prueba)</button>
+      <p id="estadoCuenta" class="estado-form" role="status"></p>
+    </div>
+  </div>
+  <button type="button" class="sec" id="volverMesasAbajo" style="width:100%;margin-bottom:15px">← Volver a todas las mesas</button>
+</section>
 <dialog class="dialogo" id="dialogPizza"><h2 id="tituloPizza"></h2><p class="peque" id="instruccionPizza"></p><div id="saboresPizza" class="sabores"></div><div class="pie"><button id="cancelarPizza" class="sec">Cancelar</button><button id="confirmarPizza">Agregar pizza</button></div></dialog>
 <dialog class="dialogo" id="dialogCobrar"><h2>Cobrar cuenta de prueba</h2><p id="cobrarTotal" class="total"></p><label>Método<select id="metodoPago"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="mixto">Mixto</option></select></label><label>Efectivo (COP)<input id="pagoEfectivo" type="number" min="0" step="1"></label><label>Transferencia (COP)<input id="pagoTransferencia" type="number" min="0" step="1"></label><p id="sumaPago" class="estado-form"></p><div class="pie"><button id="cancelarPago" class="sec">Cancelar</button><button id="confirmarPago">Cerrar mesa (prueba)</button></div></dialog>
 </main>
@@ -40,6 +70,7 @@ let estado;
 try{estado=JSON.parse(localStorage.getItem(CLAVE)||'null');}catch(_){}
 if(!estado||!Array.isArray(estado.mesas)||!estado.cuentas)estado={mesas:BASE,cuentas:{},historial:[]};
 let seleccion=estado.mesas[0]?.id||null;
+let pantallaActiva='mesas';
 let borrador=[];
 let categoriaActual='Pizzas',pizzaActiva=null;
 let catalogoProductos=[];
@@ -57,6 +88,29 @@ const limpia=el=>el.replaceChildren();
 const cuenta=()=>estado.cuentas[seleccion]||null;
 const sumaItems=items=>items.reduce((a,i)=>a+i.precio*i.cantidad,0);
 const totalCuenta=cuentaActual=>!cuentaActual?0:cuentaActual.comandas.reduce((a,c)=>a+c.total,0);
+function mostrarPantalla(pantalla){
+  pantallaActiva=pantalla;
+  $('vista-salon').hidden=pantalla!=='mesas';
+  $('vista-comanda').hidden=pantalla!=='comanda';
+  $('enlaces-principales').hidden=pantalla!=='mesas';
+  window.scrollTo(0,0);
+}
+function abrirMesa(id){
+  const mesa=estado.mesas.find(m=>m.id===id && m.activa);
+  if(!mesa)return;
+  if(seleccion!==id && borrador.length &&
+    !confirm('Tienes productos pendientes en otra mesa. ¿Descartar esa comanda sin guardar?'))return;
+  if(seleccion!==id)borrador=[];
+  seleccion=id;
+  dibujarTodo();
+  mostrarPantalla('comanda');
+}
+function volverMesas(){
+  // Mantener el borrador en memoria al regresar a la cuadrícula.
+  mostrarPantalla('mesas');
+}
+$('volverMesas').addEventListener('click',volverMesas);
+$('volverMesasAbajo').addEventListener('click',volverMesas);
 function dibujarMesas(){
   const holder=$('mesas');limpia(holder);
   for(const m of estado.mesas.filter(m=>m.activa)){
@@ -64,11 +118,7 @@ function dibujarMesas(){
     const b=linea('button',m.nombre);
     b.className='mesa'+(ocupada?' ocupada':'')+(m.id===seleccion?' elegida':'');
     const state=linea('span',ocupada?'🟠 Ocupada':'🟢 Libre');state.className='estado';b.append(state);
-    b.onclick=()=>{
-      if(seleccion!==m.id && borrador.length &&
-        !confirm('Tienes productos pendientes en la comanda. ¿Cambiar de mesa y descartarlos?'))return;
-      seleccion=m.id;borrador=[];dibujarTodo();
-    };
+    b.onclick=()=>abrirMesa(m.id);
     holder.append(b);
   }
   if(!estado.mesas.some(m=>m.id===seleccion&&m.activa)){
@@ -87,6 +137,7 @@ function dibujarMesas(){
 function dibujarCuenta(){
   const m=estado.mesas.find(m=>m.id===seleccion);
   $('nombreSeleccionada').textContent=m?m.nombre:'Sin mesa seleccionada';
+  $('mesaAbiertaTitulo').textContent=m?'🍽️ '+m.nombre:'Mesa no seleccionada';
   const c=cuenta(),arr=$('ordenes');limpia(arr);
   $('cuentaActual').textContent=c?'🟠 Cuenta abierta desde '+new Date(c.abierta).toLocaleString('es-CO'):'🟢 Mesa libre · se abre al agregar la primera comanda';
   if(c){
@@ -197,7 +248,7 @@ function dibujarHistorial(){
 function dibujarTodo(){dibujarMesas();dibujarCuenta();dibujarBorrador();menu();dibujarHistorial();}
 $('agregarMesa').onclick=()=>{
   const max=estado.mesas.filter(m=>m.id.startsWith('mesa-')).reduce((a,m)=>Math.max(a,Number(m.id.slice(5))||0),0)+1;
-  const id='mesa-'+max;estado.mesas.push({id,nombre:'Mesa '+max,activa:true});seleccion=id;persist();dibujarTodo();
+  const id='mesa-'+max;estado.mesas.push({id,nombre:'Mesa '+max,activa:true});seleccion=id;borrador=[];persist();dibujarTodo();
 };
 $('renombrar').onclick=()=>{
   const m=estado.mesas.find(m=>m.id===seleccion);if(!m)return;
@@ -287,6 +338,7 @@ window.recibirCatalogoSalon=docs=>{
   menu();
 };
 dibujarTodo();
+mostrarPantalla('mesas');
 </script>
 <script type="module">
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
