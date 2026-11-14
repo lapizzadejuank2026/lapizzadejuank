@@ -64,7 +64,11 @@ function dibujarMesas(){
     const b=linea('button',m.nombre);
     b.className='mesa'+(ocupada?' ocupada':'')+(m.id===seleccion?' elegida':'');
     const state=linea('span',ocupada?'🟠 Ocupada':'🟢 Libre');state.className='estado';b.append(state);
-    b.onclick=()=>{seleccion=m.id;borrador=[];dibujarTodo()};
+    b.onclick=()=>{
+      if(seleccion!==m.id && borrador.length &&
+        !confirm('Tienes productos pendientes en la comanda. ¿Cambiar de mesa y descartarlos?'))return;
+      seleccion=m.id;borrador=[];dibujarTodo();
+    };
     holder.append(b);
   }
   if(!estado.mesas.some(m=>m.id===seleccion&&m.activa)){
@@ -115,7 +119,21 @@ function agregar(item){
   if(iguales)iguales.cantidad++;else borrador.push({...item,cantidad:1});
   dibujarBorrador();
 }
-function menu(){
+// Algunas pizzas fueron creadas como productos generales en Firebase.
+  // Las pizzas por tamaño siempre requieren selección de sabores, no "Agregar" directamente.
+  function normalizarNombre(nombre){
+    return String(nombre||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  }
+  function maxSaboresDeProducto(p){
+    if(p.categoria!=='Pizzas')return 0;
+    const nombre=normalizarNombre(p.nombre);
+    if(!nombre.startsWith('pizza '))return 0;
+    if(/\b(porcion|slice)\b/.test(nombre))return 1;
+    if(/\b(personal|small)\b/.test(nombre))return 2;
+    if(/\b(mediana|familiar)\b/.test(nombre))return 3;
+    return 0;
+  }
+  function menu(){
   const categorias=[...new Set(['Pizzas',...catalogoProductos.map(p=>p.categoria)])];
   if(!categorias.includes(categoriaActual))categoriaActual='Pizzas';
   const tabs=$('categorias');limpia(tabs);
@@ -125,8 +143,17 @@ function menu(){
   }
   const holder=$('catalogo');limpia(holder);
   const opciones=categoriaActual==='Pizzas'
-    ? pizzas.filter(p=>p.activo).map(p=>({...p,esPizza:true}))
-      .concat(catalogoProductos.filter(p=>p.categoria==='Pizzas'))
+    ? (() => {
+        const extra=catalogoProductos.filter(p=>p.categoria==='Pizzas').map(p=>{
+          const max=maxSaboresDeProducto(p);
+          return max?{...p,max,esPizza:true}:p;
+        });
+        const equivalentes=new Set(extra.filter(p=>p.esPizza).map(p=>normalizarNombre(p.nombre)));
+        // Evita mostrar la misma pizza dos veces si el administrador la creó además como producto.
+        const tamanos=pizzas.filter(p=>p.activo && !equivalentes.has(normalizarNombre(p.nombre)))
+          .map(p=>({...p,esPizza:true}));
+        return tamanos.concat(extra);
+      })()
     : catalogoProductos.filter(p=>p.categoria===categoriaActual);
   if(!opciones.length)holder.append(linea('p','Esta categoría no tiene productos visibles.'));
   for(const p of opciones){
