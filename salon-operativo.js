@@ -398,7 +398,7 @@ $('imprimirCuenta').onclick=()=>{
  if(!c||!m)return;
  const impresora=window.ImpresionJuanca;
  if(!impresora){avisoMesa('No cargó el formato de impresión. Actualiza la página.',true);return;}
- impresora.abrirTicket(impresora.prepararCuentaMesa(m.nombre,c));
+ impresora.abrirTicket(impresora.prepararCuentaMesa(m.nombre,c,{prueba:false}));
 };
 const modal=$('dialogCobrar');
 $('abrirCobro').onclick=()=>{
