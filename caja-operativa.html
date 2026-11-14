@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#a71919">
+<title>Caja conectada | La Pizza de Juanca</title>
+<style>
+:root{color-scheme:dark;--gold:#f6bd42;--bg:#111;--panel:#232323;--line:#505050}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#fff;font-family:Arial,Helvetica,sans-serif}
+header{background:#a71919;padding:22px 12px;text-align:center}
+h1{font-size:26px;margin:0 0 6px}header p{margin:0}
+main{max-width:930px;margin:auto;padding:15px 14px 45px}
+h2{font-size:22px;margin:0 0 12px}h3{font-size:18px}
+.card{background:var(--panel);border-radius:13px;padding:18px;margin:15px 0}
+p{line-height:1.48}
+a{color:#f9d68b}
+small,.pequeno{font-size:13px;color:#d3d3d3}
+.banner{padding:13px;background:#3e2c15;color:#ffdd9b;border-left:4px solid var(--gold);border-radius:8px}
+.estado{color:#ffda8c;padding:8px 0;min-height:22px}
+.error{color:#ffaba1}
+label{display:block;font-weight:bold;margin:13px 0 9px}
+input,select,textarea{display:block;width:100%;margin-top:6px;background:#fff;color:#161616;border:0;border-radius:9px;padding:13px;font:inherit}
+textarea{min-height:70px}
+button{font:inherit;font-weight:bold;background:var(--gold);color:#171311;border:0;border-radius:9px;padding:14px;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+.acciones{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.acciones>*{flex:1}
+.secundario{background:#e5e5e5;color:#222}.peligro{background:#aa3838;color:white}
+.metricaGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.metrica{background:#151515;border:1px solid #454545;padding:15px 10px;text-align:center;border-radius:10px}
+.metrica strong{display:block;color:var(--gold);font-size:19px;margin:0 0 6px;overflow-wrap:anywhere}
+.metrica span{display:block;font-size:12px;color:#d2d2d2}
+.fila2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.registro{border-bottom:1px solid var(--line);padding:11px 0;overflow-wrap:anywhere}
+.registro:last-child{border:0}.registro p{margin:5px 0}
+.fuerte{font-weight:bold;color:#ffdc8e}
+.resumen{font-weight:bold;font-size:19px;color:var(--gold)}
+.enlaces{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:15px}
+[hidden]{display:none!important}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid white;outline-offset:3px}
+@media(max-width:640px){.metricaGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.fila2{grid-template-columns:1fr}header{padding:17px 10px}h1{font-size:24px}}
+</style>
+</head>
+<body>
+<header><h1>💰 Caja · La Pizza de Juanca</h1><p>Apertura, ingresos, gastos y cierre</p></header>
+<main>
+<div class="banner"><strong>Versión conectada a Firebase — fase de pruebas.</strong>
+Los movimientos de esta pantalla se guardarán en Firestore solamente cuando se autoricen las reglas de seguridad del administrador. Usa datos ficticios hasta comprobar el sistema. Los pedidos y las ventas de mesas todavía no se contabilizan automáticamente para evitar duplicados.</div>
+<nav class="enlaces"><a href="panel-pedidos.html">← Centro de control</a><a href="caja.html">🧪 Caja anterior de demostración</a></nav>
+<section class="card" id="vistaAcceso">
+<h2>🔐 Acceso del administrador</h2>
+<p class="pequeno">Usa la cuenta administrativa de Firebase. Ningún domiciliario debe tener acceso a esta caja.</p>
+<form id="accesoCaja">
+<label>Correo electrónico<input id="correoCaja" type="email" autocomplete="username" required placeholder="Correo del administrador"></label>
+<label>Contraseña<input id="claveCaja" type="password" autocomplete="current-password" required></label>
+<button id="entrarCaja" type="submit">Entrar a caja</button>
+</form><p id="errorAcceso" class="estado" role="status"></p>
+</section>
+<section id="vistaCaja" hidden>
+<div class="card">
+<div class="acciones"><p>Sesión: <strong id="usuarioCaja">...</strong></p><button id="salirCaja" class="secundario" type="button">Cerrar sesión</button></div>
+<p id="conexion" class="estado" role="status">Conectando con Firebase...</p>
+<p id="controlActivo" class="resumen"></p>
+</div>
+<section class="card" id="seccionApertura">
+<h2>🔓 Abrir nueva caja</h2>
+<p class="pequeno">Solo se permite un turno abierto. La base es dinero inicial, no una venta.</p>
+<form id="formApertura">
+<label>Efectivo base (COP)<input id="baseCaja" type="number" inputmode="numeric" min="0" max="100000000" step="1" required placeholder="Ejemplo: 100000"></label>
+<label>Responsable del turno<input id="responsableCaja" maxlength="70" placeholder="Nombre de quien abre" required></label>
+<label>Nota de apertura (opcional)<textarea id="notaApertura" maxlength="300" placeholder="Observaciones"></textarea></label>
+<button id="abrirCajaBoton" disabled type="submit">🔓 Abrir caja en Firebase</button>
+</form><p id="estadoApertura" class="estado" role="status"></p>
+</section>
+<section class="card" id="seccionTurno" hidden>
+<h2>📊 Resumen del turno abierto</h2>
+<div class="metricaGrid">
+<div class="metrica"><strong id="resumenEfectivo">$0</strong><span>Efectivo esperado (incluye base)</span></div>
+<div class="metrica"><strong id="resumenEfectivoEntradas">$0</strong><span>Ingresos en efectivo</span></div>
+<div class="metrica"><strong id="resumenTransferencias">$0</strong><span>Transferencias netas registradas</span></div>
+<div class="metrica"><strong id="resumenSalidas">$0</strong><span>Total salidas / gastos</span></div>
+</div>
+<p class="pequeno">Movimientos registrados: <strong id="resumenMovimientos">0</strong>. Este resumen refleja solo movimientos de caja guardados, no todos los pedidos recibidos.</p>
+</section>
+<section class="card" id="seccionMovimiento" hidden>
+<h2>➕ Registrar entrada o salida</h2>
+<p class="pequeno">Para ventas, registra el cobro una sola vez usando el número del pedido o de la cuenta. No registres pedidos que todavía no se han pagado.</p>
+<form id="formMovimientoCaja">
+<div class="fila2">
+<label>Tipo de movimiento<select id="categoriaCaja">
+<option value="venta_mesa">🍽️ Venta de mesa</option>
+<option value="venta_domicilio">🛵 Venta a domicilio</option>
+<option value="venta_llevar">🛍️ Venta para llevar</option>
+<option value="otro_ingreso">➕ Otro ingreso</option>
+<option value="gasto">🧾 Gasto / compra</option>
+<option value="pago_personal">👥 Pago a personal</option>
+<option value="retiro">🏦 Retiro / salida</option>
+</select></label>
+<label>Forma de pago<select id="metodoCaja">
+<option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="mixto">Mixto</option>
+</select></label>
+</div>
+<p class="pequeno" id="tipoDescripcion"></p>
+<div class="fila2">
+<label>Valor total (COP)<input id="montoCaja" type="number" min="1" max="100000000" step="1" inputmode="numeric" required></label>
+<label id="labelReferencia">Referencia de la operación<input id="referenciaCaja" maxlength="80" placeholder="ID del pedido o cuenta"></label>
+</div>
+<p class="pequeno" id="notaReferencia"></p>
+<div class="fila2">
+<label>Valor efectivo (COP)<input id="efectivoCaja" type="number" min="0" step="1" inputmode="numeric"></label>
+<label>Valor transferencia (COP)<input id="transferenciaCaja" type="number" min="0" step="1" inputmode="numeric"></label>
+</div>
+<p id="sumaCaja" class="estado" role="status"></p>
+<label>Concepto o detalle<input id="conceptoCaja" maxlength="140" placeholder="Ejemplo: venta pedido ABC12345" required></label>
+<button type="submit" id="guardarMovimiento" disabled>💾 Registrar movimiento</button>
+</form>
+<p id="estadoMovimientoCaja" class="estado" role="status"></p>
+</section>
+<section class="card" id="seccionLista" hidden>
+<h2>📒 Movimientos de este turno</h2>
+<button id="exportarCaja" class="secundario" type="button">⬇️ Descargar movimientos CSV</button>
+<p id="estadoMovimientos" class="estado" role="status"></p>
+<div id="listaMovimientos"></div>
+</section>
+<section class="card" id="seccionArqueo" hidden>
+<h2>🔒 Arqueo y cierre de caja</h2>
+<p class="pequeno">Cuenta el efectivo físico y compáralo con el efectivo esperado. Las transferencias registradas no se suman al dinero físico.</p>
+<label>Efectivo contado (COP)<input id="contadoCaja" type="number" min="0" max="100000000" step="1" inputmode="numeric"></label>
+<p id="diferenciaCaja" class="resumen"></p>
+<label>Observación de cierre (opcional)<textarea id="notaCierreCaja" maxlength="300" placeholder="Faltante, sobrante, explicación..."></textarea></label>
+<button id="cerrarCajaBoton" class="peligro" disabled type="button">🔒 Cerrar turno</button>
+<p id="estadoCierreCaja" class="estado" role="status"></p>
+</section>
+<section class="card">
+<h2>🕘 Historial de cierres</h2><p class="pequeno">Últimos 15 turnos cerrados guardados en Firebase.</p>
+<div id="historialTurnos"></div>
+</section>
+</section>
+</main>
+<script type="module" src="caja-operativa.js"></script>
+</body></html>
