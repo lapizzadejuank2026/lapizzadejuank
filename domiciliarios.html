@@ -137,13 +137,13 @@
 
   const estadosFinales=new Set(['entregado','cancelado']);
   const pasosEntrega=[
-    {desde:'asignado',hacia:'aceptado',boton:'✅ Aceptar entrega'},
+    {desde:'pendiente',hacia:'aceptado',boton:'✅ Aceptar entrega'},
     {desde:'aceptado',hacia:'recogido',boton:'🍕 Pedido recogido'},
     {desde:'recogido',hacia:'en_camino',boton:'🛵 Voy en camino'},
     {desde:'en_camino',hacia:'entregado',boton:'🏠 Confirmar entregado'}
   ];
   const nombresEstado={
-    asignado:'Asignado por el restaurante', aceptado:'Aceptado',
+    pendiente:'Pendiente de aceptar', asignado:'Asignación anterior: pide reasignación al administrador', aceptado:'Aceptado',
     recogido:'Recogido', en_camino:'En camino', entregado:'Entregado',
     cancelado:'Cancelado'
   };
@@ -166,7 +166,7 @@
   }
   function tarjetaEntrega(pedido){
     const d=pedido.d;
-    const estado=String(d.estadoEntrega||'asignado').toLowerCase();
+    const estado=String(d.estadoEntrega||'pendiente').toLowerCase();
     const card=document.createElement('article');
     card.className='entrega';
     const titulo=document.createElement('h3');
@@ -201,7 +201,7 @@
         mensaje.textContent='Guardando el estado...';
         try{
           await updateDoc(doc(db,'pedidos',pedido.id),{
-            estadoEntrega:paso.hacia,estadoEntregaActualizadoEn:serverTimestamp()
+            estadoEntrega:paso.hacia,entregaActualizadaEn:serverTimestamp()
           });
           mensaje.textContent='✅ Estado actualizado.';
         }catch(error){
@@ -216,8 +216,8 @@
     return card;
   }
   function mostrarPedidos(){
-    const abiertos=pedidosPropios.filter(p=>!estadosFinales.has(String(p.d.estadoEntrega||'asignado').toLowerCase()));
-    const historial=pedidosPropios.filter(p=>estadosFinales.has(String(p.d.estadoEntrega||'asignado').toLowerCase()));
+    const abiertos=pedidosPropios.filter(p=>!estadosFinales.has(String(p.d.estadoEntrega||'pendiente').toLowerCase()));
+    const historial=pedidosPropios.filter(p=>estadosFinales.has(String(p.d.estadoEntrega||'pendiente').toLowerCase()));
     const lista=$('lista-entregas');
     const historico=$('lista-historial');
     lista.replaceChildren();
