@@ -1,0 +1,113 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Apertura de caja · La Pizza de Juanca (diseño)</title>
+<style>:root{color-scheme:dark;--gold:#f6bd42}*{box-sizing:border-box}body{margin:0;background:#111;color:#fff;font-family:Arial,sans-serif}header{background:#a71919;padding:22px;text-align:center}h1{font-size:25px;margin:0}main{max-width:850px;margin:auto;padding:15px}.caja{background:#252525;border-radius:13px;padding:18px;margin:15px 0}h2{font-size:21px;margin:0 0 13px}.alerta{padding:13px;background:#493316;color:#ffe6a0;border-left:4px solid var(--gold);line-height:1.5;border-radius:8px}.ficha{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.monto{background:#141414;padding:14px;text-align:center;border-radius:10px}.monto strong{display:block;font-size:20px;color:var(--gold);margin-bottom:6px}.monto span{font-size:13px;color:#ddd}label{display:block;font-weight:bold;margin:12px 0}input,select,textarea{display:block;width:100%;font:inherit;margin-top:7px;padding:12px;border:0;border-radius:9px;background:#fff;color:#111}button{background:var(--gold);color:#151515;border:0;border-radius:9px;padding:13px;font-size:16px;font-weight:bold;cursor:pointer}button:disabled{opacity:.55}.fila{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.fila>*{flex:1}.entrada{padding:11px;border-bottom:1px solid #515151}.entrada:last-child{border:0}.estado{color:#ffdc94;min-height:20px}.total{font-size:22px;font-weight:bold;color:var(--gold)}a{color:#ffdf94}.peligro{background:#8e3030;color:#fff}@media(max-width:550px){.ficha{grid-template-columns:1fr}.monto strong{font-size:20px}}</style></head><body>
+<header><h1>💰 Apertura y cierre de caja</h1><p style="margin:7px 0 0">La Pizza de Juanca · Diseño inicial</p></header>
+<main><p class="alerta"><strong>SOLO DEMOSTRACIÓN.</strong> Esta caja no contabiliza las ventas reales, ni registra cobros bancarios. Los datos quedan únicamente en el navegador de este dispositivo. No la uses para manejar dinero real.</p>
+<p><a href="panel-pedidos.html">← Centro de control</a> · <a href="salon-mesas.html">🍽️ Diseño de mesas</a></p>
+<section class="caja" id="abrir">
+  <h2>🔓 Abrir caja</h2><p>Al iniciar el turno registra el efectivo base con el que comienzas.</p>
+  <form id="formAbrir"><label>Efectivo inicial en caja (COP)<input id="base" type="number" step="1" min="0" max="100000000" required placeholder="Ejemplo: 100000"></label><label>Responsable<input id="responsable" maxlength="70" required placeholder="Nombre del encargado"></label><button type="submit">Abrir caja de prueba</button></form><p id="msgAbrir" class="estado"></p>
+</section>
+<section id="abierta" hidden>
+<div class="caja"><h2>🟢 Caja abierta (prueba)</h2><p id="infoTurno"></p>
+<div class="ficha">
+  <div class="monto"><strong id="esperado">$0</strong><span>Efectivo esperado</span></div>
+  <div class="monto"><strong id="transferencias">$0</strong><span>Transferencias anotadas</span></div>
+  <div class="monto"><strong id="gastos">$0</strong><span>Gastos y salidas</span></div>
+</div><p class="alerta" style="margin-top:14px">Los importes de este cuadro son anotaciones de prueba. No se suman automáticamente los pedidos ni las ventas de mesas: eso se conectará después, evitando duplicados.</p></div>
+<div class="caja"><h2>➕ Movimiento manual de prueba</h2>
+<form id="movimiento"><label>Tipo<select id="tipo"><option value="ingreso">Ingreso</option><option value="egreso">Egreso / gasto</option></select></label>
+<label>Medio<select id="medio"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select></label>
+<label>Valor (COP)<input id="valor" type="number" min="1" max="100000000" step="1" required></label>
+<label>Concepto<input id="concepto" maxlength="120" required placeholder="Ejemplo: compra de ingredientes (demo)"></label>
+<button type="submit">Agregar movimiento (demo)</button><p class="estado" id="estadoMovimiento"></p></form></div>
+<div class="caja"><h2>📒 Movimientos del turno</h2><div id="movimientos"></div></div>
+<div class="caja"><h2>🔒 Cerrar caja</h2><p>Compara el efectivo físico contado con el valor que debería haber, según los movimientos registrados.</p>
+<label>Efectivo contado físicamente (COP)<input id="contado" type="number" min="0" max="100000000" step="1" placeholder="Cantidad contada"></label>
+<p id="diferencia" class="total"></p><button id="cerrar" class="peligro">Cerrar caja de prueba</button><p id="estadoCierre" class="estado"></p></div>
+</section>
+<section class="caja"><h2>🕘 Últimos cierres de prueba</h2><div id="cierres"></div><button id="borrar" class="peligro">Borrar el historial LOCAL de pruebas</button></section>
+</main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const dinero=v=>'$'+Number(v||0).toLocaleString('es-CO');
+const llave='juanca-caja-demo-v1';
+let db;
+try{db=JSON.parse(localStorage.getItem(llave)||'null')}catch(_){}
+if(!db||!Array.isArray(db.historial))db={actual:null,historial:[]};
+const guardar=()=>{try{localStorage.setItem(llave,JSON.stringify(db))}catch(_){alert('No se pudieron guardar datos de esta demostración.')}};
+const entero=(val,min=0)=>val!==''&&Number.isSafeInteger(Number(val))&&Number(val)>=min&&Number(val)<=100000000?Number(val):null;
+const elemento=(tag,txt)=>{const el=document.createElement(tag);el.textContent=txt;return el};
+const cajaEsperada=turno=>{
+  if(!turno)return 0;
+  return turno.base+turno.movimientos.reduce((acc,m)=>m.medio==='efectivo'?(acc+(m.tipo==='ingreso'?m.valor:-m.valor)):acc,0);
+};
+function render(){
+  const t=db.actual;
+  $('abrir').hidden=Boolean(t);$('abierta').hidden=!t;
+  const cierres=$('cierres');cierres.replaceChildren();
+  if(!db.historial.length)cierres.append(elemento('p','Aún no hay cierres de prueba.'));
+  for(const h of db.historial.slice(-7).reverse()){
+    cierres.append(elemento('p',h.responsable+' · '+new Date(h.cierre).toLocaleString('es-CO')+
+      ' · Esperado '+dinero(h.esperado)+' · Contado '+dinero(h.contado)+' · Diferencia '+dinero(h.diferencia)));
+  }
+  if(!t)return;
+  $('infoTurno').textContent='Responsable: '+t.responsable+' · Abierta: '+new Date(t.inicio).toLocaleString('es-CO')+' · Base: '+dinero(t.base);
+  $('esperado').textContent=dinero(cajaEsperada(t));
+  $('transferencias').textContent=dinero(t.movimientos.reduce((s,m)=>s+(m.medio==='transferencia'&&m.tipo==='ingreso'?m.valor:0),0));
+  $('gastos').textContent=dinero(t.movimientos.reduce((s,m)=>s+(m.tipo==='egreso'?m.valor:0),0));
+  const lista=$('movimientos');lista.replaceChildren();
+  if(!t.movimientos.length)lista.append(elemento('p','No hay movimientos manuales todavía.'));
+  for(const mov of t.movimientos.slice().reverse()){
+    const div=elemento('div','');div.className='entrada';
+    div.append(elemento('strong',(mov.tipo==='ingreso'?'➕ ':'➖ ')+dinero(mov.valor)+' · '+mov.medio));
+    div.append(elemento('p',mov.concepto+' · '+new Date(mov.fecha).toLocaleString('es-CO')));
+    lista.append(div);
+  }
+  calcular();
+}
+$('formAbrir').onsubmit=ev=>{
+  ev.preventDefault();if(db.actual)return;
+  const base=entero($('base').value),responsable=$('responsable').value.trim();
+  if(base===null||!responsable){$('msgAbrir').textContent='Completa un saldo inicial válido y un responsable.';return;}
+  if(!confirm('¿Abrir caja de PRUEBA? No se incluirán ventas reales.'))return;
+  db.actual={inicio:new Date().toISOString(),base,responsable,movimientos:[]};
+  guardar();render();
+};
+$('movimiento').onsubmit=ev=>{
+  ev.preventDefault();const t=db.actual;if(!t)return;
+  const valor=entero($('valor').value,1),concepto=$('concepto').value.trim(),tipo=$('tipo').value,medio=$('medio').value;
+  if(valor===null||!concepto){$('estadoMovimiento').textContent='Revisa valor y concepto.';return}
+  if(tipo==='egreso'&&medio==='efectivo'&&valor>cajaEsperada(t)){
+    $('estadoMovimiento').textContent='La salida supera el efectivo esperado. Corrige antes de registrar.';return;
+  }
+  t.movimientos.push({valor,concepto,tipo,medio,fecha:new Date().toISOString()});
+  $('valor').value='';$('concepto').value='';
+  $('estadoMovimiento').textContent='✅ Movimiento de prueba agregado.';
+  guardar();render();
+};
+function calcular(){
+  const t=db.actual;if(!t)return;
+  const v=entero($('contado').value);
+  if(v===null){$('diferencia').textContent='Ingresa el dinero contado para calcular la diferencia.';return;}
+  const dif=v-cajaEsperada(t);
+  $('diferencia').textContent='Diferencia: '+(dif>0?'+':'')+dinero(dif)+(dif===0?' ✅ Caja cuadrada':dif>0?' · Sobrante':' · Faltante');
+}
+$('contado').oninput=calcular;
+$('cerrar').onclick=()=>{
+  const t=db.actual;if(!t)return;
+  const contado=entero($('contado').value);
+  if(contado===null){$('estadoCierre').textContent='Ingresa el efectivo contado antes de cerrar.';return;}
+  if(!confirm('¿Cerrar esta caja de PRUEBA? No afecta la caja real.'))return;
+  const esperado=cajaEsperada(t);
+  db.historial.push({...t,cierre:new Date().toISOString(),contado,esperado,diferencia:contado-esperado});
+  db.actual=null;guardar();$('contado').value='';$('estadoCierre').textContent='';
+  render();
+};
+$('borrar').onclick=()=>{
+  if(db.actual){alert('Cierra primero la caja de prueba.');return;}
+  if(!confirm('¿Borrar todos los cierres locales de prueba?'))return;
+  db.historial=[];guardar();render();
+};
+render();
+</script></body></html>
