@@ -63,7 +63,7 @@
       prueba:false
     };
   }
-  function prepararCuentaMesa(nombre,cuenta){
+  function prepararCuentaMesa(nombre,cuenta,opciones={}){
     const comandas=Array.isArray(cuenta?.comandas)?cuenta.comandas:[];
     const items=comandas.flatMap(cmd=>(Array.isArray(cmd.productos)?cmd.productos:[]).map(p=>({
       nombre:String(p.nombre||p.producto||'Producto'),
@@ -76,10 +76,10 @@
     return {
       encabezado:String(nombre||'Mesa'),numero:'',
       fecha:fecha(cuenta?.abierta),nombre:'',telefono:'',direccion:'',municipio:'',
-      observaciones:'',titulo:'PRECUENTA DE MESA · DEMOSTRACIÓN',
+      observaciones:'',titulo:opciones.prueba===false?'PRECUENTA DE MESA':'PRECUENTA DE MESA · DEMOSTRACIÓN',
       items,subtotal,domicilio:null,mostrarDomicilio:false,
       nota:'Precuenta antes de pagar. No certifica ningún pago.',
-      prueba:true
+      prueba:opciones.prueba!==false
     };
   }
   function abrirTicket(datos){
