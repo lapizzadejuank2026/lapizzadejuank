@@ -64,6 +64,18 @@ Los movimientos de esta pantalla se guardarán en Firestore solamente cuando se 
 <p id="conexion" class="estado" role="status">Conectando con Firebase...</p>
 <p id="controlActivo" class="resumen"></p>
 </div>
+<section class="card" id="seccionCobrosDomi">
+<h2>🛵 Cobros de domiciliarios · Firebase</h2>
+<p class="pequeno">Aquí aparecen los pagos que reportan los domiciliarios, separados en efectivo y transferencia. <strong>Las cifras reportadas aún NO son ingresos del turno.</strong> Cuando tú hayas recibido el efectivo y comprobado la transferencia, concilia el pedido en el panel de pedidos y luego pulsa «Registrar cobro en caja». Solo así entra en los totales de caja, una vez por pedido.</p>
+<div class="metricaGrid">
+<div class="metrica"><strong id="domiEfectivoReportado">—</strong><span>Efectivo reportado sin registrar</span></div>
+<div class="metrica"><strong id="domiTransferenciaReportada">—</strong><span>Transferencias reportadas sin registrar</span></div>
+<div class="metrica"><strong id="domiEfectivoListo">—</strong><span>Efectivo conciliado, listo para caja</span></div>
+<div class="metrica"><strong id="domiTransferenciaLista">—</strong><span>Transferencias verificadas, listas para caja</span></div>
+</div>
+<p id="estadoCobrosDomi" class="estado" role="status">Esperando la conexión con Firebase...</p>
+<div id="listaCobrosDomi"></div>
+</section>
 <section class="card" id="seccionApertura">
 <h2>🔓 Abrir nueva caja</h2>
 <p class="pequeno">Solo se permite un turno abierto. La base es dinero inicial, no una venta.</p>
@@ -143,4 +155,5 @@ Los movimientos de esta pantalla se guardarán en Firestore solamente cuando se 
 </section>
 </main>
 <script type="module" src="caja-operativa.js"></script>
+<script type="module" src="caja-cobros-domiciliarios.js"></script>
 </body></html>
