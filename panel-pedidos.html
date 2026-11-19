@@ -52,6 +52,9 @@
     .monitor-metrica { background:#141414; border:1px solid #484133; border-radius:10px; padding:12px 8px; text-align:center; }
     .monitor-metrica strong { display:block; color:#ffd26f; font-size:25px; }
     .monitor-metrica span { display:block; font-size:12px; color:#eee; margin-top:4px; }
+    .jornada-filtros { display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px; }
+    .jornada-filtros button { flex:1;min-width:125px;background:#333;color:#fff;border:1px solid #666; }
+    .jornada-filtros button[aria-pressed="true"] { background:#f6bd42;color:#18130b;border-color:#f6bd42; }
     .monitor-filtros { display:flex; gap:9px; margin:15px 0 10px; }
     .monitor-filtros button { flex:1; min-width:0; margin:0; padding:12px 7px; font-size:14px; color:#eee; background:#343434; border:1px solid #656565; }
     .monitor-filtros button[aria-pressed="true"] { color:#1b1309; background:#f6bd42; border-color:#f6bd42; }
@@ -121,7 +124,12 @@
       <button id="activar">🔔 Activar alarma sonora</button>
       <button id="salir" class="secundario">Cerrar sesión</button>
       <p id="estado" class="alerta" role="status">Conectando con Firestore...</p>
-      <p id="contador"></p>
+      <p id="contador" aria-live="polite"></p>
+      <div class="jornada-filtros" aria-label="Filtrar pedidos por jornada">
+        <button type="button" id="filtro-hoy" aria-pressed="true">📅 Hoy y pendientes</button>
+        <button type="button" id="filtro-historial" aria-pressed="false">🗂️ Historial completo</button>
+      </div>
+      <p id="aviso-jornada" class="hint">El contador de hoy se reinicia a medianoche (hora de Colombia). El historial nunca se borra.</p>
     </div>
 
     <section class="caja monitor" aria-labelledby="monitor-titulo">
@@ -273,6 +281,11 @@
   let pedidosCache = [];
   let pedidosCargados = false;
   const marcoProductos = document.getElementById('marco-productos');
+  let filtroPedidos='hoy';
+  const diaColombia=fecha=>new Intl.DateTimeFormat('en-CA',{
+    timeZone:'America/Bogota',year:'numeric',month:'2-digit',day:'2-digit'
+  }).format(fecha);
+  let jornadaVisible=diaColombia(new Date());
 
   function cambiarVista(nombre) {
     vistaPedidos.hidden = nombre !== 'pedidos';
@@ -962,6 +975,33 @@
     dibujarMonitor(pedidosCache);
   });
 
+  // La jornada cambia a las 00:00 en Colombia; los datos quedan intactos en Firebase.
+  function pedidoDeHoy(p){
+    const creado=fechaDe(p.d.creadoEn);
+    return Boolean(creado&&diaColombia(creado)===diaColombia(new Date()));
+  }
+  // No ocultar pedidos antiguos si aún requieren atención del restaurante.
+  function pendienteAnterior(p){
+    const estado=String(p.d.estado||'nuevo').toLowerCase();
+    if(estado==='nuevo')return true;
+    if(!p.d.domiciliarioUid)return false;
+    return !entregaFinalizada(estadoDe(p.d));
+  }
+  document.getElementById('filtro-hoy').addEventListener('click',()=>{
+    filtroPedidos='hoy';if(pedidosCargados)pintar(pedidosCache);
+  });
+  document.getElementById('filtro-historial').addEventListener('click',()=>{
+    filtroPedidos='historial';if(pedidosCargados)pintar(pedidosCache);
+  });
+  // Si la pestaña queda abierta durante la medianoche, actualizar la jornada sin recargar.
+  setInterval(()=>{
+    const ahora=diaColombia(new Date());
+    if(ahora!==jornadaVisible){
+      jornadaVisible=ahora;
+      if(auth.currentUser&&pedidosCargados)pintar(pedidosCache);
+    }
+  },30000);
+
   function pintar(documentos) {
     pedidosCache = documentos;
     actualizarAvisoMovimiento(documentos);
@@ -986,22 +1026,31 @@
     document.getElementById('nuevos-tab').textContent = String(cuantosNuevos);
     document.getElementById('nuevos-tab').hidden = !cuantosNuevos;
 
+    const hoy=pedidos.filter(pedidoDeHoy);
+    const pendientesViejos=pedidos.filter(p=>!pedidoDeHoy(p)&&pendienteAnterior(p));
+    const visibles=filtroPedidos==='historial'
+      ? pedidos
+      : pedidos.filter(p=>pedidoDeHoy(p)||pendienteAnterior(p));
     document.getElementById('contador').textContent =
-      `${pedidos.length} pedido(s) · ${
-        pedidos.filter(x =>
-          String(x.d.estado || 'nuevo').toLowerCase() === 'nuevo'
-        ).length
-      } nuevo(s)`;
+      '📅 Pedidos de hoy: '+hoy.length+' · 🔔 Sin confirmar: '+cuantosNuevos;
+    document.getElementById('filtro-hoy').setAttribute('aria-pressed',String(filtroPedidos==='hoy'));
+    document.getElementById('filtro-historial').setAttribute('aria-pressed',String(filtroPedidos==='historial'));
+    document.getElementById('aviso-jornada').textContent=filtroPedidos==='hoy'
+      ? 'Mostrando '+hoy.length+' pedido(s) de hoy'+(pendientesViejos.length?' y '+pendientesViejos.length+' pendiente(s) de días anteriores.':'.')+
+        ' A las 12 de la noche comienza un nuevo conteo. No se borra nada de Firebase.'
+      : 'Mostrando el historial de '+pedidos.length+' pedido(s). El contador de hoy sigue independiente.';
 
     estado.textContent = hayNuevos
       ? '🔔 Hay pedidos pendientes de confirmar'
       : 'Sin pedidos nuevos';
 
-    if (!pedidos.length) {
-      lista.append(linea('Todavía no hay pedidos reales.'));
+    if (!visibles.length) {
+      lista.append(linea(filtroPedidos==='hoy'
+        ? 'No hay pedidos para hoy ni entregas antiguas pendientes. Abre «Historial completo» para consultar anteriores.'
+        : 'Todavía no hay pedidos registrados.'));
     }
 
-    for (const { id, d } of pedidos) {
+    for (const { id, d } of visibles) {
       const nuevo =
         String(d.estado || 'nuevo').toLowerCase() === 'nuevo';
 
