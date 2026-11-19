@@ -18,6 +18,10 @@
     p{line-height:1.5}
     .ayuda{font-size:14px;color:var(--suave)}
     .aviso{color:#ffdb86;background:#342b1c;padding:14px;border-radius:10px;font-size:14px;line-height:1.5}
+    .efectivo-diario{background:#282117;border:1px solid #80693a;border-radius:16px;padding:18px 20px;margin:13px 0;text-align:center}
+    .efectivo-diario .titulo-efectivo{margin:0;color:#ffdb86;font-size:17px;font-weight:bold}
+    .efectivo-diario .valor-efectivo{font-size:clamp(30px,8vw,43px);font-weight:800;margin:7px 0;color:#fff}
+    .efectivo-diario .detalle-efectivo{margin:0;color:#ddd;font-size:13px}
     label{display:block;font-size:15px;font-weight:bold;margin:13px 0 6px}
     input{display:block;width:100%;border:1px solid #bbb;background:#fff;color:#111;border-radius:10px;padding:13px;font:inherit;margin-top:7px}
     button{font:inherit;cursor:pointer;border:0;border-radius:11px;padding:14px 13px;font-weight:bold}
@@ -75,6 +79,11 @@
       <div><h2>Mi jornada</h2><p id="correo-sesion" class="ayuda"></p></div>
       <button class="secundario" id="salir" type="button">Salir</button>
     </div>
+    <section class="efectivo-diario" aria-live="polite" aria-atomic="true">
+      <p class="titulo-efectivo">💵 Efectivo recaudado hoy</p>
+      <p class="valor-efectivo" id="efectivo-hoy">Calculando…</p>
+      <p class="detalle-efectivo" id="detalle-efectivo">Efectivo reportado hoy y aún sin recibir por administración.</p>
+    </section>
     <p class="aviso" id="aviso-entregas" role="status">🔒 Cuenta individual verificada. Solo se consultarán los pedidos asignados a este domiciliario.</p>
     <p class="ayuda" style="padding:0 4px">💰 Al marcar «Voy en camino», registra cómo pagó el cliente (efectivo, transferencia o mixto) antes de cerrar la entrega. El restaurante confirma las transferencias.</p>
     <nav class="pestanas" aria-label="Secciones de la aplicación">
@@ -136,6 +145,25 @@
   let pedidosPropios=[];
   let escuchandoPedidos=false;
   let mensajeBloqueo='';
+
+  // El saldo de hoy se reinicia visualmente con la fecha de Colombia; los cobros pendientes se conservan en Firestore.
+  const diaBogota=fecha=>{
+    const f=fecha?.toDate?.() || (fecha instanceof Date ? fecha : null);
+    if(!f || !Number.isFinite(f.getTime()))return null;
+    return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Bogota',year:'numeric',month:'2-digit',day:'2-digit'}).format(f);
+  };
+  function actualizarEfectivoHoy(){
+    const hoy=diaBogota(new Date());
+    const total=pedidosPropios.reduce((s,{d})=>{
+      const cobro=d.cobroReportado;
+      const efectivo=Number(cobro?.efectivo);
+      if(!cobro || d.cobroVerificado===true || diaBogota(d.cobroReportadoEn)!==hoy || !Number.isSafeInteger(efectivo) || efectivo<0)return s;
+      return s+efectivo;
+    },0);
+    $('efectivo-hoy').textContent='$'+total.toLocaleString('es-CO');
+    $('detalle-efectivo').textContent='Efectivo de hoy pendiente de entregar. Los cobros de días anteriores siguen registrados para administración.';
+  }
+  setInterval(()=>{if(!$('portal').hidden && escuchandoPedidos)actualizarEfectivoHoy();},30000);
 
   const estadosFinales=new Set(['entregado','cancelado']);
   const pasosEntrega=[
@@ -227,6 +255,7 @@
     return card;
   }
   function mostrarPedidos(){
+    actualizarEfectivoHoy();
     const abiertos=pedidosPropios.filter(p=>!estadosFinales.has(String(p.d.estadoEntrega||'pendiente').toLowerCase()));
     const historial=pedidosPropios.filter(p=>estadosFinales.has(String(p.d.estadoEntrega||'pendiente').toLowerCase()));
     const lista=$('lista-entregas');
@@ -247,6 +276,7 @@
     detenerPedidos();
     pedidosPropios=[];
     $('estado-entregas').textContent='Buscando tus pedidos en Firebase...';
+    $('efectivo-hoy').textContent='Calculando…';
     const q=query(collection(db,'pedidos'),where('domiciliarioUid','==',user.uid));
     detenerPedidos=onSnapshot(q,snapshot=>{
       if(auth.currentUser?.uid!==user.uid)return;
@@ -259,6 +289,8 @@
       $('estado-entregas').textContent=error?.code==='permission-denied'
         ?'Firebase bloqueó la lectura de pedidos. El administrador debe habilitar reglas privadas para domiciliarios.'
         :'No se pudo consultar tus pedidos. Comprueba Internet y vuelve a iniciar sesión.';
+      $('efectivo-hoy').textContent='Sin datos';
+      $('detalle-efectivo').textContent='No se pudo consultar el saldo en Firebase. Intenta nuevamente.';
     });
   }
 
