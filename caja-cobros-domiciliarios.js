@@ -28,6 +28,7 @@ const fecha=x=>{
 const numFecha=x=>x?.seconds||(x?.toDate?.().getTime()||0)/1000;
 
 let pedidos=[],control=null,controlEnServidor=false,pedidosEnServidor=false,usuario=null;
+let errorLecturaCobros='',errorLecturaControl='',errorRegistro='';
 let detenerControl=()=>{},detenerPedidos=()=>{},guardandoId='';
 function actualizarEstado(mensaje,error=false){
   $('estadoCobrosDomi').textContent=mensaje;
@@ -36,6 +37,7 @@ function actualizarEstado(mensaje,error=false){
 function limpiar(){
   detenerPedidos();detenerControl();detenerPedidos=()=>{};detenerControl=()=>{};
   pedidos=[];control=null;controlEnServidor=false;pedidosEnServidor=false;guardandoId='';
+  errorLecturaCobros='';errorLecturaControl='';errorRegistro='';
   $('listaCobrosDomi').replaceChildren();
   for(const id of ['domiEfectivoReportado','domiTransferenciaReportada','domiEfectivoListo','domiTransferenciaLista']){
     $(id).textContent='—';
@@ -58,6 +60,10 @@ function sePuedeRegistrar(p){
 function dibujar(){
   if(!usuario)return;
   const lista=$('listaCobrosDomi');lista.replaceChildren();
+  if(errorLecturaCobros||errorLecturaControl){
+    actualizarEstado(errorLecturaCobros||errorLecturaControl,true);
+    return;
+  }
   if(!pedidosEnServidor){
     actualizarEstado('Esperando lectura de cobros confirmada por Firebase. No se permiten registros todavía.');
     return;
@@ -74,9 +80,9 @@ function dibujar(){
   const anotados=reportados.filter(p=>p.d.cajaMovimientoId);
   const ordenados=[...pendientes.sort((a,b)=>numFecha(b.d.cobroReportadoEn)-numFecha(a.d.cobroReportadoEn)),
     ...anotados.sort((a,b)=>numFecha(b.d.cajaRegistradoEn)-numFecha(a.d.cajaRegistradoEn)).slice(0,12)];
-  actualizarEstado(cajaAbierta
+  actualizarEstado(errorRegistro || (cajaAbierta
     ? '✅ Cobros sincronizados. Solo los pagos conciliados pueden ingresar al turno abierto.'
-    : 'ℹ️ Los cobros se pueden revisar, pero no registrar hasta que exista una caja abierta.');
+    : 'ℹ️ Los cobros se pueden revisar, pero no registrar hasta que exista una caja abierta.'),!!errorRegistro);
   if(!ordenados.length){txt(lista,'Aún no hay cobros de domiciliarios reportados.');return;}
   for(const p of ordenados){
     const d=p.d,r=integridad(d);
@@ -106,7 +112,8 @@ function dibujar(){
 async function registrarCobro(pedidoId,mensaje){
   if(!usuario||!controlEnServidor||!pedidosEnServidor||control?.estado!=='abierta'||guardandoId)return;
   if(!window.confirm('¿Registrar el efectivo y la transferencia de este pedido conciliado en el turno abierto? Se registrará una sola vez.'))return;
-  guardandoId=pedidoId;dibujar();mensaje.textContent='Verificando el pedido y registrando la venta...';
+  errorRegistro='';
+  guardandoId=pedidoId;dibujar();
   try{
     const movId='domicilio__'+pedidoId;
     const movRef=doc(db,'movimientosCaja',movId);
@@ -148,9 +155,9 @@ async function registrarCobro(pedidoId,mensaje){
       tx.set(refCorta,{turnoId,movimientoId:movId,categoria:'venta_domicilio',referencia:pedidoId.slice(0,8).toUpperCase(),creadoEn:serverTimestamp()});
       tx.update(pedidoRef,{cajaMovimientoId:movId,cajaTurnoId:turnoId,cajaRegistradoEn:serverTimestamp()});
     });
-    actualizarEstado('✅ Cobro de domicilio registrado en caja: efectivo y transferencia separados.');
+    errorRegistro='';
   }catch(error){
-    actualizarEstado('No se pudo registrar el cobro: '+(error.message||error.code||'Error de Firebase')+'. Comprueba que las reglas permitan registrar ventas y consulta movimientos antes de reintentar.',true);
+    errorRegistro='No se pudo registrar el cobro: '+(error.message||error.code||'Error de Firebase')+'. Comprueba las reglas de Firebase y consulta movimientos antes de reintentar.';
   }finally{guardandoId='';dibujar();}
 }
 onAuthStateChanged(auth,user=>{
@@ -159,14 +166,14 @@ onAuthStateChanged(auth,user=>{
   actualizarEstado('Cargando cobros de domiciliarios en Firebase...');
   detenerControl=onSnapshot(doc(db,'cajaControl','actual'),{includeMetadataChanges:true},snap=>{
     control=snap.exists()?snap.data():null;
-    controlEnServidor=!snap.metadata.fromCache;dibujar();
+    controlEnServidor=!snap.metadata.fromCache;errorLecturaControl='';dibujar();
   },err=>{
-    controlEnServidor=false;actualizarEstado('No se pudo consultar el estado de caja: '+(err.code||'sin acceso'),true);
+    controlEnServidor=false;errorLecturaControl='No se pudo consultar el estado de caja: '+(err.code||'sin acceso');dibujar();
   });
   detenerPedidos=onSnapshot(collection(db,'pedidos'),{includeMetadataChanges:true},snap=>{
     pedidos=snap.docs.map(d=>({id:d.id,d:d.data()}));
-    pedidosEnServidor=!snap.metadata.fromCache;dibujar();
+    pedidosEnServidor=!snap.metadata.fromCache;errorLecturaCobros='';dibujar();
   },err=>{
-    pedidosEnServidor=false;actualizarEstado('Firebase no permite consultar los pedidos: '+(err.code||'sin acceso')+'. Comprueba permisos de administrador.',true);
+    pedidosEnServidor=false;errorLecturaCobros='Firebase no permite consultar los pedidos: '+(err.code||'sin acceso')+'. Comprueba permisos de administrador.';dibujar();
   });
 });
