@@ -163,7 +163,7 @@
     $('efectivo-hoy').textContent='$'+total.toLocaleString('es-CO');
     $('detalle-efectivo').textContent='Efectivo de hoy pendiente de entregar. Los cobros de días anteriores siguen registrados para administración.';
   }
-  setInterval(()=>{if(!$('portal').hidden && escuchandoPedidos)actualizarEfectivoHoy();},30000);
+  setInterval(()=>{if(!$('portal').hidden && escuchandoPedidos && $('efectivo-hoy').textContent!=='Sin datos')actualizarEfectivoHoy();},30000);
 
   const estadosFinales=new Set(['entregado','cancelado']);
   const pasosEntrega=[
