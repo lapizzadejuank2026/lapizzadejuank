@@ -141,7 +141,7 @@
       nombrePie.textContent = nombre;
       document.title = nombre + ' | Bienvenidos';
       logo.alt = 'Logo de ' + nombre;
-      const nuevaURL = typeof datos?.logoURL==='string' && /^https:\/\//i.test(datos.logoURL)
+      const nuevaURL = typeof datos?.logoURL==='string' && (/^https:\/\//i.test(datos.logoURL) || /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(datos.logoURL))
         ? datos.logoURL : 'chef.png';
       if (logo.getAttribute('src') !== nuevaURL) {
         logo.hidden = false;
