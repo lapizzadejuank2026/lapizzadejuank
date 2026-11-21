@@ -19,7 +19,9 @@
     .header { background:#141416; border-bottom:1px solid var(--border); }
     .head-inner { display:flex; align-items:center; justify-content:space-between; gap:15px; min-height:82px; }
     .brand { display:flex; align-items:center; gap:12px; text-decoration:none; }
-    .brand-symbol { display:grid; place-items:center; width:48px; height:48px; border-radius:15px; background:#312022; font-size:28px; }
+    .brand-symbol { display:grid; place-items:center; width:48px; height:48px; border-radius:15px; background:#312022; font-size:28px; overflow:hidden; }
+    .brand-symbol img { width:100%; height:100%; object-fit:contain; display:block; background:#fff; }
+    .brand-symbol img[hidden],.brand-symbol span[hidden] { display:none!important; }
     .brand-text strong { display:block; font-size:clamp(17px,2.3vw,21px); line-height:1.15; }
     .brand-text small { display:block; color:var(--gold); font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
     .head-actions { display:flex; gap:10px; align-items:center; }
@@ -148,9 +150,9 @@
 <body>
   <header class="header">
     <div class="wrap head-inner">
-      <a href="#inicio" class="brand" aria-label="La Pizza De Juan K, inicio">
-        <span class="brand-symbol" aria-hidden="true">👨‍🍳</span>
-        <span class="brand-text"><strong>LA PIZZA DE JUAN K</strong><small>Desde 2013 · Sabor de la casa</small></span>
+      <a href="#inicio" class="brand" id="marca-inicio" aria-label="La Pizza de Juan K, inicio">
+        <span class="brand-symbol" aria-hidden="true"><img id="marca-logo" src="chef.png" alt="" onerror="this.hidden=true;document.getElementById('marca-logo-alternativo').hidden=false;"><span id="marca-logo-alternativo" hidden>👨‍🍳</span></span>
+        <span class="brand-text"><strong id="marca-nombre">LA PIZZA DE JUAN K</strong><small id="marca-lema">Desde 2013 · Sabor de la casa</small></span>
       </a>
       <div class="head-actions">
         <a class="outline-btn" href="#cobertura">Cobertura</a>
@@ -162,10 +164,10 @@
   <section class="hero" id="inicio">
     <div class="wrap hero-inner">
       <div>
-        <span class="eyebrow">Ingredientes deliciosos · Mucho sabor</span>
-        <h1>La Pizza<br>De Juan K 🍕</h1>
-        <p>Bienvenidos a nuestra pizzería. Elige tu tamaño, combina tus sabores favoritos y arma tu pedido.</p>
-        <div class="notice"><strong>MENÚ DE PEDIDOS:</strong> Puedes usar el carrito para hacer tu pedido. <strong>Tus pedidos serán enviados a La Pizza de Juanca. El valor del domicilio y el método de pago se confirmarán con el restaurante. No se realizan cobros automáticos</strong>.</div>
+        <h1 class="sr-only" id="marca-titulo-accesible">La Pizza de Juan K</h1>
+        <span class="eyebrow" id="marca-frase">Ingredientes deliciosos · Mucho sabor</span>
+        <p id="marca-bienvenida">Bienvenidos a nuestra pizzería. Elige tu tamaño, combina tus sabores favoritos y arma tu pedido.</p>
+        <div class="notice"><strong>MENÚ DE PEDIDOS:</strong> Puedes usar el carrito para hacer tu pedido. <strong>Tus pedidos serán enviados a <span id="marca-aviso-nombre">La Pizza de Juan K</span>. El valor del domicilio y el método de pago se confirmarán con el restaurante. No se realizan cobros automáticos</strong>.</div>
       </div>
       <div class="hero-pizza" aria-hidden="true">🍕</div>
     </div>
@@ -190,7 +192,7 @@
       <div class="cart-bottom"><div class="subtotal"><span>Subtotal</span><strong id="subtotal">$0</strong></div><p class="delivery-note">El valor del domicilio no está incluido.</p><button class="primary-btn" id="previewButton" type="button" disabled>Ver resumen de tu pedido</button><button class="clear-btn" id="clearButton" type="button" hidden>Vaciar carrito</button></div>
     </aside>
   </main>
-  <footer>© La Pizza De Juan K · Pedidos por nuestro menú digital.</footer>
+  <footer>© <span id="marca-pie">La Pizza de Juan K</span> · Pedidos por nuestro menú digital.</footer>
 
   <dialog id="pizzaDialog" aria-labelledby="pizzaDialogTitle">
     <div class="dialog-head"><div><span class="eyebrow">Personaliza tu pizza</span><h2 id="pizzaDialogTitle">Elige tus sabores</h2></div><button class="icon-btn" data-close="pizzaDialog" aria-label="Cerrar">×</button></div>
@@ -212,7 +214,7 @@
     <div class="dialog-head"><div><span class="eyebrow">Pedido pendiente de envio</span><h2 id="orderDialogTitle">Datos del pedido</h2></div><button class="icon-btn" data-close="orderDialog" aria-label="Cerrar">×</button></div>
     <form id="orderForm" novalidate>
       <div class="dialog-body">
-        <p class="hint">Completa tus datos para enviar el pedido a La Pizza de Juan K. No se realiza ningún cobro automático.</p>
+        <p class="hint">Completa tus datos para enviar el pedido a <span id="marca-formulario">La Pizza de Juan K</span>. No se realiza ningún cobro automático.</p>
         <fieldset style="border:0;padding:0;margin:15px 0 10px"><legend style="font-weight:800;margin-bottom:8px">¿Cómo recibirías tu pedido?</legend><div class="delivery-options"><label><input type="radio" name="delivery" value="domicilio" checked><span class="delivery-button">🛵 Domicilio</span></label><label><input type="radio" name="delivery" value="recoger"><span class="delivery-button">🏪 Recoger en el local</span></label></div></fieldset>
         <div class="form-grid">
           <label class="field">Nombre<input name="customer" maxlength="60" placeholder="Tu nombre" required autocomplete="off"></label>
@@ -249,6 +251,37 @@
     let seleccionesModificadores = new Map();
     let catalogoCargado = false;
     let categoriaActual = '';
+    let nombreNegocioActual = 'La Pizza de Juan K';
+    const informacionNegocioPorDefecto = {
+      nombre: 'La Pizza de Juan K',
+      lema: 'Desde 2013 · Sabor de la casa',
+      frase: 'Ingredientes deliciosos · Mucho sabor',
+      bienvenida: 'Bienvenidos a nuestra pizzería. Elige tu tamaño, combina tus sabores favoritos y arma tu pedido.'
+    };
+    window.aplicarConfiguracionNegocio = (datos) => {
+      const texto = campo => typeof datos?.[campo] === 'string' && datos[campo].trim()
+        ? datos[campo].trim() : informacionNegocioPorDefecto[campo];
+      nombreNegocioActual = texto('nombre');
+      byId('marca-nombre').textContent = nombreNegocioActual.toLocaleUpperCase('es-CO');
+      byId('marca-lema').textContent = texto('lema');
+      byId('marca-frase').textContent = texto('frase');
+      byId('marca-bienvenida').textContent = texto('bienvenida');
+      byId('marca-titulo-accesible').textContent = nombreNegocioActual;
+      byId('marca-aviso-nombre').textContent = nombreNegocioActual;
+      byId('marca-pie').textContent = nombreNegocioActual;
+      byId('marca-formulario').textContent = nombreNegocioActual;
+      byId('marca-inicio').setAttribute('aria-label',nombreNegocioActual+', inicio');
+      document.title = nombreNegocioActual + ' | Menú digital';
+      const logo = byId('marca-logo');
+      const alternativo = byId('marca-logo-alternativo');
+      const url = typeof datos?.logoURL === 'string' && /^https:\/\//i.test(datos.logoURL)
+        ? datos.logoURL : 'chef.png';
+      if (logo.getAttribute('src') !== url) {
+        logo.hidden = false;
+        alternativo.hidden = true;
+        logo.src = url;
+      }
+    };
     // Los sabores antiguos quedan como respaldo en Firebase y en el historial de GitHub.
     const saboresBase = [];
     let flavors = saboresBase.map(s=>s.nombre);
@@ -420,7 +453,7 @@
         const body=el('div','','product-body');
         const row=el('div','','product-title');
         row.append(el('h3',p.name),el('strong',money(p.price),'price'));
-        const desc=el('p',p.description||'Preparado con el sabor de La Pizza de Juan K.');
+        const desc=el('p',p.description||'Preparado con el sabor de '+nombreNegocioActual+'.');
         const tieneModificadores=gruposAplicables(p).length>0;
         const etiqueta=tieneModificadores?'Elegir opciones':'Agregar al carrito';
         const btn=el('button','+','product-add');
@@ -730,7 +763,7 @@
       };
       pedidoPendiente=pedido;
       byId('sendOrderButton').disabled=false;
-      const lines=['LA PIZZA DE JUAN K','RESUMEN DEL PEDIDO — AÚN NO ENVIADO',''];
+      const lines=[nombreNegocioActual.toLocaleUpperCase('es-CO'),'RESUMEN DEL PEDIDO — AÚN NO ENVIADO',''];
       for(const p of productos) {
         lines.push(`${p.cantidad} × ${p.producto} — ${money(p.subtotal)}`);
         if(p.sabores) lines.push('  Sabores: '+p.sabores.join(', '));
@@ -857,7 +890,7 @@
       try {
         if(typeof window.enviarPedidoFirebase!=='function') throw new Error('Firebase no está listo');
         await window.enviarPedidoFirebase(pedidoPendiente);
-        alert('Tu pedido fue enviado a La Pizza de Juan K.');
+        alert('Tu pedido fue enviado a '+nombreNegocioActual+'.');
         pedidoPendiente=null;
         cart=[];
         persist();
@@ -925,8 +958,10 @@
     };
 
     let detenerCatalogo = () => {};
+    let catalogoInicializado = false;
     onAuthStateChanged(auth, async user => {
       detenerCatalogo();
+      catalogoInicializado = false;
       if (!user) {
         try { await signInAnonymously(auth); }
         catch (error) { window.errorCatalogoFirebase?.(error); }
@@ -934,7 +969,15 @@
       }
       detenerCatalogo = onSnapshot(collection(db, 'productos'),
         snapshot => {
-          window.actualizarCatalogoFirebase?.(snapshot.docs.map(x=>({id:x.id,d:x.data()})));
+          const docNegocio = snapshot.docs.find(x=>x.id==='__configuracion_negocio');
+          window.aplicarConfiguracionNegocio?.(docNegocio?.data());
+          const cambiosProductos = !catalogoInicializado || snapshot.docChanges().some(x=>x.doc.id!=='__configuracion_negocio');
+          if (cambiosProductos) {
+            catalogoInicializado = true;
+            window.actualizarCatalogoFirebase?.(snapshot.docs
+              .filter(x=>x.id!=='__configuracion_negocio')
+              .map(x=>({id:x.id,d:x.data()})));
+          }
         },
         error => window.errorCatalogoFirebase?.(error)
       );
