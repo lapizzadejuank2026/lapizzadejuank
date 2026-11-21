@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#a71919">
+<title>Vista de prueba · Caja de La Pizza de Juanca</title>
+<style>
+:root{color-scheme:dark;--oro:#f6bd42;--bg:#111;--card:#242424;--line:#505050}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font:16px Arial,Helvetica,sans-serif;background:var(--bg);color:#fff}
+header{background:#a71919;text-align:center;padding:20px 14px}
+header h1{margin:0 0 6px;font-size:26px}
+header p{margin:0}
+main{max-width:880px;margin:auto;padding:16px 14px 60px}
+.alerta{padding:15px;background:#3b2d15;border-left:5px solid var(--oro);border-radius:10px;line-height:1.5}
+.alerta strong{color:#ffde9d}
+.nav{display:flex;flex-wrap:wrap;gap:10px;margin:15px 0;position:sticky;top:0;background:var(--bg);padding:10px 0;z-index:10}
+.nav a{flex:1;min-width:125px;padding:13px 9px;text-align:center;font-weight:bold;border-radius:10px;background:#f0f0f0;color:#141414;text-decoration:none}
+.nav a.abrir{background:#e5b64e}
+.nav a.cerrar{background:#a83c3c;color:#fff}
+.card{background:var(--card);padding:18px;border-radius:14px;margin:15px 0}
+h2{font-size:21px;margin:0 0 12px}h3{font-size:17px}
+p{line-height:1.48}
+.small{color:#d5d5d5;font-size:13px}
+.metricaGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.metrica{background:#151515;border:1px solid var(--line);padding:12px;border-radius:10px;text-align:center}
+.metrica strong{display:block;color:var(--oro);font-size:20px;margin-bottom:7px;overflow-wrap:anywhere}
+.metrica span{font-size:12px;color:#ddd}
+label{display:block;font-weight:bold;margin:16px 0}
+input{display:block;width:100%;font:inherit;margin-top:7px;padding:13px;border-radius:8px;border:0;background:#fff;color:#171717}
+button{background:var(--oro);border:0;border-radius:10px;font-size:16px;font-weight:bold;padding:14px 18px;color:#171717;cursor:pointer}
+button.danger{background:#a83c3c;color:white}
+.estado{color:var(--oro);font-weight:bold;min-height:22px}
+section[id]{scroll-margin-top:90px}
+[hidden]{display:none!important}
+@media(max-width:570px){.metricaGrid{grid-template-columns:1fr 1fr}.nav a{font-size:13px;min-width:90px}header h1{font-size:23px}}
+</style>
+</head>
+<body>
+<header><h1>💰 Caja · La Pizza de Juanca</h1><p>Vista de prueba de navegación y arqueo</p></header>
+<main>
+<div class="alerta" role="note"><strong>🧪 DEMOSTRACIÓN — DATOS FICTICIOS.</strong> Esta página no se conecta con Firebase, no lee pedidos reales y no puede abrir, cerrar ni registrar movimientos en la caja del restaurante. Al recargarla, las pruebas se reinician.</div>
+<nav class="nav" aria-label="Acciones rápidas">
+<a href="panel-pedidos.html">← Centro de control real</a>
+<a href="#seccionApertura" id="accesoAbrirCaja" class="abrir" hidden>🔓 Abrir caja</a>
+<a href="#seccionArqueo" id="accesoCerrarCaja" class="cerrar">🔒 Cerrar caja</a>
+</nav>
+<section class="card" id="resumen">
+<h2>📊 Resumen del turno de prueba</h2>
+<p id="estadoTurno" class="estado">Turno simulado abierto · Base $100.000</p>
+<div class="metricaGrid" id="metricasTurno">
+<div class="metrica"><strong id="efectivoEsperado">$100.000</strong><span>Efectivo esperado (incluye base)</span></div>
+<div class="metrica"><strong>$0</strong><span>Ingresos reales registrados (simulados)</span></div>
+<div class="metrica"><strong>$0</strong><span>Transferencias verificadas (simuladas)</span></div>
+</div>
+</section>
+<section class="card" id="cobros">
+<h2>🛵 Domicilios · Ejemplo del turno</h2>
+<p class="small">Los $66.000 de abajo son <strong>un ejemplo ficticio</strong> del dinero que reportaría un domiciliario. No se agregan al efectivo físico hasta su conciliación.</p>
+<div class="metricaGrid">
+<div class="metrica"><strong>$66.000</strong><span>Ventas entregadas y reportadas</span></div>
+<div class="metrica"><strong>$66.000</strong><span>Efectivo informado por domiciliario</span></div>
+<div class="metrica"><strong>$0</strong><span>Transferencia informada</span></div>
+</div>
+</section>
+<section class="card" id="seccionApertura" hidden>
+<h2>🔓 Abrir caja de prueba</h2>
+<form id="abrirForm">
+<label>Base inicial en efectivo (COP)<input id="baseNueva" inputmode="numeric" type="number" min="0" max="100000000" value="100000" required></label>
+<label>Responsable del turno<input id="responsable" type="text" maxlength="70" value="Juan Carlos" required></label>
+<button type="submit">🔓 Abrir turno de prueba</button>
+</form>
+<p id="estadoApertura" class="estado" role="status"></p>
+</section>
+<section class="card" id="seccionArqueo">
+<h2>🔒 Arqueo y cierre de caja</h2>
+<p>Cuenta el efectivo físico. Las ventas reportadas por domiciliarios <strong>no son efectivo recibido</strong> hasta conciliarse.</p>
+<label>Efectivo contado (COP)<input id="contado" inputmode="numeric" type="number" min="0" max="100000000" placeholder="Escribe el efectivo contado"></label>
+<p id="diferencia" class="estado" aria-live="polite">Escribe el valor contado para calcular la diferencia.</p>
+<button class="danger" type="button" id="botonCerrar">🔒 Confirmar cierre de prueba</button>
+<p id="estadoCierre" class="estado" role="status"></p>
+</section>
+<p class="small">Recuerda: esta vista solo permite comprobar el diseño y la navegación. No reemplaza las pruebas funcionales de Firebase de la versión pendiente de publicación.</p>
+</main>
+<script>
+(function(){
+'use strict';
+var abierto=true,base=100000;
+var $=function(id){return document.getElementById(id)};
+var pesos=function(n){return '$'+Number(n).toLocaleString('es-CO')};
+function mostrar(){
+ $('accesoAbrirCaja').hidden=abierto;
+ $('accesoCerrarCaja').hidden=!abierto;
+ $('seccionApertura').hidden=abierto;
+ $('seccionArqueo').hidden=!abierto;
+ $('metricasTurno').hidden=!abierto;
+ $('estadoTurno').textContent=abierto?'Turno simulado abierto · Base '+pesos(base):'No hay turno abierto (solo en esta demostración).';
+ $('efectivoEsperado').textContent=pesos(base);
+}
+function diferencia(){
+ var v=$('contado').value;
+ if(v===''){$('diferencia').textContent='Escribe el valor contado para calcular la diferencia.';return;}
+ var d=Number(v)-base;
+ $('diferencia').textContent='Diferencia de prueba: '+(d===0?'$0 · Cuadra':(d>0?'Sobrante ':'Faltante ')+pesos(Math.abs(d)));
+}
+$('contado').addEventListener('input',diferencia);
+$('botonCerrar').addEventListener('click',function(){
+ var v=$('contado').value;
+ if(!abierto||v===''||!Number.isFinite(Number(v))||Number(v)<0){
+  $('estadoCierre').textContent='Escribe el efectivo contado antes de cerrar el turno de prueba.';
+  return;
+ }
+ if(!confirm('¿Cerrar únicamente el turno SIMULADO? Esto NO afecta Firebase ni tu caja real.'))return;
+ abierto=false;mostrar();
+ $('estadoCierre').textContent='Cierre de demostración completado. Tu caja real no cambió.';
+ location.hash='#resumen';
+});
+$('abrirForm').addEventListener('submit',function(e){
+ e.preventDefault();
+ var n=Number($('baseNueva').value);
+ if(!Number.isFinite(n)||n<0||!$('responsable').value.trim())return;
+ base=n;abierto=true;$('contado').value='';$('estadoCierre').textContent='';
+ mostrar();diferencia();location.hash='#resumen';
+});
+mostrar();
+})();
+</script>
+</body>
+</html>
