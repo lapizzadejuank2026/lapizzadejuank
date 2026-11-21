@@ -46,13 +46,12 @@
   <div class="barra"></div>
   <header>
     <div class="chef">
-      <!-- Sube la imagen de tu chef a GitHub con el nombre chef.png -->
-      <img src="chef.png" alt="Chef de La Pizza de Juan K" onerror="this.hidden=true;this.nextElementSibling.hidden=false;">
+      <img src="chef.png" id="logo-bienvenida" alt="Logo de La Pizza de Juan K" onerror="this.hidden=true;this.nextElementSibling.hidden=false;">
       <span hidden aria-label="Chef pizzero">👨‍🍳🍕</span>
     </div>
     <div class="acciones">
       <span class="estado" id="estado"><span class="punto"></span> Abierto</span>
-      <a class="pedir" href="index-1.html?v=menu-foto-derecha-20261120" id="pedir">Pedir</a>
+      <a class="pedir" href="index-1.html?v=menu-marca-editable-20261120" id="pedir">Pedir</a>
     </div>
   </header>
 
@@ -68,12 +67,12 @@
 
     <p class="direccion"><span class="pin">📍</span><span>Cl. 3 #4-2, Gachancipá,<br>Cundinamarca, Colombia</span></p>
 
-    <a href="index-1.html?v=menu-foto-derecha-20261120" class="boton-grande" id="menu">Menú</a>
+    <a href="index-1.html?v=menu-marca-editable-20261120" class="boton-grande" id="menu">Menú</a>
     <button class="boton-grande" type="button" id="wifi">WiFi</button>
   </main>
 
   <footer>
-    <div>Menú digital de La Pizza de Juan K</div>
+    <div>Menú digital de <span id="nombre-negocio-bienvenida">La Pizza de Juan K</span></div>
     <div>Servicio en el local, para llevar y a domicilio</div>
     <div>Horario habitual: 3:00 p. m. a 11:00 p. m.</div>
   </footer>
@@ -113,6 +112,56 @@
     botonCerrar.addEventListener('click', () => { modal.classList.remove('visible'); botonWifi.focus(); });
     modal.addEventListener('click', e => { if(e.target === modal) modal.classList.remove('visible'); });
     document.addEventListener('keydown', e => { if(e.key === 'Escape') modal.classList.remove('visible'); });
+  </script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+    import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app-check.js";
+    const config = {
+      apiKey: "AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA",
+      authDomain: "pizzadejuank.firebaseapp.com",
+      projectId: "pizzadejuank",
+      storageBucket: "pizzadejuank.appspot.com",
+      messagingSenderId: "856650093973",
+      appId: "1:856650093973:web:a4cd3ad8e863617706d29c"
+    };
+    const app = initializeApp(config, 'bienvenida-clientes');
+    initializeAppCheck(app, {
+      provider: new ReCaptchaEnterpriseProvider("6LePJQ8uAAAAAI0QV2VRfwHdOl-_EuMxM6zLNmuE"),
+      isTokenAutoRefreshEnabled:true
+    });
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const logo = document.getElementById('logo-bienvenida');
+    const nombrePie = document.getElementById('nombre-negocio-bienvenida');
+    const aplicarMarca = datos => {
+      const nombre = typeof datos?.nombre==='string' && datos.nombre.trim()
+        ? datos.nombre.trim() : 'La Pizza de Juan K';
+      nombrePie.textContent = nombre;
+      document.title = nombre + ' | Bienvenidos';
+      logo.alt = 'Logo de ' + nombre;
+      const nuevaURL = typeof datos?.logoURL==='string' && /^https:\/\//i.test(datos.logoURL)
+        ? datos.logoURL : 'chef.png';
+      if (logo.getAttribute('src') !== nuevaURL) {
+        logo.hidden = false;
+        if (logo.nextElementSibling) logo.nextElementSibling.hidden = true;
+        logo.src = nuevaURL;
+      }
+    };
+    let detenerConfiguracion = () => {};
+    onAuthStateChanged(auth, async user => {
+      detenerConfiguracion();
+      if (!user) {
+        try { await signInAnonymously(auth); }
+        catch(error) { console.warn('No se pudo abrir la configuración pública:', error); }
+        return;
+      }
+      detenerConfiguracion = onSnapshot(doc(db,'productos','__configuracion_negocio'),
+        snapshot => aplicarMarca(snapshot.exists()?snapshot.data():null),
+        error => console.warn('No se pudo cargar el logo actualizado:',error)
+      );
+    });
   </script>
 </body>
 </html>
