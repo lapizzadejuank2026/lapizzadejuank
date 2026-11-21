@@ -38,6 +38,15 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .verificado input{width:auto;display:inline-block;vertical-align:middle;margin:0 8px 0 0}
 .verificado label{display:block;margin:0;font-weight:normal}
 .enlaces{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:15px}
+.enlaces a.accion-turno{display:inline-flex;justify-content:center;align-items:center;padding:12px 16px;border-radius:10px;font-weight:bold;text-decoration:none;background:#f6bd42;color:#1c1609}
+.enlaces a.accion-turno.cerrar{background:#9f3434;color:white}
+.enlaces a.accion-turno:focus-visible{outline:3px solid white;outline-offset:3px}
+.accesos-caja{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;position:sticky;top:0;z-index:8;padding:9px 0;background:var(--bg)}
+.accesos-caja a{background:#332c1d;border:1px solid #806a36;color:#ffe2a4;border-radius:9px;text-decoration:none;text-align:center;padding:11px 4px;font-size:13px;font-weight:bold}
+.accesos-caja a:focus-visible{outline:3px solid white;outline-offset:2px}
+section[id]{scroll-margin-top:80px}
+@media(max-width:420px){.accesos-caja a{font-size:12px;padding:11px 2px}}
+
 [hidden]{display:none!important}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid white;outline-offset:3px}
 @media(max-width:640px){.metricaGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.fila2{grid-template-columns:1fr}header{padding:17px 10px}h1{font-size:24px}}
@@ -48,7 +57,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 <main>
 <div class="banner"><strong>Versión conectada a Firebase — fase de pruebas.</strong>
 Los movimientos de esta pantalla se guardarán en Firestore solamente cuando se autoricen las reglas de seguridad del administrador. Usa datos ficticios hasta comprobar el sistema. Los pedidos y las ventas de mesas todavía no se contabilizan automáticamente para evitar duplicados.</div>
-<nav class="enlaces"><a href="panel-pedidos.html">← Centro de control</a><a href="caja.html">🧪 Caja anterior de demostración</a></nav>
+<nav class="enlaces" aria-label="Acciones rápidas de Caja"><a href="panel-pedidos.html">← Centro de control</a><a class="accion-turno abrir" id="accesoAbrirCaja" href="#seccionApertura" hidden>🔓 Abrir caja</a><a class="accion-turno cerrar" id="accesoCerrarCaja" href="#seccionArqueo" hidden>🔒 Cerrar caja</a></nav>
 <section class="card" id="vistaAcceso">
 <h2>🔐 Acceso del administrador</h2>
 <p class="pequeno">Usa la cuenta administrativa de Firebase. Ningún domiciliario debe tener acceso a esta caja.</p>
@@ -59,14 +68,38 @@ Los movimientos de esta pantalla se guardarán en Firestore solamente cuando se 
 </form><p id="errorAcceso" class="estado" role="status"></p>
 </section>
 <section id="vistaCaja" hidden>
+<nav class="accesos-caja" aria-label="Accesos rápidos de Caja">
+<a href="#seccionTurno">📊 Resumen</a>
+<a href="#seccionCobrosDomi">🛵 Cobros</a>
+<a href="#seccionMovimiento">➕ Movimiento</a>
+<a href="#seccionArqueo">🔒 Cerrar turno</a>
+</nav>
 <div class="card">
 <div class="acciones"><p>Sesión: <strong id="usuarioCaja">...</strong></p><button id="salirCaja" class="secundario" type="button">Cerrar sesión</button></div>
 <p id="conexion" class="estado" role="status">Conectando con Firebase...</p>
 <p id="controlActivo" class="resumen"></p>
 </div>
+<section class="card" id="seccionTurno" hidden>
+<h2>📊 Resumen del turno abierto</h2>
+<div class="metricaGrid">
+<div class="metrica"><strong id="resumenEfectivo">$0</strong><span>Efectivo esperado (incluye base)</span></div>
+<div class="metrica"><strong id="resumenEfectivoEntradas">$0</strong><span>Ingresos en efectivo</span></div>
+<div class="metrica"><strong id="resumenTransferencias">$0</strong><span>Transferencias netas registradas</span></div>
+<div class="metrica"><strong id="resumenSalidas">$0</strong><span>Total salidas / gastos</span></div>
+</div>
+<p class="pequeno">Movimientos registrados: <strong id="resumenMovimientos">0</strong>. Este resumen refleja solo movimientos de caja guardados, no todos los pedidos recibidos.</p>
+</section>
 <section class="card" id="seccionCobrosDomi">
 <h2>🛵 Cobros de domiciliarios · Firebase</h2>
 <p class="pequeno">Aquí aparecen los pagos que reportan los domiciliarios, separados en efectivo y transferencia. <strong>Las cifras reportadas aún NO son ingresos del turno.</strong> Cuando tú hayas recibido el efectivo y comprobado la transferencia, concilia el pedido en el panel de pedidos y luego pulsa «Registrar cobro en caja». Solo así entra en los totales de caja, una vez por pedido.</p>
+<h3>📈 Ventas a domicilio del turno · automático</h3>
+<p class="pequeno">Cuando el domiciliario marque «Entregado» y reporte el pago, la venta aparecerá aquí en tiempo real. Se mostrará separada por efectivo y transferencia, <strong>sin considerar recibido el dinero en caja</strong> hasta que administración lo concilie y lo registre. Estos valores son ventas reportadas, no se suman nuevamente al efectivo esperado.</p>
+<div class="metricaGrid">
+<div class="metrica"><strong id="domiVentasTurno">—</strong><span>Ventas entregadas y reportadas · turno</span></div>
+<div class="metrica"><strong id="domiEfectivoTurno">—</strong><span>De esas ventas: efectivo reportado</span></div>
+<div class="metrica"><strong id="domiTransferenciaTurno">—</strong><span>De esas ventas: transferencias reportadas</span></div>
+</div>
+<h3>🧾 Cobros pendientes de registrar en caja</h3>
 <div class="metricaGrid">
 <div class="metrica"><strong id="domiEfectivoReportado">—</strong><span>Efectivo reportado sin registrar</span></div>
 <div class="metrica"><strong id="domiTransferenciaReportada">—</strong><span>Transferencias reportadas sin registrar</span></div>
@@ -86,16 +119,7 @@ Los movimientos de esta pantalla se guardarán en Firestore solamente cuando se 
 <button id="abrirCajaBoton" disabled type="submit">🔓 Abrir caja en Firebase</button>
 </form><p id="estadoApertura" class="estado" role="status"></p>
 </section>
-<section class="card" id="seccionTurno" hidden>
-<h2>📊 Resumen del turno abierto</h2>
-<div class="metricaGrid">
-<div class="metrica"><strong id="resumenEfectivo">$0</strong><span>Efectivo esperado (incluye base)</span></div>
-<div class="metrica"><strong id="resumenEfectivoEntradas">$0</strong><span>Ingresos en efectivo</span></div>
-<div class="metrica"><strong id="resumenTransferencias">$0</strong><span>Transferencias netas registradas</span></div>
-<div class="metrica"><strong id="resumenSalidas">$0</strong><span>Total salidas / gastos</span></div>
-</div>
-<p class="pequeno">Movimientos registrados: <strong id="resumenMovimientos">0</strong>. Este resumen refleja solo movimientos de caja guardados, no todos los pedidos recibidos.</p>
-</section>
+
 <section class="card" id="seccionMovimiento" hidden>
 <h2>➕ Registrar entrada o salida</h2>
 <p class="pequeno">Para ventas, registra el cobro una sola vez usando el número del pedido o de la cuenta. No registres pedidos que todavía no se han pagado.</p>
