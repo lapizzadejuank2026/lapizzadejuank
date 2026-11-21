@@ -98,6 +98,13 @@
     .flavor:has(input:checked) { border-color:var(--gold); background:#41361f; }
     input[type=checkbox],input[type=radio] { accent-color:var(--red2); }
     .flavor:has(input:disabled) { opacity:.48; cursor:not-allowed; }
+    .mod-group{border:1px solid #46464a;border-radius:12px;padding:13px;margin:12px 0}
+    .mod-group legend{font-weight:800;padding:0 5px}
+    .mod-hint{color:var(--muted);font-size:13px;margin:2px 0 10px}
+    .mod-option{display:flex;gap:10px;align-items:center;justify-content:space-between;background:#29292c;border-radius:9px;padding:11px;margin:6px 0}
+    .mod-option label{display:flex;align-items:center;gap:9px;flex:1;cursor:pointer}
+    .mod-option input{width:18px;height:18px}
+    .mod-option small{color:var(--gold);font-weight:700}
     .flavor-counter { margin-top:14px; color:var(--gold); font-weight:750; font-size:14px; }
     .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
     label.field { display:flex; flex-direction:column; gap:5px; font-weight:700; font-size:14px; }
@@ -164,6 +171,16 @@
     <div class="dialog-footer"><span class="price" id="pizzaPrice"></span><button class="primary-btn" id="addPizzaButton" type="button" disabled>Agregar al carrito</button></div>
   </dialog>
 
+  <dialog id="modifierDialog" aria-labelledby="modifierDialogTitle">
+    <div class="dialog-head"><div><span class="eyebrow">Personaliza tu pedido</span><h2 id="modifierDialogTitle"></h2></div><button class="icon-btn" data-close="modifierDialog" aria-label="Cerrar">×</button></div>
+    <div class="dialog-body">
+      <p class="hint">Elige las opciones disponibles para este producto.</p>
+      <div id="modifierGroups"></div>
+      <p id="modifierMessage" class="hint" role="status"></p>
+    </div>
+    <div class="dialog-footer"><span class="price" id="modifierPrice"></span><button class="primary-btn" id="confirmModifiers" type="button" disabled>Agregar al carrito</button></div>
+  </dialog>
+
   <dialog id="orderDialog" aria-labelledby="orderDialogTitle">
     <div class="dialog-head"><div><span class="eyebrow">Pedido pendiente de envio</span><h2 id="orderDialogTitle">Datos del pedido</h2></div><button class="icon-btn" data-close="orderDialog" aria-label="Cerrar">×</button></div>
     <form id="orderForm" novalidate>
@@ -196,6 +213,9 @@
     const pizzaBase = [];
     let pizzas = pizzaBase.map(p=>({...p}));
     let productosAdmin = [];
+    let gruposModificadores = [];
+    let productoPersonalizando = null;
+    let seleccionesModificadores = new Map();
     let catalogoCargado = false;
     let categoriaActual = '';
     // Los sabores antiguos quedan como respaldo en Firebase y en el historial de GitHub.
@@ -216,7 +236,10 @@
         (item.id.startsWith('catalogo:') || (pizzas.some(p=>p.id===item.id) &&
           Array.isArray(item.flavors) && item.flavors.length>=1 && item.flavors.length<=3 &&
           item.flavors.every(f=>flavors.includes(f))))
-      ).map(item=>({id:item.id,flavors:Array.isArray(item.flavors)?item.flavors:[],qty:item.qty}));
+      ).map(item=>({id:item.id,flavors:Array.isArray(item.flavors)?item.flavors:[],
+        modificadores:Array.isArray(item.modificadores)?item.modificadores.filter(m=>
+          m&&typeof m.id==='string'&&Array.isArray(m.opciones)&&m.opciones.length<=50&&
+          m.opciones.every(o=>typeof o==='string')):[],qty:item.qty}));
     } catch(error) { cart=[]; }
 
     function persist() {
@@ -232,12 +255,49 @@
       if(item.id.startsWith('catalogo:')) return productosAdmin.find(p=>p.id==='catalogo:'+item.id.slice(9));
       return pizzas.find(p=>p.id===item.id && p.activo!==false);
     }
+    // Un grupo puede asignarse a varios productos, sin depender de su categoría.
+    function gruposAplicables(producto){
+      return (Array.isArray(producto?.gruposModificadores)?producto.gruposModificadores:[])
+        .map(v=>{
+          const g=gruposModificadores.find(x=>x.id===v.id&&x.activo!==false);
+          if(!g||!g.opciones.length)return null;
+          const max=Math.min(g.opciones.length,Math.max(1,Number(v.max??g.maxSeleccion??1)||1));
+          const min=Math.min(max,Math.max(0,Number(v.min??g.minSeleccion??0)||0));
+          return {...g,min,max};
+        }).filter(Boolean);
+    }
+    function validarModificadores(item,producto){
+      const aplicables=gruposAplicables(producto);
+      const elegidos=Array.isArray(item.modificadores)?item.modificadores:[];
+      if(!elegidos.every(m=>aplicables.some(g=>g.id===m.id)))return false;
+      return aplicables.every(g=>{
+        const seleccion=elegidos.find(m=>m.id===g.id);
+        const nombres=seleccion?.opciones||[];
+        return nombres.length>=g.min&&nombres.length<=g.max&&
+          new Set(nombres).size===nombres.length&&
+          nombres.every(n=>g.opciones.some(o=>o.nombre===n));
+      });
+    }
+    function extrasDeItem(item,producto){
+      return gruposAplicables(producto).reduce((total,g)=>{
+        const nombres=(item.modificadores||[]).find(m=>m.id===g.id)?.opciones||[];
+        return total+g.opciones.filter(o=>nombres.includes(o.nombre)).reduce((s,o)=>s+o.precio,0);
+      },0);
+    }
+    function detalleDeItem(item,producto){
+      return gruposAplicables(producto).flatMap(g=>{
+        const nombres=(item.modificadores||[]).find(m=>m.id===g.id)?.opciones||[];
+        return nombres.length?[{grupo:g.nombre,opciones:g.opciones.filter(o=>nombres.includes(o.nombre))}]:[];
+      });
+    }
+    function precioUnitario(item,producto){return producto.price+extrasDeItem(item,producto);}
+
     function sincronizarCarrito() {
       cart=cart.filter(item=>{
         const p=lookup(item);
         if(item.id.startsWith('catalogo:') && !catalogoCargado) return true;
         return !!p && Number.isInteger(item.qty) && item.qty>0 && item.qty<=99 &&
-          (item.id.startsWith('catalogo:') ||
+          (item.id.startsWith('catalogo:')?validarModificadores(item,p):
            (Array.isArray(item.flavors) && item.flavors.length>=1 && item.flavors.length<=p.max && item.flavors.every(f=>flavors.includes(f))));
       });
       persist();
@@ -318,22 +378,85 @@
         const row=el('div','','product-title');
         row.append(el('h3',p.name),el('strong',money(p.price),'price'));
         const desc=el('p',p.description||'Preparado con el sabor de La Pizza de Juan K.');
-        const btn=el('button','Agregar al carrito','primary-btn');
+        const tieneModificadores=gruposAplicables(p).length>0;
+        const btn=el('button',tieneModificadores?'Elegir opciones':'Agregar al carrito','primary-btn');
         btn.type='button';
-        btn.addEventListener('click',()=>agregarProducto(p));
+        btn.addEventListener('click',()=>tieneModificadores?abrirPersonalizacion(p):agregarProducto(p));
         body.append(row,desc,btn);
         card.append(art,body);
         holder.append(card);
       }
       if(!holder.children.length) holder.append(el('p',catalogoCargado?'Todavía no hay productos visibles en el menú.':'Cargando el catálogo de productos...','hint'));
     }
-    function agregarProducto(p) {
-      const item=cart.find(x=>x.id===p.id && x.flavors.length===0);
-      if(item) item.qty=Math.min(99,item.qty+1);
-      else cart.push({id:p.id,flavors:[],qty:1});
+    function agregarProducto(p,modificadores=[]) {
+      const normalizados=modificadores.map(m=>({id:m.id,opciones:[...m.opciones].sort()}))
+        .sort((a,b)=>a.id.localeCompare(b.id));
+      const firma=JSON.stringify(normalizados);
+      const item=cart.find(x=>x.id===p.id&&(!x.flavors||x.flavors.length===0)&&
+        JSON.stringify((x.modificadores||[]).map(m=>({id:m.id,opciones:[...m.opciones].sort()})).sort((a,b)=>a.id.localeCompare(b.id)))===firma);
+      if(item)item.qty=Math.min(99,item.qty+1);
+      else cart.push({id:p.id,flavors:[],modificadores:normalizados,qty:1});
       persist();
       renderCart();
       byId('carrito').scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+    function abrirPersonalizacion(p){
+      const grupos=gruposAplicables(p);
+      if(!grupos.length){agregarProducto(p);return;}
+      productoPersonalizando=p;
+      seleccionesModificadores=new Map(grupos.map(g=>[g.id,new Set()]));
+      byId('modifierDialogTitle').textContent=p.name;
+      renderPersonalizacion();
+      byId('modifierDialog').showModal();
+    }
+    function renderPersonalizacion(){
+      const p=productoPersonalizando;
+      if(!p)return;
+      const holder=byId('modifierGroups');holder.replaceChildren();
+      let valido=true,extra=0;
+      for(const g of gruposAplicables(p)){
+        const elegidos=seleccionesModificadores.get(g.id)||new Set();
+        if(elegidos.size<g.min||elegidos.size>g.max)valido=false;
+        const campo=document.createElement('fieldset');campo.className='mod-group';
+        const titulo=document.createElement('legend');titulo.textContent=g.nombre;
+        const aviso=el('p',g.min===0?'Opcional · máximo '+g.max:
+          g.min===g.max?'Elige '+g.min:'Elige entre '+g.min+' y '+g.max,'mod-hint');
+        campo.append(titulo,aviso);
+        for(const opcion of g.opciones){
+          const fila=el('div','','mod-option');
+          const label=el('label','');
+          const casilla=document.createElement('input');casilla.type='checkbox';
+          casilla.checked=elegidos.has(opcion.nombre);
+          casilla.disabled=!casilla.checked&&elegidos.size>=g.max;
+          casilla.addEventListener('change',()=>{
+            if(casilla.checked){
+              if(g.max===1)elegidos.clear();
+              if(elegidos.size<g.max)elegidos.add(opcion.nombre);
+            }else elegidos.delete(opcion.nombre);
+            seleccionesModificadores.set(g.id,elegidos);
+            renderPersonalizacion();
+          });
+          label.append(casilla,el('span',opcion.nombre));
+          fila.append(label);
+          if(opcion.precio>0)fila.append(el('small','+'+money(opcion.precio)));
+          if(elegidos.has(opcion.nombre))extra+=opcion.precio;
+          campo.append(fila);
+        }
+        holder.append(campo);
+      }
+      byId('modifierPrice').textContent=money(p.price+extra);
+      byId('confirmModifiers').disabled=!valido;
+      byId('modifierMessage').textContent=valido?'Opciones listas para agregar al carrito.':'Completa las selecciones obligatorias.';
+    }
+    function confirmarPersonalizacion(){
+      const p=productoPersonalizando;
+      if(!p)return;
+      const mods=gruposAplicables(p).map(g=>({id:g.id,opciones:[...(seleccionesModificadores.get(g.id)||new Set())]}))
+        .filter(m=>m.opciones.length);
+      if(!validarModificadores({modificadores:mods},p))return;
+      agregarProducto(p,mods);
+      byId('modifierDialog').close();
+      productoPersonalizando=null;
     }
     function openPizza(p) {
       selectedPizza=p;chosen=[];
@@ -398,11 +521,14 @@
       cart.forEach((item,index)=>{
         const p=lookup(item);
         if(!p) return;
-        total+=p.price*item.qty;
+        const precio=precioUnitario(item,p);
+        total+=precio*item.qty;
         const div=el('div','','line-item');
         const row=el('div','','item-row');
-        row.append(el('strong',p.name),el('span',money(p.price*item.qty),'item-price'));
-        const details=el('p',item.flavors.length?item.flavors.join(' · '):'Producto del menú','item-flavors');
+        row.append(el('strong',p.name),el('span',money(precio*item.qty),'item-price'));
+        const modificadores=detalleDeItem(item,p);
+        const textoMods=modificadores.map(g=>g.grupo+': '+g.opciones.map(o=>o.nombre).join(', ')).join(' · ');
+        const details=el('p',textoMods||(item.flavors.length?item.flavors.join(' · '):'Producto del menú'),'item-flavors');
         const qty=el('div','','qty');
         const minus=el('button','−');
         minus.type='button';
@@ -462,12 +588,15 @@
       const delivery=f.get('delivery')==='domicilio';
       const productos=cart.map(item=>{
         const p=lookup(item);
+        const modificadores=detalleDeItem(item,p);
+        const unitario=precioUnitario(item,p);
         return {
           producto:p.name,
           ...(item.flavors.length?{pizza:p.name,sabores:item.flavors}:{}),
+          ...(modificadores.length?{modificadores}:{}),
           cantidad:item.qty,
-          precioUnitario:p.price,
-          subtotal:p.price*item.qty
+          precioUnitario:unitario,
+          subtotal:unitario*item.qty
         };
       });
       const pedido={
@@ -485,6 +614,9 @@
       for(const p of productos) {
         lines.push(`${p.cantidad} × ${p.producto} — ${money(p.subtotal)}`);
         if(p.sabores) lines.push('  Sabores: '+p.sabores.join(', '));
+        if(p.modificadores)for(const g of p.modificadores){
+          lines.push('  '+g.grupo+': '+g.opciones.map(o=>o.nombre+(o.precio>0?' (+'+money(o.precio)+')':'')).join(', '));
+        }
       }
       lines.push('',`SUBTOTAL: ${money(pedido.total)}`,'DOMICILIO: precio por confirmar','',`Nombre: ${pedido.cliente.nombre}`,`Teléfono: ${pedido.cliente.telefono}`,`Modalidad: ${delivery?'Domicilio':'Recoger en el local'}`);
       if(delivery) lines.push(`Municipio: ${pedido.municipio}`,`Dirección: ${pedido.direccion}`);
@@ -499,9 +631,18 @@
       const nuevos=[];
       const overrides=new Map();
       const overridesSabores=new Map();
+      const nuevosGrupos=[];
       for(const item of documentos) {
         const d=item.d||{};
         const precio=Number(d.precio);
+        if(d.tipo==='grupo-modificadores'){
+          const opciones=Array.isArray(d.opciones)?d.opciones.filter(o=>o&&String(o.nombre||'').trim()).map(o=>({
+            nombre:String(o.nombre).trim(),precio:Number.isSafeInteger(Number(o.precio))&&Number(o.precio)>=0?Number(o.precio):0
+          })):[];
+          nuevosGrupos.push({id:item.id,nombre:String(d.nombre||'').trim(),activo:d.activo!==false,
+            minSeleccion:Number(d.minSeleccion??0),maxSeleccion:Number(d.maxSeleccion??1),opciones});
+          continue;
+        }
         if(d.tipo==='pizza-tamano' && item.id.startsWith('pizza-tamano-')) {
           overrides.set(item.id.slice('pizza-tamano-'.length),d);
           continue;
@@ -521,6 +662,7 @@
           fotoURL:String(d.fotoURL||''),
           orden:Number(d.orden??10),
           ordenCategoria:Number(d.ordenCategoria??10),
+          gruposModificadores:Array.isArray(d.gruposModificadores)?d.gruposModificadores:[],
           activo:true
         });
       }
@@ -540,9 +682,11 @@
         return nombre||s.nombre;
       });
       productosAdmin=nuevos;
+      gruposModificadores=nuevosGrupos;
       catalogoCargado=true;
       sincronizarCarrito();
       if(selectedPizza && byId('pizzaDialog').open) byId('pizzaDialog').close();
+      if(byId('modifierDialog').open){byId('modifierDialog').close();productoPersonalizando=null;}
       if(pedidoPendiente) {
         pedidoPendiente=null;
         byId('sendOrderButton').disabled=true;
@@ -561,6 +705,7 @@
       if(event.target===dialog) dialog.close();
     });
     byId('addPizzaButton').addEventListener('click',addPizza);
+    byId('confirmModifiers').addEventListener('click',confirmarPersonalizacion);
     byId('clearButton').addEventListener('click',()=>{
       if(confirm('¿Quieres vaciar tu carrito?')) {cart=[];persist();renderCart();}
     });
