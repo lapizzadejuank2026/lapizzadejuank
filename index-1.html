@@ -92,6 +92,14 @@
     .subtotal strong { font-size:22px; color:var(--gold); }
     .delivery-note { font-size:12px; color:var(--muted); margin:0 0 15px; }
     .cart-bottom .primary-btn { width:100%; }
+    .tracking-link { display:block; color:#ffe0a2; text-align:center; text-decoration:underline; font-weight:800; margin-top:15px; font-size:14px; }
+    .tracking-panel { grid-column:1/-1; padding:21px; border:1px solid #504435; border-radius:17px; background:#1c1b1b; scroll-margin-top:20px; }
+    .tracking-panel h2 { font-size:22px; margin:0 0 8px; }
+    .tracking-panel .tracking-content { margin-top:14px; padding:15px; background:#282728; border:1px solid #555; border-radius:12px; }
+    .tracking-panel .tracking-content strong { display:block; color:var(--gold); font-size:19px; margin:5px 0; }
+    .tracking-panel .tracking-content p { margin:6px 0; }
+    .tracking-panel .tracking-detail { color:#ddd; font-size:14px; }
+    .tracking-panel .tracking-items { font-size:13px; line-height:1.5; white-space:pre-wrap; margin-top:12px; color:#ddd; }
     .clear-btn { background:none; border:none; color:#eda4af; text-decoration:underline; padding:9px 0 0; font-size:13px; }
     .service-area { background:#161619; border:1px solid #393437; border-radius:17px; padding:18px 20px; margin-top:24px; }
     .service-area h3 { margin:0 0 8px; color:var(--gold); }
@@ -189,8 +197,14 @@
     <aside class="cart-panel" id="carrito" aria-labelledby="cartHeading">
       <div class="cart-title"><h2 id="cartHeading">🛒 Tu carrito</h2><span class="muted" id="cartItemsLabel">0 productos</span></div>
       <div class="cart-body" id="cartItems" aria-live="polite"></div>
-      <div class="cart-bottom"><div class="subtotal"><span>Subtotal</span><strong id="subtotal">$0</strong></div><p class="delivery-note">El valor del domicilio no está incluido.</p><button class="primary-btn" id="previewButton" type="button" disabled>Ver resumen de tu pedido</button><button class="clear-btn" id="clearButton" type="button" hidden>Vaciar carrito</button></div>
+      <div class="cart-bottom"><div class="subtotal"><span>Subtotal</span><strong id="subtotal">$0</strong></div><p class="delivery-note">El valor del domicilio no está incluido.</p><button class="primary-btn" id="previewButton" type="button" disabled>Ver resumen de tu pedido</button><button class="clear-btn" id="clearButton" type="button" hidden>Vaciar carrito</button><a class="tracking-link" href="#miPedido">📦 Consultar mi pedido</a></div>
     </aside>
+    <section class="tracking-panel" id="miPedido" aria-labelledby="trackingTitulo">
+      <h2 id="trackingTitulo">📦 Mi pedido</h2>
+      <p class="hint">Consulta el último pedido enviado desde este navegador. Su estado se actualiza cuando el restaurante o el domiciliario lo cambian.</p>
+      <div class="tracking-content" id="trackingContenido" role="status" aria-live="polite">Todavía no hay un pedido reciente guardado en este dispositivo.</div>
+      <p class="hint">No necesitas registrarte. Si borras los datos del navegador o cambias de celular, es posible que pierdas acceso al seguimiento.</p>
+    </section>
   </main>
   <footer>© <span id="marca-pie">La Pizza de Juan K</span> · Pedidos por nuestro menú digital.</footer>
 
@@ -289,6 +303,14 @@
     const byId = id => document.getElementById(id);
     const storageKey = 'juanK-carrito-demo-v1';
     const customerStorageKey = 'juanK-datos-cliente-v1';
+    const seguimientoStorageKey = 'juanK-ultimo-pedido-v1';
+    function recordarUltimoPedido(id) {
+      try { localStorage.setItem(seguimientoStorageKey,id); }
+      catch(error) { console.warn('No se pudo recordar el número del pedido.',error); }
+      byId('trackingContenido').textContent='Pedido #'+id.slice(0,8).toUpperCase()+' enviado. Consultando su estado...';
+      window.escucharPedidoCliente?.(id);
+      byId('miPedido').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});
+    }
     let cart = [];
     let pedidoPendiente = null;
     let selectedPizza = null;
@@ -889,8 +911,9 @@
       boton.disabled=true;
       try {
         if(typeof window.enviarPedidoFirebase!=='function') throw new Error('Firebase no está listo');
-        await window.enviarPedidoFirebase(pedidoPendiente);
-        alert('Tu pedido fue enviado a '+nombreNegocioActual+'.');
+        const referencia=await window.enviarPedidoFirebase(pedidoPendiente);
+        if (referencia?.id) recordarUltimoPedido(referencia.id);
+        alert('Tu pedido fue enviado a '+nombreNegocioActual+'. Puedes consultar su estado en «Mi pedido».');
         pedidoPendiente=null;
         cart=[];
         persist();
@@ -923,7 +946,7 @@
   </script>
   <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, doc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
     import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app-check.js";
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
 
@@ -944,23 +967,104 @@
 });
     const auth = getAuth(app);
   const db = getFirestore(app);
-  window.enviarPedidoFirebase = (pedido) =>
-  addDoc(collection(db, 'pedidos'), {
-    ...pedido,
-    estado: 'nuevo',
-    creadoEn: serverTimestamp()
-  });
-    const guardarPedidoOriginal = window.enviarPedidoFirebase;
+  window.enviarPedidoFirebase = async pedido => {
+    if (!auth.currentUser) await signInAnonymously(auth);
+    return addDoc(collection(db,'pedidos'), {
+      ...pedido,
+      clienteUid:auth.currentUser.uid,
+      estado:'nuevo',
+      creadoEn:serverTimestamp()
+    });
+  };
 
-    window.enviarPedidoFirebase = async (pedido) => {
-      if (!auth.currentUser) await signInAnonymously(auth);
-      return guardarPedidoOriginal(pedido);
-    };
+  let detenerSeguimiento=()=>{};
+  let idSeguimientoActivo=null;
+  const seguimientoContenedor=document.getElementById('trackingContenido');
+  const dineroSeguimiento=valor=>new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(Number(valor)||0);
+  function pintarSeguimiento(id,d) {
+    seguimientoContenedor.replaceChildren();
+    const titulo=document.createElement('strong');
+    titulo.textContent='Pedido #'+id.slice(0,8).toUpperCase();
+    seguimientoContenedor.append(titulo);
+    const estado=String(d.estado||'nuevo').toLowerCase().trim();
+    const entrega=String(d.estadoEntrega||'').toLowerCase().trim();
+    const domicilio=d.modalidad==='domicilio';
+    const cancelado=['cancelado','cancelada','anulado','anulada'].includes(estado)||['cancelado','cancelada'].includes(entrega);
+    let mensaje='Pedido enviado · esperando confirmación del restaurante';
+    if(cancelado) mensaje='Pedido cancelado · comunícate con el restaurante';
+    else if(domicilio && entrega==='entregado') mensaje='✅ Tu pedido fue entregado';
+    else if(domicilio && entrega==='en_camino') mensaje='🛵 Tu pedido va en camino';
+    else if(domicilio && entrega==='recogido') mensaje='🍕 El domiciliario recogió tu pedido';
+    else if(domicilio && entrega==='aceptado') mensaje='✅ El domiciliario aceptó la entrega';
+    else if(domicilio && (entrega==='pendiente'||entrega==='asignado')) mensaje='📋 Domiciliario asignado · esperando aceptación';
+    else if(estado==='listo_para_recoger') mensaje='✅ Tu pedido está listo para recoger';
+    else if(['recibido','confirmado','aceptado'].includes(estado)) mensaje='✅ El restaurante confirmó la recepción';
+    else if(['entregado','finalizado','completado'].includes(estado)) mensaje='✅ Pedido completado';
+    const linea=document.createElement('p');
+    linea.textContent=mensaje;
+    seguimientoContenedor.append(linea);
+    const modalidad=document.createElement('p');
+    modalidad.className='tracking-detail';
+    modalidad.textContent=(domicilio?'🛵 Domicilio':'🏪 Recoger en el local')+' · Subtotal: '+dineroSeguimiento(d.total);
+    seguimientoContenedor.append(modalidad);
+    if(Array.isArray(d.productos)&&d.productos.length) {
+      const lista=document.createElement('p');
+      lista.className='tracking-items';
+      lista.textContent=d.productos.map(p=>String(p.cantidad||1)+' × '+String(p.producto||p.pizza||'Producto')).join('\n');
+      seguimientoContenedor.append(lista);
+    }
+    const nota=document.createElement('p');
+    nota.className='tracking-detail';
+    nota.textContent='El domicilio y el cobro se confirman con el restaurante. No se indica hora exacta de llegada.';
+    seguimientoContenedor.append(nota);
+  }
+  function iniciarSeguimiento(id) {
+    detenerSeguimiento();
+    detenerSeguimiento=()=>{};
+    idSeguimientoActivo=id;
+    if(!id) {
+      seguimientoContenedor.textContent='Todavía no hay un pedido reciente guardado en este dispositivo.';
+      return;
+    }
+    if(!auth.currentUser) {
+      seguimientoContenedor.textContent='Conectando con tu sesión para consultar el pedido...';
+      return;
+    }
+    seguimientoContenedor.textContent='Consultando el estado del pedido #'+id.slice(0,8).toUpperCase()+'...';
+    detenerSeguimiento=onSnapshot(doc(db,'pedidos',id),snapshot=>{
+      if(idSeguimientoActivo!==id)return;
+      if(!snapshot.exists()) {
+        seguimientoContenedor.textContent='No se encontró este pedido. Consulta con el restaurante.';
+        return;
+      }
+      const datos=snapshot.data();
+      if(datos.clienteUid!==auth.currentUser?.uid) {
+        seguimientoContenedor.textContent='Este pedido no está asociado con esta sesión. Por privacidad, no se muestran sus datos.';
+        return;
+      }
+      pintarSeguimiento(id,datos);
+    },error=>{
+      if(idSeguimientoActivo!==id)return;
+      console.warn('Seguimiento no disponible:',error);
+      const codigo=String(error?.code||'');
+      seguimientoContenedor.textContent=codigo==='permission-denied'||codigo==='firestore/permission-denied'
+        ? 'El pedido se envió, pero Firebase todavía no permite consultar su estado desde clientes. Falta habilitar la lectura privada del pedido.'
+        : 'No se pudo actualizar el estado. Comprueba tu conexión y vuelve a abrir el menú.';
+    });
+  }
+  window.escucharPedidoCliente=iniciarSeguimiento;
 
     let detenerCatalogo = () => {};
     let catalogoInicializado = false;
     onAuthStateChanged(auth, async user => {
       detenerCatalogo();
+      detenerSeguimiento();
+      detenerSeguimiento=()=>{};
+      let ultimoPedido='';
+      try { ultimoPedido=localStorage.getItem('juanK-ultimo-pedido-v1')||''; } catch(_) {}
+      if(user && /^[A-Za-z0-9]{15,40}$/.test(ultimoPedido)) iniciarSeguimiento(ultimoPedido);
+      else if(user) iniciarSeguimiento('');
+      else if(ultimoPedido) seguimientoContenedor.textContent='Conectando con tu sesión para consultar el pedido...';
       catalogoInicializado = false;
       if (!user) {
         try { await signInAnonymously(auth); }
