@@ -35,6 +35,16 @@
     a{color:#ffe09b}
     [hidden]{display:none!important}
     .integrado header,.integrado #panel > .caja:first-child{display:none!important}
+    details.caja>summary{cursor:pointer;font-size:19px;font-weight:700;padding:3px 0;list-style-position:inside}
+    .grupo-compacto{display:flex;gap:10px;align-items:center;justify-content:space-between;background:#1c1c1c;border:1px solid #454545;border-radius:10px;padding:10px;margin:7px 0;flex-wrap:wrap}
+    .grupo-compacto .acciones{min-width:180px;flex:0 1 230px}
+    .grupo-compacto .acciones button{padding:8px;margin:0}
+    .grupo-compacto small{display:block;color:#bbb;margin-top:3px}
+    #formModificador{background:#191919;border-radius:10px;padding:12px;margin-top:12px}
+    #formModificador textarea{min-height:110px}
+    .mod-controls{display:flex;gap:10px;flex-wrap:wrap}
+    .mod-controls button{flex:1}
+    .mod-note{color:#ccc;font-size:13px}
     .integrado main{max-width:none;padding:2px 0 16px}
     .integrado #panel > .caja{margin-top:6px}
     @media(max-width:520px){.fila{grid-template-columns:1fr}}
@@ -104,6 +114,38 @@
         </form>
         <p id="mensaje" role="status"></p>
       </section>
+      <details class="caja" id="panelModificadores">
+        <summary>🧩 Modificadores de productos <small id="cantidadModificadores" class="ayuda">(0 grupos)</small></summary>
+        <p class="mod-note">Crea grupos de opciones para una categoría completa: Pizzas, Hamburguesas, Lasañas u otra que escribas tú. Aparecerán al personalizar productos de esa categoría.</p>
+        <form id="formModificador">
+          <input id="idModificador" type="hidden">
+          <label>Nombre del grupo
+            <input id="nombreModificador" maxlength="80" placeholder="Ej.: Sabores de pizza" required>
+          </label>
+          <label>Aplicar a la categoría
+            <input id="categoriaModificador" maxlength="70" list="sugerencias" placeholder="Ej.: Pizzas" required>
+          </label>
+          <div class="fila">
+            <label>Selecciones mínimas <small>(0 = opcional)</small>
+              <input id="minModificador" type="number" min="0" max="50" step="1" value="0" required>
+            </label>
+            <label>Selecciones máximas
+              <input id="maxModificador" type="number" min="1" max="50" step="1" value="1" required>
+            </label>
+          </div>
+          <label>Opciones disponibles <small>(una por línea, precio adicional opcional después de |)</small>
+            <textarea id="opcionesModificador" rows="5" required placeholder="Hawaiana&#10;Carnes&#10;Pollo champiñón&#10;Queso extra | 3000"></textarea>
+          </label>
+          <label class="check"><input id="activoModificador" type="checkbox" checked> Grupo visible para clientes</label>
+          <div class="mod-controls">
+            <button id="guardarModificador" type="submit">💾 Guardar modificador</button>
+            <button id="limpiarModificador" type="button" class="secundario">Nuevo / limpiar</button>
+          </div>
+          <p id="mensajeModificador" role="status" class="ayuda"></p>
+        </form>
+        <h3>Grupos creados</h3>
+        <div id="listaModificadores">Todavía no hay modificadores.</div>
+      </details>
       <section class="caja">
         <h2>Productos guardados</h2>
         <p class="ayuda">Edita un producto o usa Mostrar/Ocultar sin eliminarlo.</p>
@@ -233,6 +275,7 @@
       dejarDeEscuchar=onSnapshot(collection(db,'productos'),snapshot=>{
         productos=snapshot.docs.map(x=>({id:x.id,...x.data()}));
         pintar();
+        pintarModificadores();
       },error=>{
         $('lista').textContent='No hay acceso a la colección productos. Antes de guardar hay que configurar las reglas de Firestore para el administrador.';
         console.error(error);
@@ -270,7 +313,7 @@
     function pintar(){
       const lista=$('lista');
       lista.replaceChildren();
-      const productosComunes=productos.filter(x=>x.tipo!=='pizza-tamano' && x.tipo!=='pizza-sabor');
+      const productosComunes=productos.filter(x=>!['pizza-tamano','pizza-sabor','grupo-modificadores'].includes(x.tipo));
       if(!productosComunes.length){lista.textContent='Todavía no hay productos adicionales registrados.';return;}
       const ordenados=[...productosComunes].sort((a,b)=>
         (Number(a.ordenCategoria??10)-Number(b.ordenCategoria??10))||
@@ -308,6 +351,101 @@
         lista.append(tarjeta);
       }
     }
+
+
+    // Los modificadores se guardan en la colección productos, que ya cuenta
+    // con las reglas de acceso del administrador. No se crean colecciones nuevas.
+    const avisoModificador=texto=>$('mensajeModificador').textContent=texto;
+    function limpiarModificador(){
+      $('formModificador').reset();
+      $('idModificador').value='';
+      $('minModificador').value='0';
+      $('maxModificador').value='1';
+      $('activoModificador').checked=true;
+      $('guardarModificador').textContent='💾 Guardar modificador';
+    }
+    $('limpiarModificador').addEventListener('click',()=>{limpiarModificador();avisoModificador('Listo para crear otro grupo.');});
+    function leerOpcionesModificador(){
+      const lineas=$('opcionesModificador').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+      if(!lineas.length || lineas.length>50)throw new Error('Agrega entre 1 y 50 opciones, una por línea.');
+      const usados=new Set();
+      return lineas.map((linea,index)=>{
+        const partes=linea.split('|').map(x=>x.trim());
+        if(partes.length>2 || !partes[0] || partes[0].length>90)throw new Error('Revisa la opción de la línea '+(index+1)+'.');
+        const nombre=partes[0];
+        const clave=nombre.toLocaleLowerCase('es');
+        if(usados.has(clave))throw new Error('La opción '+nombre+' está repetida.');
+        usados.add(clave);
+        const precioTexto=partes[1]||'0';
+        if(!/^\d+$/.test(precioTexto))throw new Error('Precio inválido en la línea '+(index+1)+'. Usa pesos sin puntos.');
+        const precio=Number(precioTexto);
+        if(!Number.isSafeInteger(precio) || precio>99999999)throw new Error('Precio demasiado alto en la línea '+(index+1)+'.');
+        return {nombre,precio};
+      });
+    }
+    function editarModificador(g){
+      $('panelModificadores').open=true;
+      $('idModificador').value=g.id;
+      $('nombreModificador').value=g.nombre||'';
+      $('categoriaModificador').value=g.categoriaObjetivo||'';
+      $('minModificador').value=g.minSeleccion??0;
+      $('maxModificador').value=g.maxSeleccion??1;
+      $('opcionesModificador').value=(g.opciones||[]).map(o=>o.nombre+(Number(o.precio)>0?' | '+o.precio:'')).join('\n');
+      $('activoModificador').checked=g.activo!==false;
+      $('guardarModificador').textContent='💾 Guardar cambios';
+      avisoModificador('Editando '+g.nombre+'.');
+      $('nombreModificador').focus();
+    }
+    function pintarModificadores(){
+      const grupos=productos.filter(x=>x.tipo==='grupo-modificadores').sort((a,b)=>
+        String(a.categoriaObjetivo||'').localeCompare(String(b.categoriaObjetivo||''),'es')||
+        String(a.nombre||'').localeCompare(String(b.nombre||''),'es'));
+      $('cantidadModificadores').textContent='('+grupos.length+' grupos)';
+      const lista=$('listaModificadores');lista.replaceChildren();
+      if(!grupos.length){lista.textContent='Todavía no hay modificadores. Crea el primero arriba.';return;}
+      for(const g of grupos){
+        const div=document.createElement('div');div.className='grupo-compacto';
+        const resumen=document.createElement('div');
+        const titulo=document.createElement('strong');titulo.textContent=g.nombre||'Sin nombre';
+        const info=document.createElement('small');
+        info.textContent=(g.categoriaObjetivo||'Sin categoría')+' · '+(g.opciones||[]).length+' opciones · min '+(g.minSeleccion??0)+' / max '+(g.maxSeleccion??1)+(g.activo===false?' · Oculto':'');
+        resumen.append(titulo,info);
+        const acciones=document.createElement('div');acciones.className='acciones';
+        const editar=document.createElement('button');editar.type='button';editar.textContent='✏️ Editar';editar.addEventListener('click',()=>editarModificador(g));
+        const visibilidad=document.createElement('button');visibilidad.type='button';visibilidad.textContent=g.activo===false?'👁 Mostrar':'🙈 Ocultar';
+        visibilidad.addEventListener('click',async()=>{
+          visibilidad.disabled=true;
+          try{
+            await updateDoc(doc(db,'productos',g.id),{activo:g.activo===false,actualizadoEn:serverTimestamp()});
+            avisoModificador('Visibilidad del grupo actualizada.');
+          }catch(e){avisoModificador('No se pudo actualizar: '+(e.message||'revisa permisos.'));visibilidad.disabled=false;}
+        });
+        acciones.append(editar,visibilidad);div.append(resumen,acciones);lista.append(div);
+      }
+    }
+    $('formModificador').addEventListener('submit',async e=>{
+      e.preventDefault();
+      const boton=$('guardarModificador');boton.disabled=true;
+      avisoModificador('Guardando modificador...');
+      try{
+        if(!auth.currentUser)throw new Error('Inicia sesión como administrador.');
+        const nombre=$('nombreModificador').value.trim();
+        const categoriaObjetivo=$('categoriaModificador').value.trim();
+        if(!nombre||!categoriaObjetivo)throw new Error('Completa nombre y categoría.');
+        const minSeleccion=Number($('minModificador').value);
+        const maxSeleccion=Number($('maxModificador').value);
+        const opciones=leerOpcionesModificador();
+        if(!Number.isInteger(minSeleccion)||!Number.isInteger(maxSeleccion)||minSeleccion<0||maxSeleccion<1||maxSeleccion>opciones.length||minSeleccion>maxSeleccion)
+          throw new Error('Las selecciones deben ser coherentes con la cantidad de opciones (mínimo menor o igual al máximo).');
+        const datos={tipo:'grupo-modificadores',nombre,categoriaObjetivo,minSeleccion,maxSeleccion,opciones,
+          activo:$('activoModificador').checked,actualizadoEn:serverTimestamp()};
+        const id=$('idModificador').value;
+        if(id)await updateDoc(doc(db,'productos',id),datos);
+        else await addDoc(collection(db,'productos'),{...datos,creadoEn:serverTimestamp()});
+        limpiarModificador();avisoModificador('✅ Grupo guardado. Se aplicará a todos los productos de esa categoría.');
+      }catch(error){avisoModificador('❌ '+(error.code==='permission-denied'?'Faltan permisos de Firestore.':error.message||'No se pudo guardar.'));}
+      finally{boton.disabled=false;}
+    });
 
     $('formProducto').addEventListener('submit',async e=>{
       e.preventDefault();
