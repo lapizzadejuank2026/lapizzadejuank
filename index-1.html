@@ -49,17 +49,19 @@
     .tab { background:#222225; color:#eee; border:1px solid var(--border); border-radius:999px; padding:9px 15px; font-weight:700; }
     .tab.active { background:var(--red); border-color:var(--red); }
     .tab:disabled { color:#888; cursor:not-allowed; }
-    .products { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:17px; }
-    .product { display:flex; flex-direction:column; border:1px solid var(--border); background:var(--surface); border-radius:var(--round); overflow:hidden; }
-    .product-art { display:grid; place-items:center; min-height:124px; background:radial-gradient(circle at 65% 60%,#50331e,#2a181a 60%,#1a1518 100%); font-size:77px; }
-    .product-art img { width:100%; height:170px; object-fit:cover; display:block; }
-    .product-art:has(img) { min-height:0; }
-    .product-body { padding:18px; flex:1; display:flex; flex-direction:column; }
-    .product-title { display:flex; justify-content:space-between; gap:7px; align-items:baseline; }
-    .product h3 { margin:0; font-size:19px; }
+    .products { display:grid; grid-template-columns:1fr; gap:12px; }
+    .product { display:grid; grid-template-columns:minmax(0,1fr) 152px; border:1px solid var(--border); background:var(--surface); border-radius:var(--round); overflow:hidden; min-height:155px; }
+    .product-art { grid-column:2; grid-row:1; display:grid; place-items:center; min-height:155px; background:radial-gradient(circle at 65% 60%,#50331e,#2a181a 60%,#1a1518 100%); font-size:69px; }
+    .product-art img { width:100%; height:100%; min-height:155px; object-fit:cover; display:block; }
+    .product-body { grid-column:1; grid-row:1; min-width:0; padding:17px 18px; display:flex; flex-direction:column; align-items:flex-start; }
+    .product-title { display:flex; flex-direction:column; gap:5px; align-items:flex-start; }
+    .product h3 { margin:0; font-size:18px; line-height:1.22; overflow-wrap:anywhere; }
     .price { color:var(--gold); font-size:19px; font-weight:900; white-space:nowrap; }
-    .product p { color:var(--muted); font-size:14px; margin:8px 0 17px; flex:1; }
-    .product button { width:100%; }
+    .product p { color:var(--muted); font-size:13px; line-height:1.35; margin:8px 0 12px; overflow-wrap:anywhere; }
+    .product-actions { margin-top:auto; display:flex; gap:9px; align-items:center; }
+    .product .product-add { width:45px; height:45px; padding:0; border-radius:50%; background:var(--red); border:1px solid #f1586c; color:#fff; font-size:30px; font-weight:500; line-height:1; display:grid; place-items:center; flex:0 0 45px; }
+    .product .product-add:hover { background:#d32642; }
+    .product-add-hint { font-size:12px; font-weight:700; color:#dedee4; }
     .cart-panel { position:sticky; top:20px; border:1px solid var(--border); background:var(--surface); border-radius:var(--round); overflow:hidden; }
     .cart-title { padding:20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); }
     .cart-title h2 { font-size:21px; }
@@ -121,7 +123,7 @@
     .warning { color:#f4c47d; font-size:13px; margin-top:14px; }
     .sr-only { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
     @media(max-width:850px) { .main-layout { grid-template-columns:1fr; } .cart-panel { position:static; } .hero-pizza { width:160px; height:160px; font-size:98px; } }
-    @media(max-width:560px) { .head-inner { min-height:74px; } .brand-symbol { width:41px; height:41px; } .head-actions .outline-btn { display:none; } .hero { padding:30px 0; } .hero-inner { gap:5px; } .hero-pizza { width:105px; height:105px; font-size:64px; } .hero h1 { font-size:34px; } .hero p { font-size:14px; } .products { grid-template-columns:1fr; } .product-art { min-height:105px; } .product-body { padding:16px; } .flavor-grid { grid-template-columns:1fr; } .form-grid { grid-template-columns:1fr; } .field.full { grid-column:auto; } .dialog-footer { flex-wrap:wrap; } .dialog-footer .primary-btn { flex:1; } }
+    @media(max-width:560px) { .head-inner { min-height:74px; } .brand-symbol { width:41px; height:41px; } .head-actions .outline-btn { display:none; } .hero { padding:30px 0; } .hero-inner { gap:5px; } .hero-pizza { width:105px; height:105px; font-size:64px; } .hero h1 { font-size:34px; } .hero p { font-size:14px; }  .product { grid-template-columns:minmax(0,1fr) 112px; min-height:135px; } .product-art { min-height:135px; font-size:51px; } .product-art img { min-height:135px; } .product-body { padding:13px 11px; } .product h3 { font-size:17px; } .product .price { font-size:17px; } .product .product-add { width:40px; height:40px; flex-basis:40px; font-size:27px; } .product-add-hint { font-size:11px; } .flavor-grid { grid-template-columns:1fr; } .form-grid { grid-template-columns:1fr; } .field.full { grid-column:auto; } .dialog-footer { flex-wrap:wrap; } .dialog-footer .primary-btn { flex:1; } }
     @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } * { transition:none!important; } }
   </style>
 </head>
@@ -356,11 +358,15 @@
           const row=el('div','','product-title');
           row.append(el('h3',p.name),el('strong',money(p.price),'price'));
           const desc=el('p',p.description);
-          const btn=el('button','Elegir sabores','primary-btn');
+          const btn=el('button','+','product-add');
           btn.type='button';
+          btn.title='Elegir sabores de '+p.name;
+          btn.setAttribute('aria-label','Elegir sabores de '+p.name);
           btn.addEventListener('click',()=>openPizza(p));
-          body.append(row,desc,btn);
-          card.append(art,body);
+          const actions=el('div','','product-actions');
+          actions.append(btn,el('span','Elegir sabores','product-add-hint'));
+          body.append(row,desc,actions);
+          card.append(body,art);
           holder.append(card);
         }
       }
@@ -383,11 +389,16 @@
         row.append(el('h3',p.name),el('strong',money(p.price),'price'));
         const desc=el('p',p.description||'Preparado con el sabor de La Pizza de Juan K.');
         const tieneModificadores=gruposAplicables(p).length>0;
-        const btn=el('button',tieneModificadores?'Elegir opciones':'Agregar al carrito','primary-btn');
+        const etiqueta=tieneModificadores?'Elegir opciones':'Agregar al carrito';
+        const btn=el('button','+','product-add');
         btn.type='button';
+        btn.title=etiqueta+' — '+p.name;
+        btn.setAttribute('aria-label',etiqueta+' — '+p.name);
         btn.addEventListener('click',()=>tieneModificadores?abrirPersonalizacion(p):agregarProducto(p));
-        body.append(row,desc,btn);
-        card.append(art,body);
+        const actions=el('div','','product-actions');
+        actions.append(btn,el('span',etiqueta,'product-add-hint'));
+        body.append(row,desc,actions);
+        card.append(body,art);
         holder.append(card);
       }
       if(!holder.children.length) holder.append(el('p',catalogoCargado?'Todavía no hay productos visibles en el menú.':'Cargando el catálogo de productos...','hint'));
