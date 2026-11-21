@@ -45,6 +45,13 @@
     .mod-controls{display:flex;gap:10px;flex-wrap:wrap}
     .mod-controls button{flex:1}
     .mod-note{color:#ccc;font-size:13px}
+    .vinculo-mod{background:#1b1b1b;border:1px solid #484848;border-radius:10px;padding:10px;margin:8px 0}
+    .vinculo-mod .check{margin:0 0 5px}
+    .vinculo-mod .check input{margin:0}
+    .vinculo-mod .fila label{font-size:13px;margin-top:4px}
+    .vinculo-mod .fila input{padding:8px;margin:4px 0}
+    .grupo-asignacion{border:1px solid #444;border-radius:12px;margin:14px 0;padding:12px}
+    .grupo-asignacion legend{font-weight:bold;padding:0 5px}
     .integrado main{max-width:none;padding:2px 0 16px}
     .integrado #panel > .caja{margin-top:6px}
     @media(max-width:520px){.fila{grid-template-columns:1fr}}
@@ -102,6 +109,11 @@
               <input id="orden" type="number" min="0" max="9999" step="1" value="10" required>
             </label>
           </div>
+          <fieldset class="grupo-asignacion">
+            <legend>🧩 Modificadores para este producto</legend>
+            <p class="ayuda">Marca los grupos que aplican a este producto. Puedes usar un mismo grupo en muchos productos de distintas categorías y ajustar sus límites.</p>
+            <div id="asignacionModificadores">Cargando grupos...</div>
+          </fieldset>
           <label>Foto desde el celular <small>(JPG, PNG o WEBP, máximo 5 MB)</small>
             <input id="archivoFoto" type="file" accept="image/jpeg,image/png,image/webp">
           </label>
@@ -116,14 +128,11 @@
       </section>
       <details class="caja" id="panelModificadores">
         <summary>🧩 Modificadores de productos <small id="cantidadModificadores" class="ayuda">(0 grupos)</small></summary>
-        <p class="mod-note">Crea grupos de opciones para una categoría completa: Pizzas, Hamburguesas, Lasañas u otra que escribas tú. Aparecerán al personalizar productos de esa categoría.</p>
+        <p class="mod-note">Crea un grupo una sola vez (sabores, salsas, cubiertos...) y asígnalo a cualquiera de tus productos desde el formulario de arriba. No depende de la categoría.</p>
         <form id="formModificador">
           <input id="idModificador" type="hidden">
           <label>Nombre del grupo
             <input id="nombreModificador" maxlength="80" placeholder="Ej.: Sabores de pizza" required>
-          </label>
-          <label>Aplicar a la categoría
-            <input id="categoriaModificador" maxlength="70" list="sugerencias" placeholder="Ej.: Pizzas" required>
           </label>
           <div class="fila">
             <label>Selecciones mínimas <small>(0 = opcional)</small>
@@ -276,11 +285,64 @@
         productos=snapshot.docs.map(x=>({id:x.id,...x.data()}));
         pintar();
         pintarModificadores();
+        pintarAsignacionesProducto();
       },error=>{
         $('lista').textContent='No hay acceso a la colección productos. Antes de guardar hay que configurar las reglas de Firestore para el administrador.';
         console.error(error);
       });
     });
+
+    function pintarAsignacionesProducto(asignaciones=null){
+      const holder=$('asignacionModificadores');
+      const elegido=Array.isArray(asignaciones)?asignaciones:
+        holder.querySelector('.vinculo-mod')?Array.from(holder.querySelectorAll('.vinculo-mod'))
+          .filter(f=>f.querySelector('input[type="checkbox"]').checked)
+          .map(f=>({id:f.dataset.grupoId,min:Number(f.querySelector('[data-campo="min"]').value),
+            max:Number(f.querySelector('[data-campo="max"]').value)})):
+        (productos.find(p=>p.id===$('idProducto').value)?.gruposModificadores||[]);
+      holder.replaceChildren();
+      const grupos=productos.filter(p=>p.tipo==='grupo-modificadores')
+        .sort((a,b)=>String(a.nombre||'').localeCompare(String(b.nombre||''),'es'));
+      if(!grupos.length){
+        holder.textContent='Aún no hay grupos. Abre “Modificadores de productos” abajo y crea uno.';
+        return;
+      }
+      for(const g of grupos){
+        const seleccionado=elegido.find(x=>x.id===g.id);
+        const marco=document.createElement('div');
+        marco.className='vinculo-mod';marco.dataset.grupoId=g.id;
+        const titulo=document.createElement('label');titulo.className='check';
+        const casilla=document.createElement('input');casilla.type='checkbox';casilla.checked=!!seleccionado;
+        const nombre=document.createElement('span');
+        nombre.textContent=(g.nombre||'Grupo sin nombre')+(g.activo===false?' (oculto a clientes)':'');
+        titulo.append(casilla,nombre);
+        const fila=document.createElement('div');fila.className='fila';
+        const minLabel=document.createElement('label');minLabel.textContent='Mínimo de opciones';
+        const min=document.createElement('input');min.type='number';min.min='0';min.max='50';min.step='1';
+        min.dataset.campo='min';min.value=seleccionado?.min??g.minSeleccion??0;
+        minLabel.append(min);
+        const maxLabel=document.createElement('label');maxLabel.textContent='Máximo de opciones';
+        const max=document.createElement('input');max.type='number';max.min='1';max.max='50';max.step='1';
+        max.dataset.campo='max';max.value=seleccionado?.max??g.maxSeleccion??1;
+        maxLabel.append(max);fila.append(minLabel,maxLabel);
+        const actualizar=()=>{min.disabled=max.disabled=!casilla.checked;};
+        casilla.addEventListener('change',actualizar);actualizar();
+        marco.append(titulo,fila);holder.append(marco);
+      }
+    }
+    function leerAsignacionesProducto(){
+      return Array.from($('asignacionModificadores').querySelectorAll('.vinculo-mod'))
+        .filter(f=>f.querySelector('input[type="checkbox"]').checked)
+        .map(f=>{
+          const g=productos.find(p=>p.id===f.dataset.grupoId && p.tipo==='grupo-modificadores');
+          if(!g)throw new Error('El grupo de modificadores ya no existe.');
+          const min=Number(f.querySelector('[data-campo="min"]').value);
+          const max=Number(f.querySelector('[data-campo="max"]').value);
+          if(!Number.isInteger(min)||!Number.isInteger(max)||min<0||max<1||min>max||max>(g.opciones||[]).length)
+            throw new Error('Revisa los límites de '+g.nombre+'. El máximo no puede superar sus opciones.');
+          return {id:g.id,min,max};
+        });
+    }
 
     function limpiar(){
       $('formProducto').reset();
@@ -290,6 +352,7 @@
       $('activo').checked=true;
       $('orden').value=10;
       $('ordenCategoria').value=10;
+      pintarAsignacionesProducto([]);
     }
     $('cancelar').addEventListener('click',()=>{limpiar();mensaje('Edición cancelada.');});
 
@@ -304,6 +367,7 @@
       $('fotoURL').value=p.fotoURL||'';
       $('archivoFoto').value='';
       $('activo').checked=p.activo!==false;
+      pintarAsignacionesProducto(p.gruposModificadores||[]);
       $('tituloForm').textContent='Editar: '+p.nombre;
       $('guardar').textContent='💾 Guardar cambios de '+(p.nombre||'producto');
       mensaje('Editando producto. Pulsa Guardar para aplicar cambios.');
@@ -387,7 +451,6 @@
       $('panelModificadores').open=true;
       $('idModificador').value=g.id;
       $('nombreModificador').value=g.nombre||'';
-      $('categoriaModificador').value=g.categoriaObjetivo||'';
       $('minModificador').value=g.minSeleccion??0;
       $('maxModificador').value=g.maxSeleccion??1;
       $('opcionesModificador').value=(g.opciones||[]).map(o=>o.nombre+(Number(o.precio)>0?' | '+o.precio:'')).join('\n');
@@ -398,7 +461,6 @@
     }
     function pintarModificadores(){
       const grupos=productos.filter(x=>x.tipo==='grupo-modificadores').sort((a,b)=>
-        String(a.categoriaObjetivo||'').localeCompare(String(b.categoriaObjetivo||''),'es')||
         String(a.nombre||'').localeCompare(String(b.nombre||''),'es'));
       $('cantidadModificadores').textContent='('+grupos.length+' grupos)';
       const lista=$('listaModificadores');lista.replaceChildren();
@@ -408,7 +470,8 @@
         const resumen=document.createElement('div');
         const titulo=document.createElement('strong');titulo.textContent=g.nombre||'Sin nombre';
         const info=document.createElement('small');
-        info.textContent=(g.categoriaObjetivo||'Sin categoría')+' · '+(g.opciones||[]).length+' opciones · min '+(g.minSeleccion??0)+' / max '+(g.maxSeleccion??1)+(g.activo===false?' · Oculto':'');
+        const usos=productos.filter(p=>p.tipo!=='grupo-modificadores' && (p.gruposModificadores||[]).some(x=>x.id===g.id)).length;
+        info.textContent=(g.opciones||[]).length+' opciones · '+usos+' productos vinculados · min '+(g.minSeleccion??0)+' / max '+(g.maxSeleccion??1)+(g.activo===false?' · Oculto':'');
         resumen.append(titulo,info);
         const acciones=document.createElement('div');acciones.className='acciones';
         const editar=document.createElement('button');editar.type='button';editar.textContent='✏️ Editar';editar.addEventListener('click',()=>editarModificador(g));
@@ -430,19 +493,18 @@
       try{
         if(!auth.currentUser)throw new Error('Inicia sesión como administrador.');
         const nombre=$('nombreModificador').value.trim();
-        const categoriaObjetivo=$('categoriaModificador').value.trim();
-        if(!nombre||!categoriaObjetivo)throw new Error('Completa nombre y categoría.');
+        if(!nombre)throw new Error('Escribe el nombre del grupo.');
         const minSeleccion=Number($('minModificador').value);
         const maxSeleccion=Number($('maxModificador').value);
         const opciones=leerOpcionesModificador();
         if(!Number.isInteger(minSeleccion)||!Number.isInteger(maxSeleccion)||minSeleccion<0||maxSeleccion<1||maxSeleccion>opciones.length||minSeleccion>maxSeleccion)
           throw new Error('Las selecciones deben ser coherentes con la cantidad de opciones (mínimo menor o igual al máximo).');
-        const datos={tipo:'grupo-modificadores',nombre,categoriaObjetivo,minSeleccion,maxSeleccion,opciones,
+        const datos={tipo:'grupo-modificadores',nombre,categoriaObjetivo:'',minSeleccion,maxSeleccion,opciones,
           activo:$('activoModificador').checked,actualizadoEn:serverTimestamp()};
         const id=$('idModificador').value;
         if(id)await updateDoc(doc(db,'productos',id),datos);
         else await addDoc(collection(db,'productos'),{...datos,creadoEn:serverTimestamp()});
-        limpiarModificador();avisoModificador('✅ Grupo guardado. Se aplicará a todos los productos de esa categoría.');
+        limpiarModificador();avisoModificador('✅ Grupo guardado. Ahora puedes asignarlo a cualquier producto.');
       }catch(error){avisoModificador('❌ '+(error.code==='permission-denied'?'Faltan permisos de Firestore.':error.message||'No se pudo guardar.'));}
       finally{boton.disabled=false;}
     });
@@ -471,6 +533,7 @@
         }
         const datos={
           nombre,descripcion:$('descripcion').value.trim(),precio,categoria,
+          gruposModificadores:leerAsignacionesProducto(),
           orden:Number($('orden').value),ordenCategoria:Number($('ordenCategoria').value),
           activo:$('activo').checked,fotoURL,actualizadoEn:serverTimestamp()
         };
