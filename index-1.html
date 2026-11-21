@@ -143,7 +143,7 @@
   <main class="wrap main-layout">
     <div>
       <section aria-labelledby="menuTitle" id="menu">
-        <div class="section-heading"><div><h2 id="menuTitle">Nuestro menú</h2><p class="hint">Escoge tus favoritos, personaliza tu pizza y agrégalos al carrito.</p></div></div>
+        <div class="section-heading"><div><h2 id="menuTitle">Nuestro menú</h2><p class="hint">Escoge tus favoritos y agrégalos al carrito.</p></div></div>
         <div id="catalogStatus" class="hint" role="status">Cargando catálogo actualizado...</div>
         <div class="tabs" id="categoryTabs" aria-label="Categorías del menú"></div>
         <div class="products" id="products"></div>
@@ -192,28 +192,14 @@
 
   <script>
 'use strict';
-    const pizzaBase = [
-      {id:'personal',name:'Pizza personal',price:20000,max:2,description:'Hasta 2 sabores · perfecta para ti.',activo:true},
-      {id:'small',name:'Pizza small',price:35000,max:2,description:'Hasta 2 sabores · para compartir.',activo:true},
-      {id:'mediana',name:'Pizza mediana',price:45000,max:3,description:'Hasta 3 sabores · más variedad.',activo:true},
-      {id:'familiar',name:'Pizza familiar',price:62000,max:3,description:'Hasta 3 sabores · para toda la familia.',activo:true}
-    ];
+    // No se muestran pizzas precargadas. Los productos se crean desde Administración.
+    const pizzaBase = [];
     let pizzas = pizzaBase.map(p=>({...p}));
     let productosAdmin = [];
     let catalogoCargado = false;
-    let categoriaActual = 'Pizzas';
-    const saboresBase = [
-      {id:'hawaiana',nombre:'Hawaiana'},
-      {id:'carnes',nombre:'Carnes'},
-      {id:'pollo-champinon',nombre:'Pollo champiñón'},
-      {id:'mi-tierrita',nombre:'Mi Tierrita'},
-      {id:'mexicana',nombre:'Mexicana'},
-      {id:'venezolana',nombre:'Venezolana'},
-      {id:'de-la-casa',nombre:'De la Casa'},
-      {id:'ranchera',nombre:'Ranchera'},
-      {id:'campesina',nombre:'Campesina'},
-      {id:'pepperoni',nombre:'Pepperoni'}
-    ];
+    let categoriaActual = '';
+    // Los sabores antiguos quedan como respaldo en Firebase y en el historial de GitHub.
+    const saboresBase = [];
     let flavors = saboresBase.map(s=>s.nombre);
     const money = value => new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(value);
     const byId = id => document.getElementById(id);
@@ -266,15 +252,15 @@
     }
     function renderCategorias() {
       const holder=byId('categoryTabs');
-      const grupos=new Map([['Pizzas',0]]);
+      const grupos=new Map();
       for(const p of productosAdmin) {
         const cat=categoria(p);
         const order=Number(p.ordenCategoria||10);
         grupos.set(cat,Math.min(grupos.get(cat)??Infinity,order));
       }
-      const categorias=[...grupos.keys()].sort((a,b)=>a==='Pizzas'?-1:b==='Pizzas'?1:
+      const categorias=[...grupos.keys()].sort((a,b)=>
         grupos.get(a)-grupos.get(b) || a.localeCompare(b,'es'));
-      if(!categorias.includes(categoriaActual)) categoriaActual='Pizzas';
+      if(!categorias.includes(categoriaActual)) categoriaActual=categorias[0]||'';
       holder.replaceChildren();
       for(const cat of categorias) {
         const boton=el('button',(cat==='Pizzas'?'🍕 ':'')+cat,'tab'+(cat===categoriaActual?' active':''));
@@ -339,7 +325,7 @@
         card.append(art,body);
         holder.append(card);
       }
-      if(!holder.children.length) holder.append(el('p','No hay productos visibles en esta categoría por ahora.','hint'));
+      if(!holder.children.length) holder.append(el('p',catalogoCargado?'Todavía no hay productos visibles en el menú.':'Cargando el catálogo de productos...','hint'));
     }
     function agregarProducto(p) {
       const item=cart.find(x=>x.id===p.id && x.flavors.length===0);
@@ -567,7 +553,7 @@
     };
     window.errorCatalogoFirebase=(error)=>{
       console.error('No se pudo cargar catálogo:',error);
-      byId('catalogStatus').textContent='No se pudo cargar el catálogo actualizado. Las pizzas habituales siguen disponibles. Intenta actualizar la página.';
+      byId('catalogStatus').textContent='No se pudo cargar el catálogo actualizado. Intenta actualizar la página.';
     };
 
     document.querySelectorAll('[data-close]').forEach(btn=>btn.addEventListener('click',()=>byId(btn.dataset.close).close()));
