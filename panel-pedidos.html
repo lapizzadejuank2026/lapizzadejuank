@@ -20,7 +20,7 @@
     .productos { white-space: pre-wrap; overflow-wrap: anywhere; background: #181818; padding: 12px; border-radius: 8px; }
     .nuevo { border: 2px solid #f6bd42; }
     [hidden] { display: none !important; }
-    .tabs { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; margin:0 0 18px; position:sticky; top:0; z-index:5; padding:10px 0; background:#121212; }
+    .tabs { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; margin:0 0 18px; position:sticky; top:0; z-index:5; padding:10px 0; background:#121212; }
     .tabs button { margin:0; background:#292929; color:#f2f2f2; border:1px solid #484848; text-align:center; padding:14px 8px; font-size:15px; }
     .tabs button[aria-selected="true"] { color:#1b1410; background:#f6bd42; border-color:#f6bd42; }
     .tabs .cantidad { display:inline-block; border-radius:20px; padding:2px 7px; background:#a71919; color:white; font-size:12px; margin-left:4px; min-width:23px; }
@@ -90,7 +90,13 @@
     .equipo-tarjeta.inactivo { opacity:.72; }
     .hint-privada { color:#f6cf78; font-size:14px; line-height:1.5; }
     .tabs button { min-width:0; }
-    @media(max-width:520px) { .tabs button { font-size:12px!important; padding:13px 3px!important; } }
+    @media(max-width:520px) { .tabs { grid-template-columns:repeat(2,minmax(0,1fr)); } .tabs button { font-size:13px!important; padding:11px 5px!important; } }
+    .config-form { display:grid; gap:12px; }
+    .config-form label { display:block; color:#f4f4f4; font-weight:bold; }
+    .config-form input,.config-form textarea { display:block; margin-top:7px; width:100%; border:1px solid #636363; background:#fff; color:#151515; padding:12px; border-radius:9px; font:inherit; }
+    .config-form textarea { min-height:95px; resize:vertical; }
+    .config-form button { margin-top:5px; }
+    #config-mensaje { color:#ffe09c; white-space:pre-wrap; }
     button:focus-visible { outline:3px solid #fff; outline-offset:2px; }
     @media(max-width:520px) { header{padding:18px 12px} h1{font-size:23px} main{padding:10px 10px 24px} .caja,.pedido{padding:15px} .tabs{gap:6px} .tabs button{font-size:14px;padding:14px 5px} }
   </style>
@@ -113,6 +119,7 @@
       <button id="tab-pedidos" type="button" role="tab" aria-controls="vista-pedidos" aria-selected="true">🔔 Pedidos <span id="nuevos-tab" class="cantidad" hidden>0</span></button>
       <button id="tab-productos" type="button" role="tab" aria-controls="vista-productos" aria-selected="false">📦 Productos</button>
       <button id="tab-equipo" type="button" role="tab" aria-controls="vista-equipo" aria-selected="false">👥 Equipo y roles</button>
+      <button id="tab-configuracion" type="button" role="tab" aria-controls="vista-configuracion" aria-selected="false">⚙️ Configuración</button>
     </nav>
     <nav class="enlaces-local" aria-label="Herramientas de salón y caja">
       <a href="salon-operativo.html">🍽️ Mesas y barra · Firebase (pruebas)</a>
@@ -214,6 +221,29 @@
         <div id="equipo-lista"></div>
       </div>
     </section>
+    <section id="vista-configuracion" role="tabpanel" aria-labelledby="tab-configuracion" hidden>
+      <div class="caja">
+        <h2>⚙️ Configuración del negocio</h2>
+        <p class="hint">Personaliza los textos que verán tus clientes en la bienvenida y en el menú digital, sin modificar productos ni pedidos. Cambiar el nombre aquí no cambia tu razón social legal.</p>
+        <form id="config-form" class="config-form">
+          <label>Nombre comercial visible para los clientes
+            <input id="config-nombre" maxlength="70" required placeholder="La Pizza de Juan K">
+          </label>
+          <label>Lema bajo el nombre
+            <input id="config-lema" maxlength="110" required placeholder="Desde 2013 · Sabor de la casa">
+          </label>
+          <label>Frase destacada de la bienvenida del menú
+            <input id="config-frase" maxlength="110" required placeholder="Ingredientes deliciosos · Mucho sabor">
+          </label>
+          <label>Mensaje de bienvenida del menú
+            <textarea id="config-bienvenida" maxlength="280" required placeholder="Bienvenidos a nuestra pizzería..."></textarea>
+          </label>
+          <button type="submit" id="config-guardar">💾 Guardar cambios</button>
+          <p id="config-mensaje" role="status" aria-live="polite">Cargando información del negocio...</p>
+        </form>
+        <p class="hint">Los cambios se publican para los clientes conectados cuando Firebase confirma que se guardaron. El nombre grande repetido ya no aparecerá en el menú.</p>
+      </div>
+    </section>
   </section>
 </main>
 
@@ -243,7 +273,7 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, setPersistence, inMemoryPersistence, deleteUser } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-  import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, updateDoc, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+  import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, updateDoc, setDoc, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
   import {mostrarCobroAdmin} from './cobros-domicilios.js?v=cobro20261113b';
 
   const firebaseConfig = {
@@ -274,9 +304,12 @@
   const tabPedidos = document.getElementById('tab-pedidos');
   const tabProductos = document.getElementById('tab-productos');
   const tabEquipo = document.getElementById('tab-equipo');
+  const tabConfiguracion = document.getElementById('tab-configuracion');
   const vistaPedidos = document.getElementById('vista-pedidos');
   const vistaProductos = document.getElementById('vista-productos');
   const vistaEquipo = document.getElementById('vista-equipo');
+  const vistaConfiguracion = document.getElementById('vista-configuracion');
+  let detenerConfiguracion = () => {};
   let detenerEquipo = () => {};
   let equipoCargado = false;
   let personal = [];
@@ -294,6 +327,8 @@
     vistaPedidos.hidden = nombre !== 'pedidos';
     vistaProductos.hidden = nombre !== 'productos';
     vistaEquipo.hidden = nombre !== 'equipo';
+    vistaConfiguracion.hidden = nombre !== 'configuracion';
+    tabConfiguracion.setAttribute('aria-selected', String(nombre === 'configuracion'));
     tabPedidos.setAttribute('aria-selected', String(nombre === 'pedidos'));
     tabProductos.setAttribute('aria-selected', String(nombre === 'productos'));
     tabEquipo.setAttribute('aria-selected', String(nombre === 'equipo'));
@@ -306,6 +341,57 @@
   tabPedidos.addEventListener('click', () => cambiarVista('pedidos'));
   tabProductos.addEventListener('click', () => cambiarVista('productos'));
   tabEquipo.addEventListener('click', () => cambiarVista('equipo'));
+  tabConfiguracion.addEventListener('click', () => cambiarVista('configuracion'));
+
+  const configuracionPredeterminada = {
+    nombre: 'La Pizza de Juan K',
+    lema: 'Desde 2013 · Sabor de la casa',
+    frase: 'Ingredientes deliciosos · Mucho sabor',
+    bienvenida: 'Bienvenidos a nuestra pizzería. Elige tu tamaño, combina tus sabores favoritos y arma tu pedido.'
+  };
+  const refConfiguracion = doc(db, 'productos', '__configuracion_negocio');
+  const camposConfiguracion = {
+    nombre: document.getElementById('config-nombre'),
+    lema: document.getElementById('config-lema'),
+    frase: document.getElementById('config-frase'),
+    bienvenida: document.getElementById('config-bienvenida')
+  };
+  const configMensaje = document.getElementById('config-mensaje');
+  const configGuardar = document.getElementById('config-guardar');
+  function mostrarConfiguracion(datos) {
+    for (const [campo, input] of Object.entries(camposConfiguracion)) {
+      const valor = datos && typeof datos[campo]==='string' && datos[campo].trim()
+        ? datos[campo].trim()
+        : configuracionPredeterminada[campo];
+      input.value = valor;
+    }
+  }
+  mostrarConfiguracion(null);
+  document.getElementById('config-form').addEventListener('submit', async evento => {
+    evento.preventDefault();
+    if (!auth.currentUser) {configMensaje.textContent='Debes iniciar sesión como administrador.';return;}
+    const datos = {};
+    for (const [campo,input] of Object.entries(camposConfiguracion)) {
+      const valor=input.value.trim().replace(/\s+/g,' ');
+      if (!valor) {configMensaje.textContent='Completa todos los campos.';input.focus();return;}
+      datos[campo]=valor;
+    }
+    configGuardar.disabled=true;
+    configMensaje.textContent='Guardando los cambios...';
+    try {
+      await setDoc(refConfiguracion, {
+        tipo: 'configuracion-negocio',
+        ...datos,
+        actualizadoEn: serverTimestamp()
+      }, {merge:true});
+      configMensaje.textContent='✅ Cambios guardados. El menú y la bienvenida mostrarán la información actualizada.';
+    } catch (error) {
+      configMensaje.textContent=error?.code==='permission-denied'
+        ? 'Firebase no permitió guardar esta configuración. Revisa los permisos de administrador de la colección productos.'
+        : 'No se pudieron guardar los cambios. Comprueba la conexión y vuelve a intentar.';
+      console.error('Error al guardar configuración del negocio:',error);
+    } finally {configGuardar.disabled=false;}
+  });
 
   // La autenticación es compartida con el panel. El control de permisos real debe estar en Firestore.
   const formEquipo = document.getElementById('form-equipo');
@@ -1259,6 +1345,7 @@
   onAuthStateChanged(auth, (user) => {
     detenerEscucha();
     detenerEquipo();
+    detenerConfiguracion();
     equipoCargado = false;
     personalDisponible = false;
     personal = [];
@@ -1291,6 +1378,17 @@
     estado.textContent = 'Conectando con Firestore...';
     equipoEstado.textContent = 'Consultando personal disponible...';
     escucharEquipo();
+    detenerConfiguracion = onSnapshot(refConfiguracion, snapshot => {
+      mostrarConfiguracion(snapshot.exists()?snapshot.data():null);
+      if (configMensaje.textContent!=='Guardando los cambios...') {
+        configMensaje.textContent=snapshot.exists()
+          ? 'Información actual cargada. Puedes editarla y guardar.'
+          : 'Todavía no hay configuración personalizada. Se mostrarán los textos actuales hasta que guardes.';
+      }
+    }, error => {
+      configMensaje.textContent='No fue posible leer la configuración. Revisa los permisos de Firebase.';
+      console.error('Error al cargar configuración:',error);
+    });
 
     detenerEscucha = onSnapshot(
       collection(db, 'pedidos'),
