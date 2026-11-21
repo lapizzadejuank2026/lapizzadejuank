@@ -220,6 +220,7 @@
     let gruposModificadores = [];
     let productoPersonalizando = null;
     let seleccionesModificadores = new Map();
+    let descripcionesAbiertas = new Set();
     let catalogoCargado = false;
     let categoriaActual = '';
     // Los sabores antiguos quedan como respaldo en Firebase y en el historial de GitHub.
@@ -409,6 +410,7 @@
       if(!grupos.length){agregarProducto(p);return;}
       productoPersonalizando=p;
       seleccionesModificadores=new Map(grupos.map(g=>[g.id,new Set()]));
+      descripcionesAbiertas=new Set();
       byId('modifierDialogTitle').textContent=p.name;
       renderPersonalizacion();
       byId('modifierDialog').showModal();
@@ -444,15 +446,18 @@
           fila.append(label);
           if(opcion.precio>0)fila.append(el('small','+'+money(opcion.precio)));
           if(opcion.descripcion){
+            const clave=JSON.stringify([g.id,opcion.nombre]);
             const descripcion=el('p',opcion.descripcion,'mod-descripcion');
-            descripcion.hidden=true;
+            descripcion.hidden=!descripcionesAbiertas.has(clave);
             const informacion=el('button','ⓘ','mod-info-btn');
             informacion.type='button';
             informacion.setAttribute('aria-label','Qué lleva '+opcion.nombre);
             informacion.setAttribute('title','¿Qué lleva '+opcion.nombre+'?');
-            informacion.setAttribute('aria-expanded','false');
+            informacion.setAttribute('aria-expanded',String(!descripcion.hidden));
             informacion.addEventListener('click',()=>{
-              descripcion.hidden=!descripcion.hidden;
+              if(descripcionesAbiertas.has(clave))descripcionesAbiertas.delete(clave);
+              else descripcionesAbiertas.add(clave);
+              descripcion.hidden=!descripcionesAbiertas.has(clave);
               informacion.setAttribute('aria-expanded',String(!descripcion.hidden));
             });
             fila.append(informacion,descripcion);
