@@ -244,7 +244,7 @@
             <img id="config-logo-vista" class="config-logo-preview" src="chef.png" alt="Vista previa del logo actual">
             <input id="config-logo" type="file" accept="image/jpeg,image/png,image/webp">
           </label>
-          <p class="config-logo-note">Sube una foto JPG, PNG o WEBP de máximo 5 MB desde tu celular. Déjalo sin seleccionar para conservar el logo actual.</p>
+          <p class="config-logo-note">Elige una imagen JPG, PNG o WEBP de máximo 5 MB. Se optimizará para el logo y se guardará junto con la configuración del negocio, sin usar Firebase Storage. Si no eliges otra, se conserva la actual.</p>
           <button type="submit" id="config-guardar">💾 Guardar cambios</button>
           <p id="config-mensaje" role="status" aria-live="polite">Cargando información del negocio...</p>
         </form>
@@ -390,38 +390,34 @@
     configLogoVista.src = vistaTemporalLogo;
     configMensaje.textContent = 'Nuevo logo seleccionado. Pulsa Guardar cambios para publicarlo.';
   });
-  async function subirLogoNegocio(archivo) {
-    const {getStorage, ref, uploadBytesResumable, getDownloadURL} =
-      await import('https://www.gstatic.com/firebasejs/13.1.0/firebase-storage.js');
-    const storage = getStorage(app);
-    const extension = archivo.type === 'image/png' ? 'png' : archivo.type === 'image/webp' ? 'webp' : 'jpg';
-    const ruta = `productos/${auth.currentUser.uid}/logo-${Date.now()}.${extension}`;
-    const tarea = uploadBytesResumable(ref(storage, ruta), archivo, {contentType:archivo.type});
-    const subida = await new Promise((resolve, reject) => {
-      let terminada = false;
-      const limite = setTimeout(() => {
-        if (terminada) return;
-        terminada = true;
-        tarea.cancel();
-        reject(new Error('La subida del logo no avanzó en 35 segundos. Comprueba la conexión y revisa los permisos de Firebase Storage.'));
-      }, 35000);
-      tarea.on('state_changed', snapshot => {
-        if (terminada) return;
-        const porcentaje = Math.round(100*snapshot.bytesTransferred/Math.max(1,snapshot.totalBytes));
-        configMensaje.textContent = 'Subiendo logo: ' + porcentaje + '%';
-      }, error => {
-        if (terminada) return;
-        terminada = true;
-        clearTimeout(limite);
-        reject(error);
-      }, () => {
-        if (terminada) return;
-        terminada = true;
-        clearTimeout(limite);
-        resolve(tarea.snapshot.ref);
-      });
+  async function prepararLogoNegocio(archivo) {
+    configMensaje.textContent = 'Optimizando el logo en el celular...';
+    const imagen = await new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(archivo);
+      const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('No se pudo leer la imagen. Prueba con un archivo JPG, PNG o WEBP.')); };
+      img.src = url;
     });
-    return getDownloadURL(subida);
+    if (!imagen.naturalWidth || !imagen.naturalHeight) {
+      throw new Error('La imagen seleccionada no tiene dimensiones válidas.');
+    }
+    const canvas = document.createElement('canvas');
+    const contexto = canvas.getContext('2d');
+    if (!contexto) throw new Error('Este navegador no pudo preparar el logo.');
+    for (const maximo of [512,384,320,256,192,128]) {
+      const escala = Math.min(1, maximo/Math.max(imagen.naturalWidth, imagen.naturalHeight));
+      canvas.width = Math.max(1,Math.round(imagen.naturalWidth*escala));
+      canvas.height = Math.max(1,Math.round(imagen.naturalHeight*escala));
+      contexto.clearRect(0,0,canvas.width,canvas.height);
+      contexto.drawImage(imagen,0,0,canvas.width,canvas.height);
+      for (const calidad of [0.82,0.68,0.52]) {
+        const resultado = canvas.toDataURL('image/webp',calidad);
+        if (/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(resultado)
+            && resultado.length < 170000) return resultado;
+      }
+    }
+    throw new Error('El logo no se pudo reducir lo suficiente. Prueba con una foto más sencilla.');
   }
   function mostrarConfiguracion(datos) {
     for (const [campo, input] of Object.entries(camposConfiguracion)) {
@@ -430,7 +426,8 @@
         : configuracionPredeterminada[campo];
       input.value = valor;
     }
-    logoURLActual = datos && typeof datos.logoURL === 'string' && /^https:\/\//i.test(datos.logoURL)
+    logoURLActual = datos && typeof datos.logoURL === 'string' &&
+      (/^https:\/\//i.test(datos.logoURL) || /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(datos.logoURL))
       ? datos.logoURL : '';
     if (!configArchivo.files.length) configLogoVista.src = logoURLActual || 'chef.png';
     document.getElementById('panel-nombre').textContent = '🍕 ' + camposConfiguracion.nombre.value;
@@ -453,7 +450,8 @@
     configGuardar.disabled=true;
     configMensaje.textContent='Guardando los cambios...';
     try {
-      const logoURL = imagen ? await subirLogoNegocio(imagen) : logoURLActual;
+      const logoURL = imagen ? await prepararLogoNegocio(imagen) : logoURLActual;
+      configMensaje.textContent='Guardando información y logo en Firebase...';
       await setDoc(refConfiguracion, {
         tipo: 'configuracion-negocio',
         ...datos,
@@ -468,19 +466,9 @@
       configMensaje.textContent='✅ Cambios guardados. El menú y la bienvenida mostrarán la información actualizada.';
     } catch (error) {
       const codigo = String(error?.code||'');
-      configMensaje.textContent=codigo==='permission-denied'
-        ? 'Firebase no permitió guardar esta configuración. Revisa los permisos de administrador de la colección productos.'
-        : codigo==='storage/unauthorized'
-          ? 'El logo no se pudo subir: Firebase Storage denegó el permiso (storage/unauthorized). Hay que revisar las reglas del depósito.'
-          : codigo==='storage/bucket-not-found'
-          ? 'No se encontró el depósito de imágenes de Firebase (storage/bucket-not-found). Revisa que Storage esté habilitado.'
-          : codigo==='storage/retry-limit-exceeded'
-          ? 'Se agotaron los intentos de conexión a Firebase Storage (storage/retry-limit-exceeded). Revisa la conexión o la configuración del depósito.'
-          : codigo==='storage/quota-exceeded'
-          ? 'Firebase Storage alcanzó su cuota disponible (storage/quota-exceeded).'
-          : codigo.startsWith('storage/')
-          ? 'No se pudo subir el logo a Firebase Storage. Código: '+codigo+'. Revisa el depósito y sus reglas.'
-          : 'No se pudieron guardar los cambios: '+(error?.message||'Comprueba la conexión e inténtalo de nuevo.');
+      configMensaje.textContent=(codigo==='permission-denied'||codigo==='firestore/permission-denied')
+        ? 'Firestore no permitió guardar la configuración. Debemos revisar los permisos del administrador en la colección productos.'
+        : 'No se pudieron guardar los cambios: '+(error?.message||'Comprueba la conexión e inténtalo de nuevo.')+(codigo?' Código: '+codigo:'');
       console.error('Error al guardar configuración del negocio:',error);
     } finally {configGuardar.disabled=false;}
   });
