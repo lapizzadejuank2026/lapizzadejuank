@@ -274,7 +274,7 @@
       document.title = nombreNegocioActual + ' | Menú digital';
       const logo = byId('marca-logo');
       const alternativo = byId('marca-logo-alternativo');
-      const url = typeof datos?.logoURL === 'string' && /^https:\/\//i.test(datos.logoURL)
+      const url = typeof datos?.logoURL === 'string' && (/^https:\/\//i.test(datos.logoURL) || /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(datos.logoURL))
         ? datos.logoURL : 'chef.png';
       if (logo.getAttribute('src') !== url) {
         logo.hidden = false;
