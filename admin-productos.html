@@ -41,7 +41,14 @@
     .grupo-compacto .acciones button{padding:8px;margin:0}
     .grupo-compacto small{display:block;color:#bbb;margin-top:3px}
     #formModificador{background:#191919;border-radius:10px;padding:12px;margin-top:12px}
-    #formModificador textarea{min-height:110px}
+    .mod-opciones-lista{margin:10px 0}
+    .mod-fila-opcion{display:grid;grid-template-columns:minmax(0,1fr) minmax(106px,145px) 42px;gap:8px;align-items:end;padding:9px;margin:8px 0;background:#272727;border:1px solid #474747;border-radius:9px}
+    .mod-fila-opcion label{margin:0;font-size:13px}
+    .mod-fila-opcion input{margin:4px 0 0;padding:9px;width:100%}
+    .mod-fila-opcion .mod-eliminar-opcion{width:42px;height:40px;margin:0;padding:4px;background:#444;color:#fff}
+    .mod-fila-opcion .mod-eliminar-opcion:focus-visible{outline:2px solid #ffd575}
+    #agregarOpcionModificador{margin:0 0 6px}
+    @media(max-width:520px){.mod-fila-opcion{grid-template-columns:minmax(0,1fr) minmax(96px,112px) 36px;gap:5px;padding:6px}.mod-fila-opcion .mod-eliminar-opcion{width:36px}.mod-fila-opcion input{font-size:16px;padding:8px}}
     .mod-controls{display:flex;gap:10px;flex-wrap:wrap}
     .mod-controls button{flex:1}
     .mod-note{color:#ccc;font-size:13px}
@@ -96,9 +103,9 @@
               <input id="maxModificador" type="number" min="1" max="50" step="1" value="1" required>
             </label>
           </div>
-          <label>Opciones disponibles <small>(una por línea, precio adicional opcional después de |)</small>
-            <textarea id="opcionesModificador" rows="5" required placeholder="Hawaiana&#10;Carnes&#10;Pollo champiñón&#10;Queso extra | 3000"></textarea>
-          </label>
+          <p class="mod-note"><strong>Opciones disponibles</strong>. Cada opción tiene su propio precio adicional. Déjalo vacío o escribe 0 si está incluido en el precio del producto.</p>
+          <div id="filasOpcionesModificador" class="mod-opciones-lista" aria-label="Opciones y precios adicionales"></div>
+          <button id="agregarOpcionModificador" type="button" class="secundario">＋ Agregar otra opción</button>
           <label class="check"><input id="activoModificador" type="checkbox" checked> Grupo visible para clientes</label>
           <div class="mod-controls">
             <button id="guardarModificador" type="submit">💾 Guardar modificador</button>
@@ -420,40 +427,80 @@
     // Los modificadores se guardan en la colección productos, que ya cuenta
     // con las reglas de acceso del administrador. No se crean colecciones nuevas.
     const avisoModificador=texto=>$('mensajeModificador').textContent=texto;
+    function crearFilaOpcionModificador(nombre='',precio=0){
+      const contenedor=$('filasOpcionesModificador');
+      if(contenedor.children.length>=50){avisoModificador('Máximo 50 opciones por grupo.');return;}
+      const fila=document.createElement('div');fila.className='mod-fila-opcion';
+      const nombreLabel=document.createElement('label');nombreLabel.textContent='Opción / sabor';
+      const nombreInput=document.createElement('input');nombreInput.type='text';
+      nombreInput.className='mod-nombre-opcion';nombreInput.maxLength=90;
+      nombreInput.placeholder='Ej.: Hawaiana';nombreInput.value=nombre;
+      nombreInput.autocomplete='off';
+      nombreLabel.append(nombreInput);
+      const precioLabel=document.createElement('label');precioLabel.textContent='Adicional ($)';
+      const precioInput=document.createElement('input');precioInput.type='number';
+      precioInput.className='mod-precio-opcion';precioInput.min='0';
+      precioInput.max='99999999';precioInput.step='1';precioInput.inputMode='numeric';
+      precioInput.placeholder='0';precioInput.value=Number(precio)>0?String(precio):'';
+      precioLabel.append(precioInput);
+      const quitar=document.createElement('button');quitar.type='button';
+      quitar.className='mod-eliminar-opcion';quitar.textContent='×';
+      quitar.setAttribute('aria-label','Quitar opción');
+      quitar.addEventListener('click',()=>{
+        fila.remove();
+        if(!contenedor.children.length)crearFilaOpcionModificador();
+      });
+      fila.append(nombreLabel,precioLabel,quitar);
+      contenedor.append(fila);
+      return nombreInput;
+    }
     function limpiarModificador(){
       $('formModificador').reset();
       $('idModificador').value='';
       $('minModificador').value='0';
       $('maxModificador').value='1';
       $('activoModificador').checked=true;
+      $('filasOpcionesModificador').replaceChildren();
+      crearFilaOpcionModificador();
       $('guardarModificador').textContent='💾 Guardar modificador';
     }
+    $('agregarOpcionModificador').addEventListener('click',()=>{
+      const input=crearFilaOpcionModificador();
+      if(input)input.focus();
+    });
     $('limpiarModificador').addEventListener('click',()=>{limpiarModificador();avisoModificador('Listo para crear otro grupo.');});
     function leerOpcionesModificador(){
-      const lineas=$('opcionesModificador').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
-      if(!lineas.length || lineas.length>50)throw new Error('Agrega entre 1 y 50 opciones, una por línea.');
-      const usados=new Set();
-      return lineas.map((linea,index)=>{
-        const partes=linea.split('|').map(x=>x.trim());
-        if(partes.length>2 || !partes[0] || partes[0].length>90)throw new Error('Revisa la opción de la línea '+(index+1)+'.');
-        const nombre=partes[0];
+      const filas=Array.from($('filasOpcionesModificador').querySelectorAll('.mod-fila-opcion'));
+      const usadas=new Set();
+      const opciones=[];
+      for(let i=0;i<filas.length;i++){
+        const nombre=filas[i].querySelector('.mod-nombre-opcion').value.trim();
+        const textoPrecio=filas[i].querySelector('.mod-precio-opcion').value.trim();
+        if(!nombre&&!textoPrecio)continue;
+        if(!nombre||nombre.length>90)throw new Error('Escribe el nombre de la opción '+(i+1)+'.');
         const clave=nombre.toLocaleLowerCase('es');
-        if(usados.has(clave))throw new Error('La opción '+nombre+' está repetida.');
-        usados.add(clave);
-        const precioTexto=partes[1]||'0';
-        if(!/^\d+$/.test(precioTexto))throw new Error('Precio inválido en la línea '+(index+1)+'. Usa pesos sin puntos.');
-        const precio=Number(precioTexto);
-        if(!Number.isSafeInteger(precio) || precio>99999999)throw new Error('Precio demasiado alto en la línea '+(index+1)+'.');
-        return {nombre,precio};
-      });
+        if(usadas.has(clave))throw new Error('La opción '+nombre+' está repetida.');
+        usadas.add(clave);
+        if(textoPrecio&&!/^\d+$/.test(textoPrecio))throw new Error('Precio inválido en '+nombre+'. Escribe pesos sin puntos.');
+        const precio=textoPrecio?Number(textoPrecio):0;
+        if(!Number.isSafeInteger(precio)||precio<0||precio>99999999)
+          throw new Error('Precio adicional inválido para '+nombre+'.');
+        opciones.push({nombre,precio});
+      }
+      if(!opciones.length||opciones.length>50)
+        throw new Error('Agrega entre 1 y 50 opciones. Puedes dejar el precio vacío para cobrar $0 extra.');
+      return opciones;
     }
+    limpiarModificador();
     function editarModificador(g){
       $('panelModificadores').open=true;
       $('idModificador').value=g.id;
       $('nombreModificador').value=g.nombre||'';
       $('minModificador').value=g.minSeleccion??0;
       $('maxModificador').value=g.maxSeleccion??1;
-      $('opcionesModificador').value=(g.opciones||[]).map(o=>o.nombre+(Number(o.precio)>0?' | '+o.precio:'')).join('\n');
+      $('filasOpcionesModificador').replaceChildren();
+      for(const o of (g.opciones||[]))crearFilaOpcionModificador(String(o.nombre||''),Number(o.precio)||0);
+      if(!$('filasOpcionesModificador').children.length)crearFilaOpcionModificador();
       $('activoModificador').checked=g.activo!==false;
       $('guardarModificador').textContent='💾 Guardar cambios';
       avisoModificador('Editando '+g.nombre+'.');
