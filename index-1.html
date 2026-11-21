@@ -122,6 +122,7 @@
     .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
     label.field { display:flex; flex-direction:column; gap:5px; font-weight:700; font-size:14px; }
     .field.full { grid-column:1/-1; }
+    .delivery-field[hidden], .domicilio-extra[hidden] { display:none !important; }
     .field input,.field select,.field textarea { background:#2c2c30; border:1px solid #505057; color:white; border-radius:10px; padding:11px; width:100%; min-height:44px; }
     .field textarea { resize:vertical; min-height:80px; }
     .delivery-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:3px 0 18px; }
@@ -218,9 +219,9 @@
           <label class="field">Teléfono<input name="phone" inputmode="tel" maxlength="20" placeholder="Tu celular" required autocomplete="off"></label>
           <label class="field delivery-field">Municipio<select name="city"><option value="Gachancipá">Gachancipá</option><option value="Tocancipá">Tocancipá (todo el municipio)</option></select></label>
           <label class="field delivery-field">Dirección<input name="address" maxlength="150" placeholder="Dirección y referencia" required autocomplete="off"></label>
-          <label class="field full">Observaciones (opcional)<textarea name="notes" maxlength="350" placeholder="Indicaciones de la pizza o del domicilio"></textarea></label>
+          <label class="field full domicilio-extra">Observaciones (opcional)<textarea name="notes" maxlength="350" placeholder="Indicaciones de la pizza o del domicilio"></textarea></label>
         </div>
-        <div class="customer-memory">
+        <div class="customer-memory domicilio-extra">
           <label class="remember-choice"><input type="checkbox" id="rememberCustomer"> Recordar mis datos para próximos pedidos en este dispositivo</label>
           <div class="memory-help"><span id="customerMemoryStatus" role="status">Solo se guardan en este navegador si marcas la casilla.</span><button type="button" class="subtle-btn" id="forgetCustomer" hidden>Borrar datos guardados</button></div>
         </div>
@@ -667,6 +668,9 @@
         label.hidden=!delivery;
         label.querySelector('input,select').required=delivery;
       });
+      document.querySelectorAll('.domicilio-extra').forEach(element=>{
+        element.hidden=!delivery;
+      });
     }
     function avisarErrorFormulario(mensaje,campo) {
       const aviso=byId('orderFormError');
@@ -720,7 +724,7 @@
         modalidad:delivery?'domicilio':'recoger',
         municipio:delivery?String(f.get('city')||''):'',
         direccion:delivery?String(f.get('address')||'').trim():'',
-        observaciones:String(f.get('notes')||'').trim(),
+        observaciones:delivery?String(f.get('notes')||'').trim():'',
         productos,
         total:productos.reduce((sum,p)=>sum+p.subtotal,0)
       };
