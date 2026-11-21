@@ -287,7 +287,7 @@
     apiKey: 'AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA',
     authDomain: 'pizzadejuank.firebaseapp.com',
     projectId: 'pizzadejuank',
-    storageBucket: 'pizzadejuank.appspot.com',
+    storageBucket: 'pizzadejuank.firebasestorage.app',
     messagingSenderId: '856650093973',
     appId: '1:856650093973:web:a4cd3ad8e863617706d29c'
   };
@@ -393,7 +393,7 @@
   async function subirLogoNegocio(archivo) {
     const {getStorage, ref, uploadBytesResumable, getDownloadURL} =
       await import('https://www.gstatic.com/firebasejs/13.1.0/firebase-storage.js');
-    const storage = getStorage(app, 'gs://pizzadejuank.firebasestorage.app');
+    const storage = getStorage(app);
     const extension = archivo.type === 'image/png' ? 'png' : archivo.type === 'image/webp' ? 'webp' : 'jpg';
     const ruta = `productos/${auth.currentUser.uid}/logo-${Date.now()}.${extension}`;
     const tarea = uploadBytesResumable(ref(storage, ruta), archivo, {contentType:archivo.type});
@@ -403,8 +403,8 @@
         if (terminada) return;
         terminada = true;
         tarea.cancel();
-        reject(new Error('La subida tardó demasiado. Revisa tu conexión e inténtalo de nuevo.'));
-      }, 90000);
+        reject(new Error('La subida del logo no avanzó en 35 segundos. Comprueba la conexión y revisa los permisos de Firebase Storage.'));
+      }, 35000);
       tarea.on('state_changed', snapshot => {
         if (terminada) return;
         const porcentaje = Math.round(100*snapshot.bytesTransferred/Math.max(1,snapshot.totalBytes));
@@ -467,10 +467,19 @@
       document.getElementById('panel-nombre').textContent = '🍕 ' + datos.nombre;
       configMensaje.textContent='✅ Cambios guardados. El menú y la bienvenida mostrarán la información actualizada.';
     } catch (error) {
-      configMensaje.textContent=error?.code==='permission-denied'
+      const codigo = String(error?.code||'');
+      configMensaje.textContent=codigo==='permission-denied'
         ? 'Firebase no permitió guardar esta configuración. Revisa los permisos de administrador de la colección productos.'
-        : String(error?.code||'').startsWith('storage/')
-          ? 'No se pudo subir el logo a Firebase Storage ('+error.code+'). Comprueba los permisos del depósito de fotos e inténtalo de nuevo.'
+        : codigo==='storage/unauthorized'
+          ? 'El logo no se pudo subir: Firebase Storage denegó el permiso (storage/unauthorized). Hay que revisar las reglas del depósito.'
+          : codigo==='storage/bucket-not-found'
+          ? 'No se encontró el depósito de imágenes de Firebase (storage/bucket-not-found). Revisa que Storage esté habilitado.'
+          : codigo==='storage/retry-limit-exceeded'
+          ? 'Se agotaron los intentos de conexión a Firebase Storage (storage/retry-limit-exceeded). Revisa la conexión o la configuración del depósito.'
+          : codigo==='storage/quota-exceeded'
+          ? 'Firebase Storage alcanzó su cuota disponible (storage/quota-exceeded).'
+          : codigo.startsWith('storage/')
+          ? 'No se pudo subir el logo a Firebase Storage. Código: '+codigo+'. Revisa el depósito y sus reglas.'
           : 'No se pudieron guardar los cambios: '+(error?.message||'Comprueba la conexión e inténtalo de nuevo.');
       console.error('Error al guardar configuración del negocio:',error);
     } finally {configGuardar.disabled=false;}
