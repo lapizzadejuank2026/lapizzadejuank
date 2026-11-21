@@ -692,7 +692,7 @@
         byId('sendOrderButton').disabled=true;
         byId('summaryText').textContent='El catálogo cambió. Cierra este resumen y genera uno nuevo para verificar los precios y la disponibilidad.';
       }
-      byId('catalogStatus').textContent='Catálogo actualizado desde administración.';
+      byId('catalogStatus').textContent='Catálogo actualizado · personalización de productos habilitada.';
       renderCategorias();renderProducts();renderCart();
     };
     window.errorCatalogoFirebase=(error)=>{
