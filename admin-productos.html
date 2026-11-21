@@ -48,6 +48,11 @@
     .mod-fila-opcion .mod-eliminar-opcion{width:42px;height:40px;margin:0;padding:4px;background:#444;color:#fff}
     .mod-fila-opcion .mod-eliminar-opcion:focus-visible{outline:2px solid #ffd575}
     #agregarOpcionModificador{margin:0 0 6px}
+    .mod-descripcion-editor{grid-column:1/-1;margin-top:0}
+    .mod-descripcion-editor summary{color:#ffe09b;font-size:13px;font-weight:600;cursor:pointer;list-style-position:inside}
+    .mod-descripcion-editor label{margin-top:7px;font-size:13px}
+    .mod-descripcion-editor textarea{width:100%;min-height:70px;margin:4px 0 0;padding:10px;resize:vertical;font:inherit}
+    .mod-descripcion-editor small{display:block;color:#bbb;font-weight:400;margin-top:4px}
     @media(max-width:520px){.mod-fila-opcion{grid-template-columns:minmax(0,1fr) minmax(96px,112px) 36px;gap:5px;padding:6px}.mod-fila-opcion .mod-eliminar-opcion{width:36px}.mod-fila-opcion input{font-size:16px;padding:8px}}
     .mod-controls{display:flex;gap:10px;flex-wrap:wrap}
     .mod-controls button{flex:1}
@@ -103,7 +108,7 @@
               <input id="maxModificador" type="number" min="1" max="50" step="1" value="1" required>
             </label>
           </div>
-          <p class="mod-note"><strong>Opciones disponibles</strong>. Cada opción tiene su propio precio adicional. Déjalo vacío o escribe 0 si está incluido en el precio del producto.</p>
+          <p class="mod-note"><strong>Opciones disponibles</strong>. Cada opción tiene su propio precio adicional. Déjalo vacío o escribe 0 si está incluido en el precio del producto. Puedes añadir los ingredientes en «¿Qué lleva?» cuando quieras.</p>
           <div id="filasOpcionesModificador" class="mod-opciones-lista" aria-label="Opciones y precios adicionales"></div>
           <button id="agregarOpcionModificador" type="button" class="secundario">＋ Agregar otra opción</button>
           <label class="check"><input id="activoModificador" type="checkbox" checked> Grupo visible para clientes</label>
@@ -427,7 +432,7 @@
     // Los modificadores se guardan en la colección productos, que ya cuenta
     // con las reglas de acceso del administrador. No se crean colecciones nuevas.
     const avisoModificador=texto=>$('mensajeModificador').textContent=texto;
-    function crearFilaOpcionModificador(nombre='',precio=0){
+    function crearFilaOpcionModificador(nombre='',precio=0,descripcion=''){
       const contenedor=$('filasOpcionesModificador');
       if(contenedor.children.length>=50){avisoModificador('Máximo 50 opciones por grupo.');return;}
       const fila=document.createElement('div');fila.className='mod-fila-opcion';
@@ -450,7 +455,17 @@
         fila.remove();
         if(!contenedor.children.length)crearFilaOpcionModificador();
       });
-      fila.append(nombreLabel,precioLabel,quitar);
+      const detalles=document.createElement('details');detalles.className='mod-descripcion-editor';
+      detalles.open=Boolean(String(descripcion||'').trim());
+      const resumen=document.createElement('summary');resumen.textContent='ⓘ ¿Qué lleva? (ingredientes opcionales)';
+      const descripcionLabel=document.createElement('label');descripcionLabel.textContent='Ingredientes o descripción para el cliente';
+      const descripcionInput=document.createElement('textarea');
+      descripcionInput.className='mod-descripcion-opcion';descripcionInput.maxLength=350;
+      descripcionInput.rows=2;descripcionInput.value=String(descripcion||'');
+      descripcionInput.placeholder='Describe aquí qué ingredientes lleva esta opción.';
+      const consejo=document.createElement('small');consejo.textContent='Solo aparecerá en el menú cuando escribas una descripción.';
+      descripcionLabel.append(descripcionInput,consejo);detalles.append(resumen,descripcionLabel);
+      fila.append(nombreLabel,precioLabel,quitar,detalles);
       contenedor.append(fila);
       return nombreInput;
     }
@@ -476,7 +491,8 @@
       for(let i=0;i<filas.length;i++){
         const nombre=filas[i].querySelector('.mod-nombre-opcion').value.trim();
         const textoPrecio=filas[i].querySelector('.mod-precio-opcion').value.trim();
-        if(!nombre&&!textoPrecio)continue;
+        const descripcion=filas[i].querySelector('.mod-descripcion-opcion').value.trim();
+        if(!nombre&&!textoPrecio&&!descripcion)continue;
         if(!nombre||nombre.length>90)throw new Error('Escribe el nombre de la opción '+(i+1)+'.');
         const clave=nombre.toLocaleLowerCase('es');
         if(usadas.has(clave))throw new Error('La opción '+nombre+' está repetida.');
@@ -485,7 +501,7 @@
         const precio=textoPrecio?Number(textoPrecio):0;
         if(!Number.isSafeInteger(precio)||precio<0||precio>99999999)
           throw new Error('Precio adicional inválido para '+nombre+'.');
-        opciones.push({nombre,precio});
+        opciones.push({nombre,precio,descripcion});
       }
       if(!opciones.length||opciones.length>50)
         throw new Error('Agrega entre 1 y 50 opciones. Puedes dejar el precio vacío para cobrar $0 extra.');
@@ -499,7 +515,7 @@
       $('minModificador').value=g.minSeleccion??0;
       $('maxModificador').value=g.maxSeleccion??1;
       $('filasOpcionesModificador').replaceChildren();
-      for(const o of (g.opciones||[]))crearFilaOpcionModificador(String(o.nombre||''),Number(o.precio)||0);
+      for(const o of (g.opciones||[]))crearFilaOpcionModificador(String(o.nombre||''),Number(o.precio)||0,String(o.descripcion||''));
       if(!$('filasOpcionesModificador').children.length)crearFilaOpcionModificador();
       $('activoModificador').checked=g.activo!==false;
       $('guardarModificador').textContent='💾 Guardar cambios';
