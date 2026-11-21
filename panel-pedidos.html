@@ -1459,8 +1459,13 @@
     equipoEstado.textContent = 'Consultando personal disponible...';
     escucharEquipo();
     detenerConfiguracion = onSnapshot(refConfiguracion, snapshot => {
+      // El listener puede dispararse en mitad de un guardado: no debe tapar el resultado.
+      if (configGuardar.disabled || configArchivo.files.length) return;
       mostrarConfiguracion(snapshot.exists()?snapshot.data():null);
-      if (configMensaje.textContent!=='Guardando los cambios...') {
+      const mensajeActual = configMensaje.textContent;
+      if (!mensajeActual.startsWith('✅ Cambios guardados') &&
+          !mensajeActual.startsWith('No se pudieron guardar') &&
+          !mensajeActual.startsWith('Firestore no permitió')) {
         configMensaje.textContent=snapshot.exists()
           ? 'Información actual cargada. Puedes editarla y guardar.'
           : 'Todavía no hay configuración personalizada. Se mostrarán los textos actuales hasta que guardes.';
