@@ -126,6 +126,11 @@
     .field textarea { resize:vertical; min-height:80px; }
     .radio-group { display:flex; flex-wrap:wrap; gap:16px; margin:3px 0 18px; }
     .radio-group label { cursor:pointer; }
+    .customer-memory { margin-top:14px; padding:13px 14px; border:1px solid var(--border); border-radius:12px; background:#242427; }
+    .remember-choice { display:flex; align-items:flex-start; gap:10px; font-size:14px; font-weight:700; cursor:pointer; }
+    .remember-choice input { width:18px; height:18px; flex:0 0 18px; margin-top:2px; accent-color:var(--red); }
+    .memory-help { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-top:9px; font-size:12px; color:var(--muted); }
+    .memory-help button { font-size:12px; padding:7px 10px; border-radius:8px; }
     .summary-box { white-space:pre-wrap; background:#29292c; border:1px solid #46464c; padding:14px; border-radius:12px; font-size:14px; margin-top:10px; max-height:42vh; overflow:auto; }
     .warning { color:#f4c47d; font-size:13px; margin-top:14px; }
     .sr-only { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
@@ -210,7 +215,11 @@
           <label class="field delivery-field">Dirección<input name="address" maxlength="150" placeholder="Dirección y referencia" required autocomplete="off"></label>
           <label class="field full">Observaciones (opcional)<textarea name="notes" maxlength="350" placeholder="Indicaciones de la pizza o del domicilio"></textarea></label>
         </div>
-        <p class="warning">Tus datos se guardarán para gestionar tu pedido. no compartas contraseña ni datos bancarios.</p>
+        <div class="customer-memory">
+          <label class="remember-choice"><input type="checkbox" id="rememberCustomer"> Recordar mis datos para próximos pedidos en este dispositivo</label>
+          <div class="memory-help"><span id="customerMemoryStatus" role="status">Solo se guardan en este navegador si marcas la casilla.</span><button type="button" class="subtle-btn" id="forgetCustomer" hidden>Borrar datos guardados</button></div>
+        </div>
+        <p class="warning">Tus datos se enviarán al restaurante para gestionar tu pedido. No compartas contraseñas ni datos bancarios.</p>
       </div>
       <div class="dialog-footer"><button class="outline-btn" type="button" data-close="orderDialog">Volver</button><button class="primary-btn" type="submit">Generar resumen</button><p id="orderFormError" class="warning" role="alert" hidden style="width:100%;margin:0"></p></div>
     </form>
@@ -240,6 +249,7 @@
     const money = value => new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(value);
     const byId = id => document.getElementById(id);
     const storageKey = 'juanK-carrito-demo-v1';
+    const customerStorageKey = 'juanK-datos-cliente-v1';
     let cart = [];
     let pedidoPendiente = null;
     let selectedPizza = null;
@@ -591,6 +601,61 @@
       });
       byId('subtotal').textContent=money(total);
     }
+    function cargarDatosCliente() {
+      let datos;
+      try { datos=JSON.parse(localStorage.getItem(customerStorageKey)||'null'); }
+      catch(error) { return; }
+      if(!datos || typeof datos!=='object' || Array.isArray(datos)) return;
+      const formulario=byId('orderForm');
+      for(const [campo,maximo] of [['customer',60],['phone',20],['address',150]]) {
+        if(typeof datos[campo]==='string') formulario.elements.namedItem(campo).value=datos[campo].slice(0,maximo);
+      }
+      if(['Gachancipá','Tocancipá'].includes(datos.city)) formulario.elements.namedItem('city').value=datos.city;
+      if(['domicilio','recoger'].includes(datos.delivery)) {
+        const radio=[...formulario.querySelectorAll('input[name="delivery"]')].find(e=>e.value===datos.delivery);
+        if(radio) radio.checked=true;
+      }
+      byId('rememberCustomer').checked=true;
+      byId('forgetCustomer').hidden=false;
+      byId('customerMemoryStatus').textContent='Datos recuperados de este dispositivo. Puedes corregirlos antes de enviar.';
+      deliveryFields();
+    }
+    function olvidarDatosCliente(limpiarFormulario=false) {
+      try { localStorage.removeItem(customerStorageKey); } catch(error) {}
+      byId('rememberCustomer').checked=false;
+      byId('forgetCustomer').hidden=true;
+      byId('customerMemoryStatus').textContent='Los datos ya no quedarán guardados para futuros pedidos.';
+      if(limpiarFormulario) {
+        const formulario=byId('orderForm');
+        for(const campo of ['customer','phone','address']) formulario.elements.namedItem(campo).value='';
+        formulario.elements.namedItem('city').value='Gachancipá';
+        formulario.querySelector('input[name="delivery"][value="domicilio"]').checked=true;
+        deliveryFields();
+      }
+    }
+    function guardarDatosCliente() {
+      if(!byId('rememberCustomer').checked) {
+        try { localStorage.removeItem(customerStorageKey); } catch(error) {}
+        byId('forgetCustomer').hidden=true;
+        return;
+      }
+      const formulario=byId('orderForm');
+      const datos={
+        customer:formulario.elements.namedItem('customer').value.trim(),
+        phone:formulario.elements.namedItem('phone').value.trim(),
+        city:formulario.elements.namedItem('city').value,
+        address:formulario.elements.namedItem('address').value.trim(),
+        delivery:formulario.elements.delivery.value
+      };
+      try {
+        localStorage.setItem(customerStorageKey,JSON.stringify(datos));
+        byId('forgetCustomer').hidden=false;
+        byId('customerMemoryStatus').textContent='Datos guardados en este dispositivo para el próximo pedido.';
+      } catch(error) {
+        byId('rememberCustomer').checked=false;
+        byId('customerMemoryStatus').textContent='Este navegador no permitió guardar tus datos. Podrás continuar el pedido normalmente.';
+      }
+    }
     function deliveryFields() {
       const delivery=byId('orderForm').elements.delivery.value==='domicilio';
       document.querySelectorAll('.delivery-field').forEach(label=>{
@@ -669,6 +734,7 @@
       if(pedido.observaciones) lines.push(`Observaciones: ${pedido.observaciones}`);
       lines.push('','Este pedido solo se envía al confirmar. No se realiza ningún cobro automático.');
       byId('summaryText').textContent=lines.join('\n');
+      guardarDatosCliente();
       byId('orderDialog').close();
       byId('summaryDialog').showModal();
     }
@@ -761,6 +827,11 @@
       byId('orderDialog').showModal();
     });
     document.querySelectorAll('input[name="delivery"]').forEach(e=>e.addEventListener('change',deliveryFields));
+    byId('rememberCustomer').addEventListener('change',event=>{
+      if(event.target.checked) byId('customerMemoryStatus').textContent='Tus datos quedarán guardados al generar el resumen.';
+      else olvidarDatosCliente();
+    });
+    byId('forgetCustomer').addEventListener('click',()=>olvidarDatosCliente(true));
     byId('orderForm').addEventListener('submit',event=>{
       try { showSummary(event); }
       catch(error) {
@@ -805,6 +876,7 @@
         boton.disabled=false;
       }
     });
+    cargarDatosCliente();
     renderCategorias();renderProducts();renderCart();deliveryFields();
   </script>
   <script type="module">
