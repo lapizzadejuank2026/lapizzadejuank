@@ -294,7 +294,7 @@
       $('usuario').textContent='Sesión: '+user.email;
       $('lista').textContent='Cargando productos...';
       dejarDeEscuchar=onSnapshot(collection(db,'productos'),snapshot=>{
-        productos=snapshot.docs.map(x=>({id:x.id,...x.data()}));
+        productos=snapshot.docs.filter(x=>x.id!=='__configuracion_negocio' && x.data().tipo!=='configuracion-negocio').map(x=>({id:x.id,...x.data()}));
         pintar();
         pintarModificadores();
         pintarAsignacionesProducto();
