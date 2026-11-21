@@ -124,8 +124,13 @@
     .field.full { grid-column:1/-1; }
     .field input,.field select,.field textarea { background:#2c2c30; border:1px solid #505057; color:white; border-radius:10px; padding:11px; width:100%; min-height:44px; }
     .field textarea { resize:vertical; min-height:80px; }
-    .radio-group { display:flex; flex-wrap:wrap; gap:16px; margin:3px 0 18px; }
-    .radio-group label { cursor:pointer; }
+    .delivery-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:3px 0 18px; }
+    .delivery-options label { position:relative; display:block; cursor:pointer; }
+    .delivery-options input { position:absolute; width:1px; height:1px; opacity:0; }
+    .delivery-options .delivery-button { display:flex; justify-content:center; align-items:center; width:100%; min-height:54px; padding:10px 8px; border:2px solid #fff; border-radius:12px; background:#fff; color:#242428; font-weight:800; text-align:center; line-height:1.2; transition:background .15s,border-color .15s,color .15s; }
+    .delivery-options input:checked + .delivery-button { background:var(--red); border-color:#ff5e77; color:#fff; }
+    .delivery-options input:focus-visible + .delivery-button { outline:3px solid var(--gold); outline-offset:3px; }
+    .delivery-options label:hover .delivery-button { border-color:var(--gold); }
     .customer-memory { margin-top:14px; padding:13px 14px; border:1px solid var(--border); border-radius:12px; background:#242427; }
     .remember-choice { display:flex; align-items:flex-start; gap:10px; font-size:14px; font-weight:700; cursor:pointer; }
     .remember-choice input { width:18px; height:18px; flex:0 0 18px; margin-top:2px; accent-color:var(--red); }
@@ -207,7 +212,7 @@
     <form id="orderForm" novalidate>
       <div class="dialog-body">
         <p class="hint">Completa tus datos para enviar el pedido a La Pizza de Juan K. No se realiza ningún cobro automático.</p>
-        <fieldset style="border:0;padding:0;margin:15px 0 10px"><legend style="font-weight:800;margin-bottom:8px">¿Cómo recibirías tu pedido?</legend><div class="radio-group"><label><input type="radio" name="delivery" value="domicilio" checked> Domicilio</label><label><input type="radio" name="delivery" value="recoger"> Recoger en el local</label></div></fieldset>
+        <fieldset style="border:0;padding:0;margin:15px 0 10px"><legend style="font-weight:800;margin-bottom:8px">¿Cómo recibirías tu pedido?</legend><div class="delivery-options"><label><input type="radio" name="delivery" value="domicilio" checked><span class="delivery-button">🛵 Domicilio</span></label><label><input type="radio" name="delivery" value="recoger"><span class="delivery-button">🏪 Recoger en el local</span></label></div></fieldset>
         <div class="form-grid">
           <label class="field">Nombre<input name="customer" maxlength="60" placeholder="Tu nombre" required autocomplete="off"></label>
           <label class="field">Teléfono<input name="phone" inputmode="tel" maxlength="20" placeholder="Tu celular" required autocomplete="off"></label>
