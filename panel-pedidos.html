@@ -163,9 +163,9 @@
       <div class="caja">
         <h2 class="seccion-titulo">📦 Administrar productos</h2>
         <p class="hint">Agrega productos, cambia precios, organiza categorías y administra fotografías. La recepción y su alarma siguen activas mientras trabajas aquí.</p>
-        <p><a class="portal-link" href="admin-productos.html?v=modificadores-menu-foto-derecha-20261120#panelModificadores" target="_blank" rel="noopener">🧩 Abrir modificadores de productos</a></p>
+        <p><a class="portal-link" href="admin-productos.html?v=modificadores-marca-editable-20261120#panelModificadores" target="_blank" rel="noopener">🧩 Abrir modificadores de productos</a></p>
         <p class="hint">Si no ves la sección dentro del panel, usa el enlace de arriba para abrir el editor directamente.</p>
-        <p><a class="portal-link" href="index-1.html?v=menu-foto-derecha-20261120" target="_blank" rel="noopener">👀 Probar menú de clientes con modificadores</a></p>
+        <p><a class="portal-link" href="index-1.html?v=menu-marca-editable-20261120" target="_blank" rel="noopener">👀 Probar menú de clientes con modificadores</a></p>
       </div>
       <iframe id="marco-productos" title="Editor de productos" loading="lazy"></iframe>
     </section>
@@ -341,7 +341,7 @@
     tabEquipo.setAttribute('aria-selected', String(nombre === 'equipo'));
     if (nombre === 'productos' && !marcoCargado) {
       marcoCargado = true;
-      marcoProductos.src = 'admin-productos.html?integrado=1&v=modificadores-menu-foto-derecha-20261120';
+      marcoProductos.src = 'admin-productos.html?integrado=1&v=modificadores-marca-editable-20261120';
     }
     if (nombre === 'equipo' && auth.currentUser && !equipoCargado) escucharEquipo();
   }
