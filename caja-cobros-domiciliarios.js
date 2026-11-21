@@ -27,19 +27,19 @@ const fecha=x=>{
 };
 const numFecha=x=>x?.seconds||(x?.toDate?.().getTime()||0)/1000;
 
-let pedidos=[],control=null,controlEnServidor=false,pedidosEnServidor=false,usuario=null;
-let errorLecturaCobros='',errorLecturaControl='',errorRegistro='';
-let detenerControl=()=>{},detenerPedidos=()=>{},guardandoId='';
+let pedidos=[],control=null,turnoActivo=null,turnoEscuchadoId='',controlEnServidor=false,pedidosEnServidor=false,usuario=null;
+let errorLecturaCobros='',errorLecturaControl='',errorLecturaTurno='',errorRegistro='';
+let detenerControl=()=>{},detenerPedidos=()=>{},detenerTurno=()=>{},guardandoId='';
 function actualizarEstado(mensaje,error=false){
   $('estadoCobrosDomi').textContent=mensaje;
   $('estadoCobrosDomi').className=error?'estado error':'estado';
 }
 function limpiar(){
-  detenerPedidos();detenerControl();detenerPedidos=()=>{};detenerControl=()=>{};
-  pedidos=[];control=null;controlEnServidor=false;pedidosEnServidor=false;guardandoId='';
-  errorLecturaCobros='';errorLecturaControl='';errorRegistro='';
+  detenerPedidos();detenerControl();detenerTurno();detenerPedidos=()=>{};detenerControl=()=>{};detenerTurno=()=>{};
+  pedidos=[];control=null;turnoActivo=null;turnoEscuchadoId='';controlEnServidor=false;pedidosEnServidor=false;guardandoId='';
+  errorLecturaCobros='';errorLecturaControl='';errorLecturaTurno='';errorRegistro='';
   $('listaCobrosDomi').replaceChildren();
-  for(const id of ['domiEfectivoReportado','domiTransferenciaReportada','domiEfectivoListo','domiTransferenciaLista']){
+  for(const id of ['domiEfectivoReportado','domiTransferenciaReportada','domiEfectivoListo','domiTransferenciaLista','domiVentasTurno','domiEfectivoTurno','domiTransferenciaTurno']){
     $(id).textContent='—';
   }
 }
@@ -60,8 +60,8 @@ function sePuedeRegistrar(p){
 function dibujar(){
   if(!usuario)return;
   const lista=$('listaCobrosDomi');lista.replaceChildren();
-  if(errorLecturaCobros||errorLecturaControl){
-    actualizarEstado(errorLecturaCobros||errorLecturaControl,true);
+  if(errorLecturaCobros||errorLecturaControl||errorLecturaTurno){
+    actualizarEstado(errorLecturaCobros||errorLecturaControl||errorLecturaTurno,true);
     return;
   }
   if(!pedidosEnServidor){
@@ -76,6 +76,17 @@ function dibujar(){
   $('domiEfectivoListo').textContent=pesos(listos.reduce((s,p)=>s+integridad(p.d).efectivo,0));
   $('domiTransferenciaLista').textContent=pesos(listos.reduce((s,p)=>s+integridad(p.d).transferencia,0));
   const cajaAbierta=controlEnServidor && control?.estado==='abierta';
+  // Solo las entregas finalizadas dentro del turno cuentan como ventas reportadas de ese turno.
+  // Es un indicador en tiempo real, no un ingreso físico ni un movimiento contable adicional.
+  const inicio=numFecha(turnoActivo?.aperturaEn);
+  const ventasTurno=cajaAbierta&&turnoActivo?.estado==='abierta'&&inicio>0
+    ?reportados.filter(p=>p.d.estadoEntrega==='entregado'
+      && !!integridad(p.d)
+      && numFecha(p.d.entregaActualizadaEn)>=inicio)
+    :[];
+  $('domiVentasTurno').textContent=turnoActivo?pesos(ventasTurno.reduce((s,p)=>s+integridad(p.d).total,0)):'—';
+  $('domiEfectivoTurno').textContent=turnoActivo?pesos(ventasTurno.reduce((s,p)=>s+integridad(p.d).efectivo,0)):'—';
+  $('domiTransferenciaTurno').textContent=turnoActivo?pesos(ventasTurno.reduce((s,p)=>s+integridad(p.d).transferencia,0)):'—';
   const pendientes=reportados.filter(p=>!p.d.cajaMovimientoId);
   const anotados=reportados.filter(p=>p.d.cajaMovimientoId);
   const ordenados=[...pendientes.sort((a,b)=>numFecha(b.d.cobroReportadoEn)-numFecha(a.d.cobroReportadoEn)),
@@ -160,15 +171,35 @@ async function registrarCobro(pedidoId,mensaje){
     errorRegistro='No se pudo registrar el cobro: '+(error.message||error.code||'Error de Firebase')+'. Comprueba las reglas de Firebase y consulta movimientos antes de reintentar.';
   }finally{guardandoId='';dibujar();}
 }
+function escucharTurnoActivo(turnoId){
+  if(turnoId===turnoEscuchadoId)return;
+  detenerTurno();detenerTurno=()=>{};
+  turnoActivo=null;turnoEscuchadoId=turnoId||'';errorLecturaTurno='';
+  if(!turnoEscuchadoId){dibujar();return;}
+  const id=turnoEscuchadoId;
+  detenerTurno=onSnapshot(doc(db,'cajaTurnos',id),{includeMetadataChanges:true},snap=>{
+    if(turnoEscuchadoId!==id)return;
+    turnoActivo=snap.exists()&&!snap.metadata.fromCache?snap.data():null;
+    errorLecturaTurno=snap.exists()?'':'No se encontró el turno actual en Firebase.';
+    dibujar();
+  },err=>{
+    if(turnoEscuchadoId!==id)return;
+    turnoActivo=null;
+    errorLecturaTurno='No se pudo consultar la fecha de apertura del turno: '+(err.code||'sin acceso');
+    dibujar();
+  });
+}
 onAuthStateChanged(auth,user=>{
   limpiar();usuario=user;
   if(!user){actualizarEstado('Inicia sesión como administrador para consultar cobros.');return;}
   actualizarEstado('Cargando cobros de domiciliarios en Firebase...');
   detenerControl=onSnapshot(doc(db,'cajaControl','actual'),{includeMetadataChanges:true},snap=>{
     control=snap.exists()?snap.data():null;
-    controlEnServidor=!snap.metadata.fromCache;errorLecturaControl='';dibujar();
+    controlEnServidor=!snap.metadata.fromCache;errorLecturaControl='';
+    escucharTurnoActivo(control?.estado==='abierta'?control.turnoId:'');dibujar();
   },err=>{
-    controlEnServidor=false;errorLecturaControl='No se pudo consultar el estado de caja: '+(err.code||'sin acceso');dibujar();
+    controlEnServidor=false;errorLecturaControl='No se pudo consultar el estado de caja: '+(err.code||'sin acceso');
+    escucharTurnoActivo('');dibujar();
   });
   detenerPedidos=onSnapshot(collection(db,'pedidos'),{includeMetadataChanges:true},snap=>{
     pedidos=snap.docs.map(d=>({id:d.id,d:d.data()}));
