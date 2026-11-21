@@ -27,7 +27,7 @@
     .producto img{max-width:110px;max-height:110px;object-fit:cover;border-radius:10px;float:right;margin-left:10px}
     .producto h3{margin:0 0 6px}
     .producto p{overflow-wrap:anywhere}
-    #mensaje,#errorLogin,#mensajePizzas,#mensajeSabores{color:#ffd575;font-weight:bold;white-space:pre-wrap}
+    #mensaje,#errorLogin{color:#ffd575;font-weight:bold;white-space:pre-wrap}
     .tamano{background:#1b1b1b;border:1px solid #454545;border-radius:11px;padding:12px;margin:10px 0}
     .tamano .fila{align-items:center}
     .tamano .check{margin-top:14px}
@@ -59,22 +59,10 @@
         <p id="usuario"></p>
         <a href="panel-pedidos.html">← Volver a recepción de pedidos</a>
         <button id="salir" class="secundario" type="button">Cerrar sesión</button>
-        <p class="ayuda">Los cambios se reflejan en el menú de clientes cuando Firebase permita su consulta.</p>
+        <p class="ayuda">Los productos visibles se sincronizan con el menú de clientes a través de Firebase.</p>
         <p><a href="index-1.html" target="_blank" rel="noopener">👀 Ver menú de clientes</a></p>
       </div>
 
-      <section class="caja">
-        <h2>🍕 Nombres y precios de pizzas por tamaño</h2>
-        <p class="ayuda">Pulsa Editar en cada pizza y después Guardar cambios. Cada tamaño se guarda por separado, sin modificar los demás.</p>
-        <div id="listaTamanos"></div>
-        <p id="mensajePizzas" role="status"></p>
-      </section>
-      <section class="caja">
-        <h2>🧀 Sabores de pizza que ya tenemos</h2>
-        <p class="ayuda">Cada sabor se edita y guarda de manera independiente. El precio depende del tamaño de la pizza.</p>
-        <div id="listaSabores"></div>
-        <p id="mensajeSabores" role="status"></p>
-      </section>
       <section class="caja">
         <h2 id="tituloForm">Agregar producto</h2>
         <form id="formProducto">
@@ -145,7 +133,7 @@
   <script type="module">
     import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
     import {getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-    import {getFirestore,collection,addDoc,doc,updateDoc,setDoc,onSnapshot,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+    import {getFirestore,collection,addDoc,doc,updateDoc,onSnapshot,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
     // Storage se importa al seleccionar una foto. Una falla en ese servicio
     // no debe impedir iniciar sesión o modificar precios y productos.
 
@@ -182,138 +170,9 @@
     }
     let productos=[];
     let dejarDeEscuchar=()=>{};
-    const pizzasBase=[
-      {id:'personal',nombre:'Pizza personal',precio:20000,max:2},
-      {id:'small',nombre:'Pizza small',precio:35000,max:2},
-      {id:'mediana',nombre:'Pizza mediana',precio:45000,max:3},
-      {id:'familiar',nombre:'Pizza familiar',precio:62000,max:3}
-    ];
-    const saboresBase=[
-      {id:'hawaiana',nombre:'Hawaiana'},
-      {id:'carnes',nombre:'Carnes'},
-      {id:'pollo-champinon',nombre:'Pollo champiñón'},
-      {id:'mi-tierrita',nombre:'Mi Tierrita'},
-      {id:'mexicana',nombre:'Mexicana'},
-      {id:'venezolana',nombre:'Venezolana'},
-      {id:'de-la-casa',nombre:'De la Casa'},
-      {id:'ranchera',nombre:'Ranchera'},
-      {id:'campesina',nombre:'Campesina'},
-      {id:'pepperoni',nombre:'Pepperoni'}
-    ];
-
-    // Un botón de edición y uno de guardado para cada tarjeta.
-    function botonesIndividuales(card,campos,guardarDatos){
-      card.dataset.editando='no';
-      const acciones=document.createElement('div');acciones.className='acciones';
-      const editar=document.createElement('button');editar.type='button';editar.textContent='✏️ Editar';
-      const guardar=document.createElement('button');guardar.type='button';guardar.textContent='💾 Guardar cambios';
-      const aviso=document.createElement('p');aviso.className='ayuda';aviso.setAttribute('role','status');
-      const bloquear=valor=>campos.forEach(x=>x.disabled=valor);
-      bloquear(true);guardar.disabled=true;
-      editar.addEventListener('click',()=>{
-        card.dataset.editando='si';bloquear(false);editar.disabled=true;guardar.disabled=false;
-        aviso.textContent='Puedes modificar este producto y guardar solo sus cambios.';
-        campos[0].focus();
-      });
-      guardar.addEventListener('click',async()=>{
-        guardar.disabled=true;aviso.textContent='Guardando cambios...';
-        try{
-          await guardarDatos(aviso);
-          card.dataset.editando='no';bloquear(true);editar.disabled=false;
-          aviso.textContent='✅ Cambios guardados.';
-        }catch(e){
-          console.error(e);
-          aviso.textContent='❌ '+(e.code==='permission-denied'?'No tienes permiso para guardar en Firestore.':
-            String(e.code||'').startsWith('storage/')?'Firebase Storage no guardó la foto ('+e.code+'). Prueba con un enlace HTTPS.':
-            e.message||'No se pudo guardar.');
-          guardar.disabled=false;
-        }
-      });
-      acciones.append(editar,guardar);card.append(acciones,aviso);
-    }
-
-    function pintarSabores(){
-      const lista=$('listaSabores');
-      for(const sabor of saboresBase){
-        const actual=lista.querySelector('[data-sabor-id="'+sabor.id+'"]');
-        if(actual?.dataset.editando==='si')continue;
-        const d=productos.find(p=>p.id==='pizza-sabor-'+sabor.id && p.tipo==='pizza-sabor')||{};
-        const card=document.createElement('div');card.className='tamano';card.dataset.saborId=sabor.id;
-        const titulo=document.createElement('h3');titulo.textContent=d.nombre||sabor.nombre;
-        const label=document.createElement('label');label.textContent='Nombre del sabor';
-        const nombre=document.createElement('input');nombre.type='text';nombre.maxLength=100;nombre.value=d.nombre||sabor.nombre;
-        label.append(nombre);
-        const disponible=document.createElement('label');disponible.className='check';
-        const activo=document.createElement('input');activo.type='checkbox';activo.checked=d.activo!==false;
-        disponible.append(activo,document.createTextNode('Disponible'));
-        card.append(titulo,label,disponible);
-        botonesIndividuales(card,[nombre,activo],async()=>{
-          if(!auth.currentUser)throw new Error('Inicia sesión para guardar.');
-          const valor=nombre.value.trim();if(!valor)throw new Error('Escribe el nombre del sabor.');
-          await setDoc(doc(db,'productos','pizza-sabor-'+sabor.id),{
-            nombre:valor,activo:activo.checked,orden:saboresBase.indexOf(sabor)+1,
-            tipo:'pizza-sabor',categoria:'Pizzas',actualizadoEn:serverTimestamp()
-          },{merge:true});
-          titulo.textContent=valor;
-          $('mensajeSabores').textContent='✅ '+valor+' guardado.';
-        });
-        if(actual)actual.replaceWith(card);else lista.append(card);
-      }
-    }
-
-    function pintarTamanos(){
-      const lista=$('listaTamanos');
-      for(const pizza of pizzasBase){
-        const actual=lista.querySelector('[data-pizza-id="'+pizza.id+'"]');
-        if(actual?.dataset.editando==='si')continue;
-        const d=productos.find(x=>x.id==='pizza-tamano-'+pizza.id && x.tipo==='pizza-tamano')||{};
-        const card=document.createElement('div');card.className='tamano';card.dataset.pizzaId=pizza.id;
-        const titulo=document.createElement('h3');titulo.textContent=d.nombre||pizza.nombre;
-        const fila=document.createElement('div');fila.className='fila';
-        const nombreLabel=document.createElement('label');nombreLabel.textContent='Nombre ('+pizza.max+' sabores)';
-        const nombre=document.createElement('input');nombre.type='text';nombre.maxLength=100;nombre.value=d.nombre||pizza.nombre;
-        nombreLabel.append(nombre);
-        const precioLabel=document.createElement('label');precioLabel.textContent='Precio en pesos colombianos';
-        const precio=document.createElement('input');precio.type='number';precio.min='0';precio.max='99999999';precio.step='1';precio.value=d.precio??pizza.precio;
-        precioLabel.append(precio);fila.append(nombreLabel,precioLabel);
-        const disponible=document.createElement('label');disponible.className='check';
-        const activo=document.createElement('input');activo.type='checkbox';activo.checked=d.activo!==false;
-        disponible.append(activo,document.createTextNode('Visible en el menú'));
-        const fotoLabel=document.createElement('label');fotoLabel.textContent='Foto desde el celular (JPG, PNG o WEBP, máximo 5 MB)';
-        const foto=document.createElement('input');foto.type='file';foto.accept='image/jpeg,image/png,image/webp';fotoLabel.append(foto);
-        const enlaceLabel=document.createElement('label');enlaceLabel.textContent='O enlace de fotografía (HTTPS)';
-        const enlace=document.createElement('input');enlace.type='url';enlace.placeholder='https://...';enlace.value=d.fotoURL||'';enlaceLabel.append(enlace);
-        enlace.addEventListener('input',()=>{if(enlace.value.trim())foto.value='';});
-        foto.addEventListener('change',()=>{if(foto.files.length)enlace.value='';});
-        card.append(titulo,fila,disponible,fotoLabel,enlaceLabel);
-        if(d.fotoURL && d.fotoURL.startsWith('https://')){
-          const img=document.createElement('img');img.src=d.fotoURL;img.alt='Foto actual de '+(d.nombre||pizza.nombre);
-          img.loading='lazy';img.style.cssText='display:block;float:none;max-width:140px;max-height:115px;margin:10px 0;border-radius:10px;object-fit:cover';
-          card.append(img);
-        }
-        botonesIndividuales(card,[nombre,precio,activo,foto,enlace],async aviso=>{
-          if(!auth.currentUser)throw new Error('Inicia sesión para guardar.');
-          const n=nombre.value.trim(),p=Number(precio.value),url=enlace.value.trim(),archivo=foto.files[0]||null;
-          if(!n)throw new Error('Escribe el nombre de la pizza.');
-          if(precio.value.trim()===''||!Number.isInteger(p)||p<0||p>99999999)throw new Error('El precio no es válido.');
-          if(url && !url.startsWith('https://'))throw new Error('El enlace debe comenzar por https://');
-          if(archivo && (!['image/jpeg','image/png','image/webp'].includes(archivo.type)||archivo.size>5*1024*1024))
-            throw new Error('La foto debe ser JPG, PNG o WEBP de máximo 5 MB.');
-          const datos={nombre:n,precio:p,categoria:'Pizzas',tipo:'pizza-tamano',
-            max:pizza.max,activo:activo.checked,ordenCategoria:1,orden:pizzasBase.indexOf(pizza)+1,
-            fotoURL:url,actualizadoEn:serverTimestamp()};
-          if(archivo){
-            const extension=archivo.type==='image/png'?'png':archivo.type==='image/webp'?'webp':'jpg';
-            const ruta='productos/'+auth.currentUser.uid+'/pizzas/pizza-tamano-'+pizza.id+'-'+Date.now()+'.'+extension;
-            datos.fotoURL=await subirFotoConProgreso(ruta,archivo,'foto de '+n,texto=>aviso.textContent=texto);
-          }
-          await setDoc(doc(db,'productos','pizza-tamano-'+pizza.id),datos,{merge:true});
-          titulo.textContent=n;enlace.value=datos.fotoURL||'';foto.value='';
-          $('mensajePizzas').textContent='✅ '+n+': cambios guardados.';
-        });
-        if(actual)actual.replaceWith(card);else lista.append(card);
-      }
-    }
+    // El catálogo se gestiona exclusivamente desde el formulario Agregar producto.
+    // Los productos de pizza antiguos permanecen en Firestore como respaldo,
+    // pero no se presentan como plantillas en este administrador.
     const mensaje=texto=>$('mensaje').textContent=texto;
     const pesos=n=>'$'+Number(n||0).toLocaleString('es-CO');
 
@@ -374,8 +233,6 @@
       dejarDeEscuchar=onSnapshot(collection(db,'productos'),snapshot=>{
         productos=snapshot.docs.map(x=>({id:x.id,...x.data()}));
         pintar();
-        pintarTamanos();
-        pintarSabores();
       },error=>{
         $('lista').textContent='No hay acceso a la colección productos. Antes de guardar hay que configurar las reglas de Firestore para el administrador.';
         console.error(error);
