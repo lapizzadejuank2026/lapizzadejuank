@@ -101,10 +101,14 @@
     .mod-group{border:1px solid #46464a;border-radius:12px;padding:13px;margin:12px 0}
     .mod-group legend{font-weight:800;padding:0 5px}
     .mod-hint{color:var(--muted);font-size:13px;margin:2px 0 10px}
-    .mod-option{display:flex;gap:10px;align-items:center;justify-content:space-between;background:#29292c;border-radius:9px;padding:11px;margin:6px 0}
+    .mod-option{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:#29292c;border-radius:9px;padding:11px;margin:6px 0}
     .mod-option label{display:flex;align-items:center;gap:9px;flex:1;cursor:pointer}
     .mod-option input{width:18px;height:18px}
     .mod-option small{color:var(--gold);font-weight:700}
+    .mod-info-btn{background:#37373b;color:#ffe2a3;border:1px solid #736243;border-radius:50%;width:32px;height:32px;flex:0 0 32px;padding:0;display:grid;place-items:center;font-size:17px;font-weight:800;line-height:1}
+    .mod-info-btn[aria-expanded="true"]{background:#5c4426;border-color:var(--gold)}
+    .mod-descripcion{flex:0 0 100%;margin:0;padding:9px 11px;border-left:3px solid var(--gold);border-radius:5px;background:#202024;color:#e8e8ed;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}
+    .mod-descripcion[hidden]{display:none}
     .flavor-counter { margin-top:14px; color:var(--gold); font-weight:750; font-size:14px; }
     .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
     label.field { display:flex; flex-direction:column; gap:5px; font-weight:700; font-size:14px; }
@@ -439,6 +443,20 @@
           label.append(casilla,el('span',opcion.nombre));
           fila.append(label);
           if(opcion.precio>0)fila.append(el('small','+'+money(opcion.precio)));
+          if(opcion.descripcion){
+            const descripcion=el('p',opcion.descripcion,'mod-descripcion');
+            descripcion.hidden=true;
+            const informacion=el('button','ⓘ','mod-info-btn');
+            informacion.type='button';
+            informacion.setAttribute('aria-label','Qué lleva '+opcion.nombre);
+            informacion.setAttribute('title','¿Qué lleva '+opcion.nombre+'?');
+            informacion.setAttribute('aria-expanded','false');
+            informacion.addEventListener('click',()=>{
+              descripcion.hidden=!descripcion.hidden;
+              informacion.setAttribute('aria-expanded',String(!descripcion.hidden));
+            });
+            fila.append(informacion,descripcion);
+          }
           if(elegidos.has(opcion.nombre))extra+=opcion.precio;
           campo.append(fila);
         }
@@ -637,7 +655,8 @@
         const precio=Number(d.precio);
         if(d.tipo==='grupo-modificadores'){
           const opciones=Array.isArray(d.opciones)?d.opciones.filter(o=>o&&String(o.nombre||'').trim()).map(o=>({
-            nombre:String(o.nombre).trim(),precio:Number.isSafeInteger(Number(o.precio))&&Number(o.precio)>=0?Number(o.precio):0
+            nombre:String(o.nombre).trim(),precio:Number.isSafeInteger(Number(o.precio))&&Number(o.precio)>=0?Number(o.precio):0,
+            descripcion:String(o.descripcion||'').trim().slice(0,350)
           })):[];
           nuevosGrupos.push({id:item.id,nombre:String(d.nombre||'').trim(),activo:d.activo!==false,
             minSeleccion:Number(d.minSeleccion??0),maxSeleccion:Number(d.maxSeleccion??1),opciones});
@@ -692,7 +711,7 @@
         byId('sendOrderButton').disabled=true;
         byId('summaryText').textContent='El catálogo cambió. Cierra este resumen y genera uno nuevo para verificar los precios y la disponibilidad.';
       }
-      byId('catalogStatus').textContent='Catálogo actualizado · personalización de productos habilitada.';
+      byId('catalogStatus').textContent='Catálogo actualizado · consulta de ingredientes y opciones habilitada.';
       renderCategorias();renderProducts();renderCart();
     };
     window.errorCatalogoFirebase=(error)=>{
