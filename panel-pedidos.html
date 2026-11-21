@@ -96,13 +96,15 @@
     .config-form input,.config-form textarea { display:block; margin-top:7px; width:100%; border:1px solid #636363; background:#fff; color:#151515; padding:12px; border-radius:9px; font:inherit; }
     .config-form textarea { min-height:95px; resize:vertical; }
     .config-form button { margin-top:5px; }
+    .config-logo-preview { width:92px; height:92px; object-fit:contain; border-radius:14px; background:#fff; padding:8px; display:block; margin:10px 0; border:1px solid #777; }
+    .config-logo-note { color:#c9c9c9; font-size:13px; line-height:1.4; margin:2px 0 7px; }
     #config-mensaje { color:#ffe09c; white-space:pre-wrap; }
     button:focus-visible { outline:3px solid #fff; outline-offset:2px; }
     @media(max-width:520px) { header{padding:18px 12px} h1{font-size:23px} main{padding:10px 10px 24px} .caja,.pedido{padding:15px} .tabs{gap:6px} .tabs button{font-size:14px;padding:14px 5px} }
   </style>
 </head>
 <body>
-<header><h1>🍕 La Pizza de Juan K</h1><div>Centro de control · Pedidos, productos y equipo</div></header>
+<header><h1 id="panel-nombre">🍕 La Pizza de Juan K</h1><div>Centro de control · Pedidos, productos y equipo</div></header>
 <main>
   <section id="acceso" class="caja">
     <h2>Acceso del negocio</h2>
@@ -238,6 +240,11 @@
           <label>Mensaje de bienvenida del menú
             <textarea id="config-bienvenida" maxlength="280" required placeholder="Bienvenidos a nuestra pizzería..."></textarea>
           </label>
+          <label>Logo del negocio (foto que aparece en la cabecera)
+            <img id="config-logo-vista" class="config-logo-preview" src="chef.png" alt="Vista previa del logo actual">
+            <input id="config-logo" type="file" accept="image/jpeg,image/png,image/webp">
+          </label>
+          <p class="config-logo-note">Sube una foto JPG, PNG o WEBP de máximo 5 MB desde tu celular. Déjalo sin seleccionar para conservar el logo actual.</p>
           <button type="submit" id="config-guardar">💾 Guardar cambios</button>
           <p id="config-mensaje" role="status" aria-live="polite">Cargando información del negocio...</p>
         </form>
@@ -358,6 +365,64 @@
   };
   const configMensaje = document.getElementById('config-mensaje');
   const configGuardar = document.getElementById('config-guardar');
+  const configArchivo = document.getElementById('config-logo');
+  const configLogoVista = document.getElementById('config-logo-vista');
+  let logoURLActual = '';
+  let vistaTemporalLogo = null;
+  function limpiarVistaTemporalLogo() {
+    if (vistaTemporalLogo) URL.revokeObjectURL(vistaTemporalLogo);
+    vistaTemporalLogo = null;
+  }
+  configArchivo.addEventListener('change', () => {
+    limpiarVistaTemporalLogo();
+    const imagen = configArchivo.files?.[0];
+    if (!imagen) {
+      configLogoVista.src = logoURLActual || 'chef.png';
+      return;
+    }
+    if (!['image/jpeg','image/png','image/webp'].includes(imagen.type) || imagen.size > 5*1024*1024) {
+      configArchivo.value = '';
+      configLogoVista.src = logoURLActual || 'chef.png';
+      configMensaje.textContent = 'Selecciona un JPG, PNG o WEBP de máximo 5 MB.';
+      return;
+    }
+    vistaTemporalLogo = URL.createObjectURL(imagen);
+    configLogoVista.src = vistaTemporalLogo;
+    configMensaje.textContent = 'Nuevo logo seleccionado. Pulsa Guardar cambios para publicarlo.';
+  });
+  async function subirLogoNegocio(archivo) {
+    const {getStorage, ref, uploadBytesResumable, getDownloadURL} =
+      await import('https://www.gstatic.com/firebasejs/13.1.0/firebase-storage.js');
+    const storage = getStorage(app, 'gs://pizzadejuank.firebasestorage.app');
+    const extension = archivo.type === 'image/png' ? 'png' : archivo.type === 'image/webp' ? 'webp' : 'jpg';
+    const ruta = `productos/${auth.currentUser.uid}/logo-${Date.now()}.${extension}`;
+    const tarea = uploadBytesResumable(ref(storage, ruta), archivo, {contentType:archivo.type});
+    const subida = await new Promise((resolve, reject) => {
+      let terminada = false;
+      const limite = setTimeout(() => {
+        if (terminada) return;
+        terminada = true;
+        tarea.cancel();
+        reject(new Error('La subida tardó demasiado. Revisa tu conexión e inténtalo de nuevo.'));
+      }, 90000);
+      tarea.on('state_changed', snapshot => {
+        if (terminada) return;
+        const porcentaje = Math.round(100*snapshot.bytesTransferred/Math.max(1,snapshot.totalBytes));
+        configMensaje.textContent = 'Subiendo logo: ' + porcentaje + '%';
+      }, error => {
+        if (terminada) return;
+        terminada = true;
+        clearTimeout(limite);
+        reject(error);
+      }, () => {
+        if (terminada) return;
+        terminada = true;
+        clearTimeout(limite);
+        resolve(tarea.snapshot.ref);
+      });
+    });
+    return getDownloadURL(subida);
+  }
   function mostrarConfiguracion(datos) {
     for (const [campo, input] of Object.entries(camposConfiguracion)) {
       const valor = datos && typeof datos[campo]==='string' && datos[campo].trim()
@@ -365,6 +430,10 @@
         : configuracionPredeterminada[campo];
       input.value = valor;
     }
+    logoURLActual = datos && typeof datos.logoURL === 'string' && /^https:\/\//i.test(datos.logoURL)
+      ? datos.logoURL : '';
+    if (!configArchivo.files.length) configLogoVista.src = logoURLActual || 'chef.png';
+    document.getElementById('panel-nombre').textContent = '🍕 ' + camposConfiguracion.nombre.value;
   }
   mostrarConfiguracion(null);
   document.getElementById('config-form').addEventListener('submit', async evento => {
@@ -376,19 +445,33 @@
       if (!valor) {configMensaje.textContent='Completa todos los campos.';input.focus();return;}
       datos[campo]=valor;
     }
+    const imagen = configArchivo.files?.[0];
+    if (imagen && (!['image/jpeg','image/png','image/webp'].includes(imagen.type) || imagen.size > 5*1024*1024)) {
+      configMensaje.textContent='Selecciona una imagen JPG, PNG o WEBP de máximo 5 MB.';
+      return;
+    }
     configGuardar.disabled=true;
     configMensaje.textContent='Guardando los cambios...';
     try {
+      const logoURL = imagen ? await subirLogoNegocio(imagen) : logoURLActual;
       await setDoc(refConfiguracion, {
         tipo: 'configuracion-negocio',
         ...datos,
+        logoURL,
         actualizadoEn: serverTimestamp()
       }, {merge:true});
+      logoURLActual = logoURL;
+      configArchivo.value = '';
+      limpiarVistaTemporalLogo();
+      configLogoVista.src = logoURL || 'chef.png';
+      document.getElementById('panel-nombre').textContent = '🍕 ' + datos.nombre;
       configMensaje.textContent='✅ Cambios guardados. El menú y la bienvenida mostrarán la información actualizada.';
     } catch (error) {
       configMensaje.textContent=error?.code==='permission-denied'
         ? 'Firebase no permitió guardar esta configuración. Revisa los permisos de administrador de la colección productos.'
-        : 'No se pudieron guardar los cambios. Comprueba la conexión y vuelve a intentar.';
+        : String(error?.code||'').startsWith('storage/')
+          ? 'No se pudo subir el logo a Firebase Storage ('+error.code+'). Comprueba los permisos del depósito de fotos e inténtalo de nuevo.'
+          : 'No se pudieron guardar los cambios: '+(error?.message||'Comprueba la conexión e inténtalo de nuevo.');
       console.error('Error al guardar configuración del negocio:',error);
     } finally {configGuardar.disabled=false;}
   });
