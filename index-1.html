@@ -135,7 +135,8 @@
     .delivery-field[hidden], .domicilio-extra[hidden] { display:none !important; }
     .field input,.field select,.field textarea { background:#2c2c30; border:1px solid #505057; color:white; border-radius:10px; padding:11px; width:100%; min-height:44px; }
     .field textarea { resize:vertical; min-height:80px; }
-    #campoPagoEfectivo[hidden]{display:none!important}
+    #campoPagoEfectivo[hidden], .pago-tarjeta-opcion[hidden]{display:none!important}
+    .pago-tarjeta-opcion{grid-column:1/-1}
     .cambio-cliente{padding:10px 12px;margin:6px 0 12px;border:1px solid var(--border);border-radius:9px;background:#252525;color:#ffe2a3;font-size:13px;line-height:1.5}
     .delivery-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:3px 0 18px; }
     .delivery-options label { position:relative; display:block; cursor:pointer; }
@@ -237,8 +238,9 @@
           <div class="delivery-options">
             <label><input type="radio" name="pagoPreferido" value="efectivo"><span class="delivery-button">💵 Efectivo</span></label>
             <label><input type="radio" name="pagoPreferido" value="transferencia"><span class="delivery-button">📲 Transferencia</span></label>
+            <label class="pago-tarjeta-opcion"><input type="radio" name="pagoPreferido" value="tarjeta"><span class="delivery-button">💳 Tarjeta con datáfono</span></label>
           </div>
-          <p class="hint">Es solo tu forma de pago prevista. No se cobra aquí; el restaurante o domiciliario confirmará el pago real.</p>
+          <p class="hint">Es solo tu forma de pago prevista. No se cobra aquí; el restaurante o domiciliario confirmará el pago real. Para domicilio con tarjeta solicitaremos un datáfono y confirmaremos su disponibilidad.</p>
           <div id="campoPagoEfectivo" hidden>
             <label class="field" for="pagoConEfectivo">💵 ¿Con cuánto dinero vas a pagar?
               <input id="pagoConEfectivo" name="pagoConEfectivo" type="number" inputmode="numeric" min="1" max="100000000" step="1" placeholder="Ejemplo: 50000">
@@ -742,6 +744,11 @@
       document.querySelectorAll('.domicilio-extra').forEach(element=>{
         element.hidden=!delivery;
       });
+      const tarjeta=byId('orderForm').querySelector('input[name="pagoPreferido"][value="tarjeta"]');
+      tarjeta.closest('.pago-tarjeta-opcion').hidden=!delivery;
+      tarjeta.disabled=!delivery;
+      if(!delivery&&tarjeta.checked)tarjeta.checked=false;
+      actualizarPagoPreferido();
     }
     function subtotalActualCarrito(){
       sincronizarCarrito();
@@ -803,8 +810,8 @@
         }
       }
       const pagoPreferido=formulario.elements.pagoPreferido.value;
-      if(!['efectivo','transferencia'].includes(pagoPreferido)) {
-        avisarErrorFormulario('Selecciona si prefieres pagar en efectivo o por transferencia.',formulario.querySelector('input[name="pagoPreferido"]'));
+      if(!(['efectivo','transferencia'].includes(pagoPreferido)||(esDomicilio&&pagoPreferido==='tarjeta'))) {
+        avisarErrorFormulario(esDomicilio?'Selecciona efectivo, transferencia o tarjeta con datáfono.':'Selecciona efectivo o transferencia.',formulario.querySelector('input[name="pagoPreferido"]'));
         return;
       }
       sincronizarCarrito();
@@ -859,7 +866,9 @@
       }
       lines.push('',`SUBTOTAL: ${money(pedido.total)}`,delivery?'DOMICILIO: precio por confirmar':'DOMICILIO: no aplica','',`Nombre: ${pedido.cliente.nombre}`,`Teléfono: ${pedido.cliente.telefono}`,`Modalidad: ${delivery?'Domicilio':'Recoger en el local'}`);
       if(delivery)lines.push('⚠️ El domicilio no está incluido. El total final y las vueltas pueden variar según el costo del envío.');
-      lines.push('Forma de pago prevista: '+(pagoPreferido==='efectivo'?'Efectivo':'Transferencia')+' (sin cobrar todavía)');
+      const nombrePagoPrevisto=pagoPreferido==='efectivo'?'Efectivo':pagoPreferido==='tarjeta'?'Tarjeta con datáfono':'Transferencia';
+      lines.push('Forma de pago prevista: '+nombrePagoPrevisto+' (sin cobrar todavía)');
+      if(pagoPreferido==='tarjeta')lines.push('⚠️ El restaurante debe confirmar el datáfono antes de enviar el domicilio.');
       if(pagoPreferido==='efectivo'){
         lines.push('El cliente pagará con: '+money(pagoConEfectivo));
         lines.push(delivery
