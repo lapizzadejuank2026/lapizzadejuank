@@ -217,6 +217,11 @@
     texto(card,'Municipio: '+(d.municipio||cliente.municipio||'Sin municipio'));
     if(d.observaciones) texto(card,'Observaciones: '+d.observaciones);
     texto(card,'Productos:\n'+detalleProductos(d),'productos');
+    if(['efectivo','transferencia'].includes(d.pagoPreferido)) {
+      texto(card,'💳 Cliente prefiere pagar por: '+
+        (d.pagoPreferido==='efectivo'?'Efectivo':'Transferencia')+
+        ' · Confirmar el pago real al cobrar');
+    }
     mostrarCobroDomiciliario(card,pedido.id,d,db,auth);
     const paso=pasosEntrega.find(p=>p.desde===estado);
     if(paso){
