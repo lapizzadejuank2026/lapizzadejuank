@@ -84,7 +84,9 @@ function dibujar(){
     ?reportados.filter(p=>p.d.cajaTurnoId===control.turnoId ||
       (!p.d.cajaTurnoId&&numFecha(p.d.cobroReportadoEn)>=inicio))
     :[];
-  const sinCaja=delTurno.filter(p=>!p.d.cajaMovimientoId);
+  const referenciasCaja=window.__juancaReferenciasCaja||new Set();
+  const yaRegistrado=p=>Boolean(p.d.cajaMovimientoId)||referenciasCaja.has(p.id.toUpperCase())||referenciasCaja.has(p.id.slice(0,8).toUpperCase());
+  const sinCaja=delTurno.filter(p=>!yaRegistrado(p));
   window.__juancaPendientesDomicilio={
     turnoId:turnoCargado?control.turnoId:'',
     efectivo:sinCaja.reduce((sum,p)=>sum+(integridad(p.d)?.efectivo||0),0),
@@ -92,7 +94,7 @@ function dibujar(){
   };
   window.dispatchEvent(new Event('juanca-pendientes-actualizados'));
   const pendientes=sinCaja;
-  const anotados=delTurno.filter(p=>p.d.cajaMovimientoId&&!p.d.cajaConciliacionFinalizadaEn);
+  const anotados=delTurno.filter(p=>yaRegistrado(p)&&!p.d.cajaConciliacionFinalizadaEn);
   const ordenados=[...pendientes.sort((a,b)=>numFecha(b.d.cobroReportadoEn)-numFecha(a.d.cobroReportadoEn)),
     ...anotados.sort((a,b)=>numFecha(b.d.cajaRegistradoEn)-numFecha(a.d.cajaRegistradoEn))];
   const finalizables=anotados.filter(p=>p.d.cobroVerificado===true);
@@ -121,8 +123,8 @@ function dibujar(){
     txt(div,r?'Efectivo: '+pesos(r.efectivo)+' · Transferencia: '+pesos(r.transferencia)+' · Total: '+pesos(r.total)
       :'⚠️ Este reporte tiene importes inválidos y requiere revisión.');
     txt(div,fecha(d.cobroReportadoEn),'pequeno');
-    if(d.cajaMovimientoId){
-      txt(div,'✅ Registrado en caja · Movimiento '+String(d.cajaMovimientoId).slice(0,12),'pequeno');
+    if(yaRegistrado(p)){
+      txt(div,'✅ Registrado en caja'+(d.cajaMovimientoId?' · Movimiento '+String(d.cajaMovimientoId).slice(0,12):' · Referencia verificada en movimientos'),'pequeno');
     }else if(d.estadoEntrega!=='entregado'){
       txt(div,'⏳ Pago informado; espera a confirmar la entrega. No figura como ingreso de caja.','pequeno');
     }else if(d.cobroVerificado!==true){
@@ -213,6 +215,7 @@ async function registrarCobro(pedidoId,mensaje){
     errorRegistro='No se pudo registrar el cobro: '+(error.message||error.code||'Error de Firebase')+'. Comprueba las reglas de Firebase y consulta movimientos antes de reintentar.';
   }finally{guardandoId='';dibujar();}
 }
+window.addEventListener('juanca-caja-movimientos-actualizados',dibujar);
 onAuthStateChanged(auth,user=>{
   limpiar();usuario=user;
   if(!user){actualizarEstado('Inicia sesión como administrador para consultar cobros.');return;}
