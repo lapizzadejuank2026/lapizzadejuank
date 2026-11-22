@@ -232,6 +232,7 @@
       <div class="dialog-body">
         <p class="hint">Completa tus datos para enviar el pedido a <span id="marca-formulario">La Pizza de Juan K</span>. No se realiza ningún cobro automático.</p>
         <fieldset style="border:0;padding:0;margin:15px 0 10px"><legend style="font-weight:800;margin-bottom:8px">¿Cómo recibirías tu pedido?</legend><div class="delivery-options"><label><input type="radio" name="delivery" value="domicilio" checked><span class="delivery-button">🛵 Domicilio</span></label><label><input type="radio" name="delivery" value="recoger"><span class="delivery-button">🏪 Recoger en el local</span></label></div></fieldset>
+        <p id="avisoCostoDomicilio" class="warning domicilio-extra" role="note">⚠️ El valor del domicilio no está incluido en el subtotal. Tu total final puede variar según el costo del envío. Si pagas en efectivo, las vueltas se calcularán con el valor final confirmado por el restaurante.</p>
         <fieldset style="border:0;padding:0;margin:15px 0 12px"><legend style="font-weight:800;margin-bottom:8px">¿Cómo prefieres pagar?</legend>
           <div class="delivery-options">
             <label><input type="radio" name="pagoPreferido" value="efectivo"><span class="delivery-button">💵 Efectivo</span></label>
@@ -770,7 +771,7 @@
       }else if(pago<subtotal){
         aviso.textContent='⚠️ Ese valor no alcanza para cubrir los productos ('+money(subtotal)+').';
       }else if(f.elements.delivery.value==='domicilio'){
-        aviso.textContent='Cambio aproximado sobre productos: '+money(pago-subtotal)+'. El domicilio se confirma después y cambiará las vueltas.';
+        aviso.textContent='Cambio provisional sobre los productos: '+money(pago-subtotal)+'. ⚠️ No incluye domicilio: el total y las vueltas finales pueden variar según el costo del envío.';
       }else {
         aviso.textContent='Cambio previsto: '+money(pago-subtotal)+'.';
       }
@@ -856,12 +857,13 @@
           lines.push('  '+g.grupo+': '+g.opciones.map(o=>o.nombre+(o.precio>0?' (+'+money(o.precio)+')':'')).join(', '));
         }
       }
-      lines.push('',`SUBTOTAL: ${money(pedido.total)}`,'DOMICILIO: precio por confirmar','',`Nombre: ${pedido.cliente.nombre}`,`Teléfono: ${pedido.cliente.telefono}`,`Modalidad: ${delivery?'Domicilio':'Recoger en el local'}`);
+      lines.push('',`SUBTOTAL: ${money(pedido.total)}`,delivery?'DOMICILIO: precio por confirmar':'DOMICILIO: no aplica','',`Nombre: ${pedido.cliente.nombre}`,`Teléfono: ${pedido.cliente.telefono}`,`Modalidad: ${delivery?'Domicilio':'Recoger en el local'}`);
+      if(delivery)lines.push('⚠️ El domicilio no está incluido. El total final y las vueltas pueden variar según el costo del envío.');
       lines.push('Forma de pago prevista: '+(pagoPreferido==='efectivo'?'Efectivo':'Transferencia')+' (sin cobrar todavía)');
       if(pagoPreferido==='efectivo'){
         lines.push('El cliente pagará con: '+money(pagoConEfectivo));
         lines.push(delivery
-          ? 'Cambio sujeto al valor del domicilio (aún por confirmar).'
+          ? '⚠️ Las vueltas finales dependen del precio del domicilio, aún por confirmar.'
           : 'Cambio previsto: '+money(pagoConEfectivo-totalProductos));
       }
       if(delivery) lines.push(`Municipio: ${pedido.municipio}`,`Dirección: ${pedido.direccion}`);
