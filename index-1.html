@@ -135,6 +135,9 @@
     .delivery-field[hidden], .domicilio-extra[hidden] { display:none !important; }
     .field input,.field select,.field textarea { background:#2c2c30; border:1px solid #505057; color:white; border-radius:10px; padding:11px; width:100%; min-height:44px; }
     .field textarea { resize:vertical; min-height:80px; }
+    #campoPagoEfectivo[hidden], .pago-tarjeta-opcion[hidden]{display:none!important}
+    .pago-tarjeta-opcion{grid-column:1/-1}
+    .cambio-cliente{padding:10px 12px;margin:6px 0 12px;border:1px solid var(--border);border-radius:9px;background:#252525;color:#ffe2a3;font-size:13px;line-height:1.5}
     .delivery-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:3px 0 18px; }
     .delivery-options label { position:relative; display:block; cursor:pointer; }
     .delivery-options input { position:absolute; width:1px; height:1px; opacity:0; }
@@ -230,6 +233,21 @@
       <div class="dialog-body">
         <p class="hint">Completa tus datos para enviar el pedido a <span id="marca-formulario">La Pizza de Juan K</span>. No se realiza ningún cobro automático.</p>
         <fieldset style="border:0;padding:0;margin:15px 0 10px"><legend style="font-weight:800;margin-bottom:8px">¿Cómo recibirías tu pedido?</legend><div class="delivery-options"><label><input type="radio" name="delivery" value="domicilio" checked><span class="delivery-button">🛵 Domicilio</span></label><label><input type="radio" name="delivery" value="recoger"><span class="delivery-button">🏪 Recoger en el local</span></label></div></fieldset>
+        <p id="avisoCostoDomicilio" class="warning domicilio-extra" role="note">⚠️ El valor del domicilio no está incluido en el subtotal. Tu total final puede variar según el costo del envío. Si pagas en efectivo, las vueltas se calcularán con el valor final confirmado por el restaurante.</p>
+        <fieldset style="border:0;padding:0;margin:15px 0 12px"><legend style="font-weight:800;margin-bottom:8px">¿Cómo prefieres pagar?</legend>
+          <div class="delivery-options">
+            <label><input type="radio" name="pagoPreferido" value="efectivo"><span class="delivery-button">💵 Efectivo</span></label>
+            <label><input type="radio" name="pagoPreferido" value="transferencia"><span class="delivery-button">📲 Transferencia</span></label>
+            <label class="pago-tarjeta-opcion"><input type="radio" name="pagoPreferido" value="tarjeta"><span class="delivery-button">💳 Tarjeta con datáfono</span></label>
+          </div>
+          <p class="hint">Es solo tu forma de pago prevista. No se cobra aquí; el restaurante o domiciliario confirmará el pago real. Para domicilio con tarjeta solicitaremos un datáfono y confirmaremos su disponibilidad.</p>
+          <div id="campoPagoEfectivo" hidden>
+            <label class="field" for="pagoConEfectivo">💵 ¿Con cuánto dinero vas a pagar?
+              <input id="pagoConEfectivo" name="pagoConEfectivo" type="number" inputmode="numeric" min="1" max="100000000" step="1" placeholder="Ejemplo: 50000">
+            </label>
+            <p id="cambioCliente" class="cambio-cliente" role="status">Escribe el valor que entregarás para preparar el cambio.</p>
+          </div>
+        </fieldset>
         <div class="form-grid">
           <label class="field">Nombre<input name="customer" maxlength="60" placeholder="Tu nombre" required autocomplete="off"></label>
           <label class="field">Teléfono<input name="phone" inputmode="tel" maxlength="20" placeholder="Tu celular" required autocomplete="off"></label>
@@ -726,6 +744,44 @@
       document.querySelectorAll('.domicilio-extra').forEach(element=>{
         element.hidden=!delivery;
       });
+      const tarjeta=byId('orderForm').querySelector('input[name="pagoPreferido"][value="tarjeta"]');
+      tarjeta.closest('.pago-tarjeta-opcion').hidden=!delivery;
+      tarjeta.disabled=!delivery;
+      if(!delivery&&tarjeta.checked)tarjeta.checked=false;
+      actualizarPagoPreferido();
+    }
+    function subtotalActualCarrito(){
+      sincronizarCarrito();
+      return cart.reduce((s,item)=>{
+        const p=lookup(item);
+        return s+(p?precioUnitario(item,p)*item.qty:0);
+      },0);
+    }
+    function actualizarPagoPreferido(){
+      const formulario=byId('orderForm');
+      const esEfectivo=formulario.elements.pagoPreferido.value==='efectivo';
+      const campo=byId('pagoConEfectivo');
+      byId('campoPagoEfectivo').hidden=!esEfectivo;
+      campo.required=esEfectivo;
+      campo.disabled=!esEfectivo;
+      if(!esEfectivo)campo.value='';
+      actualizarVistaCambio();
+    }
+    function actualizarVistaCambio(){
+      const f=byId('orderForm');
+      if(f.elements.pagoPreferido.value!=='efectivo')return;
+      const v=byId('pagoConEfectivo').value;
+      const pago=Number(v),subtotal=subtotalActualCarrito();
+      const aviso=byId('cambioCliente');
+      if(v===''||!Number.isSafeInteger(pago)||pago<=0||pago>100000000){
+        aviso.textContent='Escribe el valor del billete o dinero que entregarás.';
+      }else if(pago<subtotal){
+        aviso.textContent='⚠️ Ese valor no alcanza para cubrir los productos ('+money(subtotal)+').';
+      }else if(f.elements.delivery.value==='domicilio'){
+        aviso.textContent='Cambio provisional sobre los productos: '+money(pago-subtotal)+'. ⚠️ No incluye domicilio: el total y las vueltas finales pueden variar según el costo del envío.';
+      }else {
+        aviso.textContent='Cambio previsto: '+money(pago-subtotal)+'.';
+      }
     }
     function avisarErrorFormulario(mensaje,campo) {
       const aviso=byId('orderFormError');
@@ -753,6 +809,11 @@
           return;
         }
       }
+      const pagoPreferido=formulario.elements.pagoPreferido.value;
+      if(!(['efectivo','transferencia'].includes(pagoPreferido)||(esDomicilio&&pagoPreferido==='tarjeta'))) {
+        avisarErrorFormulario(esDomicilio?'Selecciona efectivo, transferencia o tarjeta con datáfono.':'Selecciona efectivo o transferencia.',formulario.querySelector('input[name="pagoPreferido"]'));
+        return;
+      }
       sincronizarCarrito();
       if(!cart.length || cart.some(item=>!lookup(item))) {
         renderCart();
@@ -774,14 +835,24 @@
           subtotal:unitario*item.qty
         };
       });
+      const totalProductos=productos.reduce((sum,p)=>sum+p.subtotal,0);
+      const pagoEnEfectivo=String(f.get('pagoConEfectivo')||'').trim();
+      const pagoConEfectivo=pagoPreferido==='efectivo'?Number(pagoEnEfectivo):null;
+      if(pagoPreferido==='efectivo'&&
+        (!pagoEnEfectivo||!Number.isSafeInteger(pagoConEfectivo)||pagoConEfectivo<totalProductos||pagoConEfectivo>100000000)) {
+        avisarErrorFormulario('Indica con cuánto pagarás en efectivo. Debe cubrir al menos el subtotal de productos.',byId('pagoConEfectivo'));
+        return;
+      }
       const pedido={
         cliente:{nombre:String(f.get('customer')||'').trim(),telefono:String(f.get('phone')||'').trim()},
         modalidad:delivery?'domicilio':'recoger',
         municipio:delivery?String(f.get('city')||''):'',
         direccion:delivery?String(f.get('address')||'').trim():'',
         observaciones:delivery?String(f.get('notes')||'').trim():'',
+        pagoPreferido,
+        ...(pagoPreferido==='efectivo'?{pagoConEfectivo}:{}),
         productos,
-        total:productos.reduce((sum,p)=>sum+p.subtotal,0)
+        total:totalProductos
       };
       pedidoPendiente=pedido;
       byId('sendOrderButton').disabled=false;
@@ -793,7 +864,17 @@
           lines.push('  '+g.grupo+': '+g.opciones.map(o=>o.nombre+(o.precio>0?' (+'+money(o.precio)+')':'')).join(', '));
         }
       }
-      lines.push('',`SUBTOTAL: ${money(pedido.total)}`,'DOMICILIO: precio por confirmar','',`Nombre: ${pedido.cliente.nombre}`,`Teléfono: ${pedido.cliente.telefono}`,`Modalidad: ${delivery?'Domicilio':'Recoger en el local'}`);
+      lines.push('',`SUBTOTAL: ${money(pedido.total)}`,delivery?'DOMICILIO: precio por confirmar':'DOMICILIO: no aplica','',`Nombre: ${pedido.cliente.nombre}`,`Teléfono: ${pedido.cliente.telefono}`,`Modalidad: ${delivery?'Domicilio':'Recoger en el local'}`);
+      if(delivery)lines.push('⚠️ El domicilio no está incluido. El total final y las vueltas pueden variar según el costo del envío.');
+      const nombrePagoPrevisto=pagoPreferido==='efectivo'?'Efectivo':pagoPreferido==='tarjeta'?'Tarjeta con datáfono':'Transferencia';
+      lines.push('Forma de pago prevista: '+nombrePagoPrevisto+' (sin cobrar todavía)');
+      if(pagoPreferido==='tarjeta')lines.push('⚠️ El restaurante debe confirmar el datáfono antes de enviar el domicilio.');
+      if(pagoPreferido==='efectivo'){
+        lines.push('El cliente pagará con: '+money(pagoConEfectivo));
+        lines.push(delivery
+          ? '⚠️ Las vueltas finales dependen del precio del domicilio, aún por confirmar.'
+          : 'Cambio previsto: '+money(pagoConEfectivo-totalProductos));
+      }
       if(delivery) lines.push(`Municipio: ${pedido.municipio}`,`Dirección: ${pedido.direccion}`);
       if(pedido.observaciones) lines.push(`Observaciones: ${pedido.observaciones}`);
       lines.push('','Este pedido solo se envía al confirmar. No se realiza ningún cobro automático.');
@@ -888,9 +969,14 @@
     });
     byId('previewButton').addEventListener('click',()=>{
       deliveryFields();
+      actualizarPagoPreferido();
       byId('orderDialog').showModal();
     });
-    document.querySelectorAll('input[name="delivery"]').forEach(e=>e.addEventListener('change',deliveryFields));
+    document.querySelectorAll('input[name="delivery"]').forEach(e=>e.addEventListener('change',()=>{
+      deliveryFields();actualizarVistaCambio();
+    }));
+    document.querySelectorAll('input[name="pagoPreferido"]').forEach(e=>e.addEventListener('change',actualizarPagoPreferido));
+    byId('pagoConEfectivo').addEventListener('input',actualizarVistaCambio);
     byId('rememberCustomer').addEventListener('change',event=>{
       if(event.target.checked) byId('customerMemoryStatus').textContent='Tus datos quedarán guardados al generar el resumen.';
       else olvidarDatosCliente();
