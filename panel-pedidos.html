@@ -1471,7 +1471,8 @@
 
     estado.textContent = 'Conectando con Firestore...';
     equipoEstado.textContent = 'Consultando personal disponible...';
-    detenerEstadoCaja=onSnapshot(doc(db,'cajaControl','actual'), snap=>{
+    detenerEstadoCaja=onSnapshot(doc(db,'cajaControl','actual'), {includeMetadataChanges:true}, snap=>{
+      if(snap.metadata.fromCache){mostrarEstadoCaja(null);return;}
       mostrarEstadoCaja(snap.exists()&&snap.data().estado==='abierta'?'abierta':'cerrada');
     },()=>mostrarEstadoCaja(null));
     escucharEquipo();
