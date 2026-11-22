@@ -56,6 +56,8 @@ function validarOnline(){
 }
 function limpiarSubs(){
   detenerControl();detenerTurnos();detenerMovimientos();
+  window.__juancaReferenciasCaja=new Set();
+  window.dispatchEvent(new Event('juanca-caja-movimientos-actualizados'));
   detenerControl=()=>{};detenerTurnos=()=>{};detenerMovimientos=()=>{};
   servidor=false;control=null;turno=null;turnos=[];movimientos=[];turnoEscuchado='';
 }
@@ -130,12 +132,17 @@ function pintarMovimientos(){
 }
 function escucharMovimientos(turnoId){
   detenerMovimientos();movimientos=[];
+  window.__juancaReferenciasCaja=new Set();
+  window.dispatchEvent(new Event('juanca-caja-movimientos-actualizados'));
   turnoEscuchado=turnoId||'';
   if(!turnoId){pintarMovimientos();return;}
   detenerMovimientos=onSnapshot(query(collection(db,'movimientosCaja'),where('turnoId','==',turnoId)),
     snap=>{
       if(turnoEscuchado!==turnoId)return;
       movimientos=snap.docs.map(x=>({id:x.id,...x.data()}));
+      window.__juancaReferenciasCaja=new Set(movimientos.filter(m=>m.tipo==='ingreso'&&['venta_mesa','venta_domicilio','venta_llevar'].includes(m.categoria))
+        .map(m=>String(m.referencia||'').toUpperCase()).filter(Boolean));
+      window.dispatchEvent(new Event('juanca-caja-movimientos-actualizados'));
       pintarResumen();
     },error=>{
       $('estadoMovimientos').textContent='No se pueden consultar movimientos: '+(error.code||'sin acceso')+'. Revisa reglas.';
