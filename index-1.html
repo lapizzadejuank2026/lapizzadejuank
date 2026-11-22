@@ -230,6 +230,13 @@
       <div class="dialog-body">
         <p class="hint">Completa tus datos para enviar el pedido a <span id="marca-formulario">La Pizza de Juan K</span>. No se realiza ningún cobro automático.</p>
         <fieldset style="border:0;padding:0;margin:15px 0 10px"><legend style="font-weight:800;margin-bottom:8px">¿Cómo recibirías tu pedido?</legend><div class="delivery-options"><label><input type="radio" name="delivery" value="domicilio" checked><span class="delivery-button">🛵 Domicilio</span></label><label><input type="radio" name="delivery" value="recoger"><span class="delivery-button">🏪 Recoger en el local</span></label></div></fieldset>
+        <fieldset style="border:0;padding:0;margin:15px 0 12px"><legend style="font-weight:800;margin-bottom:8px">¿Cómo prefieres pagar?</legend>
+          <div class="delivery-options">
+            <label><input type="radio" name="pagoPreferido" value="efectivo"><span class="delivery-button">💵 Efectivo</span></label>
+            <label><input type="radio" name="pagoPreferido" value="transferencia"><span class="delivery-button">📲 Transferencia</span></label>
+          </div>
+          <p class="hint">Es solo tu forma de pago prevista. No se cobra aquí; el restaurante o domiciliario confirmará el pago real.</p>
+        </fieldset>
         <div class="form-grid">
           <label class="field">Nombre<input name="customer" maxlength="60" placeholder="Tu nombre" required autocomplete="off"></label>
           <label class="field">Teléfono<input name="phone" inputmode="tel" maxlength="20" placeholder="Tu celular" required autocomplete="off"></label>
@@ -753,6 +760,11 @@
           return;
         }
       }
+      const pagoPreferido=formulario.elements.pagoPreferido.value;
+      if(!['efectivo','transferencia'].includes(pagoPreferido)) {
+        avisarErrorFormulario('Selecciona si prefieres pagar en efectivo o por transferencia.',formulario.querySelector('input[name="pagoPreferido"]'));
+        return;
+      }
       sincronizarCarrito();
       if(!cart.length || cart.some(item=>!lookup(item))) {
         renderCart();
@@ -780,6 +792,7 @@
         municipio:delivery?String(f.get('city')||''):'',
         direccion:delivery?String(f.get('address')||'').trim():'',
         observaciones:delivery?String(f.get('notes')||'').trim():'',
+        pagoPreferido,
         productos,
         total:productos.reduce((sum,p)=>sum+p.subtotal,0)
       };
@@ -794,6 +807,7 @@
         }
       }
       lines.push('',`SUBTOTAL: ${money(pedido.total)}`,'DOMICILIO: precio por confirmar','',`Nombre: ${pedido.cliente.nombre}`,`Teléfono: ${pedido.cliente.telefono}`,`Modalidad: ${delivery?'Domicilio':'Recoger en el local'}`);
+      lines.push('Forma de pago prevista: '+(pagoPreferido==='efectivo'?'Efectivo':'Transferencia')+' (sin cobrar todavía)');
       if(delivery) lines.push(`Municipio: ${pedido.municipio}`,`Dirección: ${pedido.direccion}`);
       if(pedido.observaciones) lines.push(`Observaciones: ${pedido.observaciones}`);
       lines.push('','Este pedido solo se envía al confirmar. No se realiza ningún cobro automático.');
