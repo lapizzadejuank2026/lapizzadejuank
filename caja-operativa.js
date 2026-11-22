@@ -56,15 +56,36 @@ function validarOnline(){
 }
 function limpiarSubs(){
   detenerControl();detenerTurnos();detenerMovimientos();
+  window.__juancaReferenciasCaja=new Set();
+  window.dispatchEvent(new Event('juanca-caja-movimientos-actualizados'));
   detenerControl=()=>{};detenerTurnos=()=>{};detenerMovimientos=()=>{};
   servidor=false;control=null;turno=null;turnos=[];movimientos=[];turnoEscuchado='';
 }
+// Presentación de ventas: solo ventas cobradas o reportadas en el turno, nunca base ni ingresos extra.
+function pintarVentas(){
+  const activa=control?.estado==='abierta'&&turno?.estado==='abierta'&&control.turnoId===turno.id;
+  const registrados=activa?movimientos.filter(m=>m.tipo==='ingreso'&&['venta_mesa','venta_llevar','venta_domicilio'].includes(m.categoria)):[];
+  const subtotal=campo=>registrados.reduce((sum,m)=>sum+enteroRegistro(m[campo]),0);
+  const previo=window.__juancaPendientesDomicilio||{};
+  const actual=activa&&previo.turnoId===turno.id;
+  const efectivo=subtotal('efectivo')+(actual?enteroRegistro(previo.efectivo):0);
+  const transferencia=subtotal('transferencia')+(actual?enteroRegistro(previo.transferencia):0);
+  $('domiEfectivoReportado').textContent=pesos(efectivo);
+  $('domiTransferenciaReportada').textContent=pesos(transferencia);
+  $('totalVentas').textContent=pesos(efectivo+transferencia);
+  $('baseCajaResumen').textContent=activa?pesos(saldoBase(turno)):'—';
+  $('gastosCajaResumen').textContent=activa?pesos(enteroRegistro(turno.efectivoEgresos)+enteroRegistro(turno.transferenciaEgresos)):'$0';
+}
+window.addEventListener('juanca-pendientes-actualizados',pintarVentas);
 function pintarResumen(){
+  pintarVentas();
   const ocupada=control?.estado==='abierta';
   const abierta=ocupada&&turno?.estado==='abierta'&&control.turnoId===turno.id;
   $('seccionApertura').hidden=ocupada;
   $('seccionTurno').hidden=!abierta;
   $('seccionMovimiento').hidden=!abierta;
+  $('abrirMovimientos').disabled=!abierta;
+  if(!abierta&&$('dialogMovimiento').open)$('dialogMovimiento').close();
   $('seccionArqueo').hidden=!abierta;
   $('seccionLista').hidden=!abierta;
   const puede=abierta&&servidor&&!cargando;
@@ -111,13 +132,18 @@ function pintarMovimientos(){
 }
 function escucharMovimientos(turnoId){
   detenerMovimientos();movimientos=[];
+  window.__juancaReferenciasCaja=new Set();
+  window.dispatchEvent(new Event('juanca-caja-movimientos-actualizados'));
   turnoEscuchado=turnoId||'';
   if(!turnoId){pintarMovimientos();return;}
   detenerMovimientos=onSnapshot(query(collection(db,'movimientosCaja'),where('turnoId','==',turnoId)),
     snap=>{
       if(turnoEscuchado!==turnoId)return;
       movimientos=snap.docs.map(x=>({id:x.id,...x.data()}));
-      pintarMovimientos();
+      window.__juancaReferenciasCaja=new Set(movimientos.filter(m=>m.tipo==='ingreso'&&['venta_mesa','venta_domicilio','venta_llevar'].includes(m.categoria))
+        .map(m=>String(m.referencia||'').toUpperCase()).filter(Boolean));
+      window.dispatchEvent(new Event('juanca-caja-movimientos-actualizados'));
+      pintarResumen();
     },error=>{
       $('estadoMovimientos').textContent='No se pueden consultar movimientos: '+(error.code||'sin acceso')+'. Revisa reglas.';
     });
@@ -154,6 +180,11 @@ $('accesoCaja').addEventListener('submit',async e=>{
   finally{b.disabled=false;}
 });
 $('salirCaja').addEventListener('click',()=>signOut(auth));
+$('abrirMovimientos').addEventListener('click',()=>{
+  if(control?.estado!=='abierta'||turno?.estado!=='abierta')return;
+  $('dialogMovimiento').showModal();
+});
+$('cerrarDialogoMovimiento').addEventListener('click',()=>$('dialogMovimiento').close());
 onAuthStateChanged(auth,user=>{
   limpiarSubs();usuario=user;
   $('vistaAcceso').hidden=!!user;$('vistaCaja').hidden=!user;
@@ -289,6 +320,7 @@ $('formMovimientoCaja').addEventListener('submit',async e=>{
     $('montoCaja').value='';$('conceptoCaja').value='';$('referenciaCaja').value='';
     $('confirmoTransferenciaCaja').checked=false;
     intentoMovimiento=null;configurarMetodo();
+    $('dialogMovimiento').close();
   }catch(error){
     $('estadoMovimientoCaja').textContent='No se registró: '+(error.message||error.code)+
       ' Si hubo un fallo de red, comprueba primero el historial antes de volver a intentar.';

@@ -29,6 +29,10 @@
     .seccion-titulo { font-size:21px; margin:10px 0 4px; }
     .hint { color:#c8c8c8; font-size:14px; line-height:1.45; }
     #marco-productos { display:block; width:100%; height:1100px; border:0; border-radius:13px; background:#111; }
+    .estado-caja-enlace{display:block;text-decoration:none;padding:13px 16px;margin:0 0 12px;border-radius:12px;font-weight:bold;text-align:center;border:1px solid #777;background:#292929;color:#f7f7f7}
+    .estado-caja-enlace.abierta{background:#17462e;border-color:#4b9f70;color:#dcffe7}
+    .estado-caja-enlace.cerrada{background:#4d1d1d;border-color:#dd6666;color:#ffe5e5}
+    .estado-caja-enlace.pendiente{background:#3c3525;border-color:#b39a6c;color:#ffedcb}
     .enlaces-local { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-bottom:12px; }
     .enlaces-local a { text-decoration:none; text-align:center; background:#373028; border:1px solid #765b26; color:#ffda84; border-radius:10px; padding:13px 8px; font-size:15px; font-weight:bold; }
     .enlaces-local a:focus-visible {outline:3px solid #fff; outline-offset:3px}
@@ -117,6 +121,7 @@
   </section>
 
   <section id="panel" hidden>
+    <a id="estadoCajaEnlace" class="estado-caja-enlace pendiente" href="caja-operativa.html" aria-live="polite">⏳ Consultando estado de caja...</a>
     <nav class="tabs" aria-label="Secciones del administrador">
       <button id="tab-pedidos" type="button" role="tab" aria-controls="vista-pedidos" aria-selected="true">🔔 Pedidos <span id="nuevos-tab" class="cantidad" hidden>0</span></button>
       <button id="tab-productos" type="button" role="tab" aria-controls="vista-productos" aria-selected="false">📦 Productos</button>
@@ -125,7 +130,7 @@
     </nav>
     <nav class="enlaces-local" aria-label="Herramientas de salón y caja">
       <a href="salon-operativo.html">🍽️ Mesas y barra · Firebase (pruebas)</a>
-      <a href="caja-operativa.html">💰 Caja en Firebase · pruebas</a>
+      <a href="caja-operativa.html">💰 Caja</a>
     </nav>
     <section id="vista-pedidos" role="tabpanel" aria-labelledby="tab-pedidos">
     <div class="caja">
@@ -1255,6 +1260,35 @@
       tarjeta.append(linea(
         'Tipo de pedido: ' + lugarPedido
       ));
+      if (['efectivo','transferencia','tarjeta'].includes(d.pagoPreferido)) {
+        const descripcionPago=d.pagoPreferido==='efectivo'?'Efectivo':
+          d.pagoPreferido==='tarjeta'?'Tarjeta con datáfono':'Transferencia';
+        tarjeta.append(linea('💳 El cliente prefiere pagar por: ' +descripcionPago+' · Sin confirmar cobro'));
+        if(d.pagoPreferido==='tarjeta' && modalidadPedido.includes('domicilio')){
+          const avisoDatafono=linea('⚠️ LLEVAR DATÁFONO AL DOMICILIO. Confirmar que esté disponible y cargado antes de salir.');
+          avisoDatafono.style.cssText='font-weight:800;background:#fff0b0;color:#4c2b00;padding:10px;border-radius:8px';
+          tarjeta.append(avisoDatafono);
+        }
+        const pagoCon=Number(d.pagoConEfectivo);
+        if(d.pagoPreferido==='efectivo'&&d.pagoConEfectivo!=null&&
+          Number.isSafeInteger(pagoCon)&&pagoCon>0){
+          const pesosCambio=n=>'$'+n.toLocaleString('es-CO');
+          tarjeta.append(linea('💵 El cliente indica que pagará con: '+pesosCambio(pagoCon)));
+          const subtotal=Number(d.total),valorDomicilio=Number(d.domicilioValor);
+          const tieneDomicilio=modalidadPedido.includes('domicilio');
+          const precioConocido=!tieneDomicilio||
+            (d.domicilioValor!=null&&Number.isSafeInteger(valorDomicilio)&&valorDomicilio>=0);
+          if(Number.isSafeInteger(subtotal)&&subtotal>=0&&precioConocido){
+            const total=subtotal+(tieneDomicilio?valorDomicilio:0);
+            const vueltas=pagoCon-total;
+            tarjeta.append(linea(vueltas>=0
+              ? '💰 Cambio a preparar: '+pesosCambio(vueltas)+' (total '+pesosCambio(total)+')'
+              : '⚠️ El efectivo indicado no cubre el total. Faltan '+pesosCambio(-vueltas)+'. Confirma con el cliente.'));
+          }else if(tieneDomicilio){
+            tarjeta.append(linea('⏳ Cambio por calcular cuando se confirme el precio del domicilio.'));
+          }
+        }
+      }
 
       tarjeta.append(linea(
         'Dirección: ' + (d.direccion || cliente.direccion || 'No indicada')
@@ -1422,7 +1456,16 @@
     if (hayNuevos) sonar();
   }
 
+  let detenerEstadoCaja = () => {};
+  const enlaceCaja = document.getElementById('estadoCajaEnlace');
+  function mostrarEstadoCaja(estado){
+    const abierta=estado==='abierta',cerrada=estado==='cerrada';
+    enlaceCaja.className='estado-caja-enlace '+(abierta?'abierta':cerrada?'cerrada':'pendiente');
+    enlaceCaja.textContent=abierta?'🟢 Caja abierta · Ir a caja':cerrada?'🔴 Caja cerrada · Toca para abrirla':'⏳ Estado de caja no disponible · Ir a caja';
+  }
   onAuthStateChanged(auth, (user) => {
+    detenerEstadoCaja();detenerEstadoCaja=()=>{};
+    mostrarEstadoCaja(null);
     detenerEscucha();
     detenerEquipo();
     detenerConfiguracion();
@@ -1457,6 +1500,10 @@
 
     estado.textContent = 'Conectando con Firestore...';
     equipoEstado.textContent = 'Consultando personal disponible...';
+    detenerEstadoCaja=onSnapshot(doc(db,'cajaControl','actual'), {includeMetadataChanges:true}, snap=>{
+      if(snap.metadata.fromCache){mostrarEstadoCaja(null);return;}
+      mostrarEstadoCaja(snap.exists()&&snap.data().estado==='abierta'?'abierta':'cerrada');
+    },()=>mostrarEstadoCaja(null));
     escucharEquipo();
     detenerConfiguracion = onSnapshot(refConfiguracion, snapshot => {
       // El listener puede dispararse en mitad de un guardado: no debe tapar el resultado.

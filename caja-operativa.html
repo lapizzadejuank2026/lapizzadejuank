@@ -3,12 +3,22 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#a71919">
-<title>Caja conectada | La Pizza de Juanca</title>
+<title>Caja | La Pizza de Juanca</title>
 <style>
 :root{color-scheme:dark;--gold:#f6bd42;--bg:#111;--panel:#232323;--line:#505050}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:#fff;font-family:Arial,Helvetica,sans-serif}
 header{background:#a71919;padding:22px 12px;text-align:center}
 h1{font-size:26px;margin:0 0 6px}header p{margin:0}
+.botonCaja{display:inline-block;background:var(--gold);color:#171311;text-decoration:none;font-weight:bold;border-radius:9px;padding:13px 15px;text-align:center}
+.metric-boton{width:100%;font-size:14px;margin-top:8px;padding:11px 5px}
+.totalVentas{border:1px solid #675021;background:#151515;border-radius:12px;text-align:center;padding:16px;margin:12px 0}
+.totalVentas strong{display:block;color:var(--gold);font-size:27px}
+.dialogMovimiento{background:var(--bg);color:white;border:1px solid #70604a;border-radius:14px;padding:0;width:min(94vw,760px);max-height:88vh;overflow:auto}
+.dialogMovimiento::backdrop{background:rgba(0,0,0,.8)}
+.dialogMovimiento .card{margin:0}
+.cerrarDialogo{float:right;padding:9px 12px}
+.salidaSesion{margin:22px 0 0;text-align:center}
+.salidaSesion button{width:100%;max-width:350px}
 main{max-width:930px;margin:auto;padding:15px 14px 45px}
 h2{font-size:22px;margin:0 0 12px}h3{font-size:18px}
 .card{background:var(--panel);border-radius:13px;padding:18px;margin:15px 0}
@@ -46,9 +56,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 <body>
 <header><h1>💰 Caja · La Pizza de Juanca</h1><p>Apertura, ingresos, gastos y cierre</p></header>
 <main>
-<div class="banner"><strong>Versión conectada a Firebase — fase de pruebas.</strong>
-Los movimientos de esta pantalla se guardarán en Firestore solamente cuando se autoricen las reglas de seguridad del administrador. Usa datos ficticios hasta comprobar el sistema. Los pedidos y las ventas de mesas todavía no se contabilizan automáticamente para evitar duplicados.</div>
-<nav class="enlaces"><a href="panel-pedidos.html">← Centro de control</a><a href="caja.html">🧪 Caja anterior de demostración</a></nav>
+<nav class="enlaces"><a href="panel-pedidos.html">← Centro de control</a></nav>
 <section class="card" id="vistaAcceso">
 <h2>🔐 Acceso del administrador</h2>
 <p class="pequeno">Usa la cuenta administrativa de Firebase. Ningún domiciliario debe tener acceso a esta caja.</p>
@@ -60,21 +68,25 @@ Los movimientos de esta pantalla se guardarán en Firestore solamente cuando se 
 </section>
 <section id="vistaCaja" hidden>
 <div class="card">
-<div class="acciones"><p>Sesión: <strong id="usuarioCaja">...</strong></p><button id="salirCaja" class="secundario" type="button">Cerrar sesión</button></div>
+<div class="acciones"><p>Sesión: <strong id="usuarioCaja">...</strong></p><a class="botonCaja" href="#seccionCobrosDomi">💰 Ir a caja</a></div>
 <p id="conexion" class="estado" role="status">Conectando con Firebase...</p>
 <p id="controlActivo" class="resumen"></p>
 </div>
 <section class="card" id="seccionCobrosDomi">
-<h2>🛵 Cobros de domiciliarios · Firebase</h2>
-<p class="pequeno">Aquí aparecen los pagos que reportan los domiciliarios, separados en efectivo y transferencia. <strong>Las cifras reportadas aún NO son ingresos del turno.</strong> Cuando tú hayas recibido el efectivo y comprobado la transferencia, concilia el pedido en el panel de pedidos y luego pulsa «Registrar cobro en caja». Solo así entra en los totales de caja, una vez por pedido.</p>
+<h2>💰 Total de ventas</h2>
+<p class="pequeno">El domicilio entra en ventas cuando el repartidor pulsa «Registrar pago del cliente» y Firebase guarda el reporte, no al aceptar el pedido. Se suman efectivo y transferencias (también pagos mixtos), sin incluir la base. Los cobros pendientes de conciliación cuentan como ventas reportadas, pero no como efectivo ya entregado ni transferencias verificadas. Cada venta se cuenta una sola vez.</p>
+<div class="totalVentas"><strong id="totalVentas">$0</strong><span>Total de ventas cobradas o reportadas del turno</span></div>
 <div class="metricaGrid">
-<div class="metrica"><strong id="domiEfectivoReportado">—</strong><span>Efectivo reportado sin registrar</span></div>
-<div class="metrica"><strong id="domiTransferenciaReportada">—</strong><span>Transferencias reportadas sin registrar</span></div>
-<div class="metrica"><strong id="domiEfectivoListo">—</strong><span>Efectivo conciliado, listo para caja</span></div>
-<div class="metrica"><strong id="domiTransferenciaLista">—</strong><span>Transferencias verificadas, listas para caja</span></div>
+<div class="metrica"><strong id="domiEfectivoReportado">$0</strong><span>Efectivo reportado</span></div>
+<div class="metrica"><strong id="domiTransferenciaReportada">$0</strong><span>Transferencias reportadas</span></div>
+<div class="metrica"><strong id="baseCajaResumen">—</strong><span>Base de caja (no es venta)</span></div>
+<div class="metrica"><strong id="gastosCajaResumen">$0</strong><span>Gastos y salidas</span><button class="metric-boton" type="button" id="abrirMovimientos" disabled>➕ Registrar entrada o salida</button></div>
 </div>
 <p id="estadoCobrosDomi" class="estado" role="status">Esperando la conexión con Firebase...</p>
 <div id="listaCobrosDomi"></div>
+<button type="button" id="finalizarConciliacion" class="secundario" disabled>✅ Finalizar conciliación</button>
+<p id="estadoConciliacion" class="estado" role="status"></p>
+<details><summary>🕘 Historial de conciliaciones</summary><div id="listaHistorialCobros"></div></details>
 </section>
 <section class="card" id="seccionApertura">
 <h2>🔓 Abrir nueva caja</h2>
@@ -83,7 +95,7 @@ Los movimientos de esta pantalla se guardarán en Firestore solamente cuando se 
 <label>Efectivo base (COP)<input id="baseCaja" type="number" inputmode="numeric" min="0" max="100000000" step="1" required placeholder="Ejemplo: 100000"></label>
 <label>Responsable del turno<input id="responsableCaja" maxlength="70" placeholder="Nombre de quien abre" required></label>
 <label>Nota de apertura (opcional)<textarea id="notaApertura" maxlength="300" placeholder="Observaciones"></textarea></label>
-<button id="abrirCajaBoton" disabled type="submit">🔓 Abrir caja en Firebase</button>
+<button id="abrirCajaBoton" disabled type="submit">🔓 Abrir caja</button>
 </form><p id="estadoApertura" class="estado" role="status"></p>
 </section>
 <section class="card" id="seccionTurno" hidden>
@@ -96,7 +108,8 @@ Los movimientos de esta pantalla se guardarán en Firestore solamente cuando se 
 </div>
 <p class="pequeno">Movimientos registrados: <strong id="resumenMovimientos">0</strong>. Este resumen refleja solo movimientos de caja guardados, no todos los pedidos recibidos.</p>
 </section>
-<section class="card" id="seccionMovimiento" hidden>
+<dialog id="dialogMovimiento" class="dialogMovimiento"><section class="card" id="seccionMovimiento" hidden>
+<button id="cerrarDialogoMovimiento" class="secundario cerrarDialogo" type="button">✕ Cerrar</button>
 <h2>➕ Registrar entrada o salida</h2>
 <p class="pequeno">Para ventas, registra el cobro una sola vez usando el número del pedido o de la cuenta. No registres pedidos que todavía no se han pagado.</p>
 <form id="formMovimientoCaja">
@@ -132,7 +145,7 @@ Los movimientos de esta pantalla se guardarán en Firestore solamente cuando se 
 <button type="submit" id="guardarMovimiento" disabled>💾 Registrar movimiento</button>
 </form>
 <p id="estadoMovimientoCaja" class="estado" role="status"></p>
-</section>
+</section></dialog>
 <section class="card" id="seccionLista" hidden>
 <h2>📒 Movimientos de este turno</h2>
 <button id="exportarCaja" class="secundario" type="button">⬇️ Descargar movimientos CSV</button>
@@ -152,6 +165,7 @@ Los movimientos de esta pantalla se guardarán en Firestore solamente cuando se 
 <h2>🕘 Historial de cierres</h2><p class="pequeno">Últimos 15 turnos cerrados guardados en Firebase.</p>
 <div id="historialTurnos"></div>
 </section>
+<div class="salidaSesion"><button id="salirCaja" class="secundario" type="button">Cerrar sesión</button></div>
 </section>
 </main>
 <script type="module" src="caja-operativa.js"></script>

@@ -70,6 +70,22 @@ function cuadro(padre) {
   padre.append(section);
   return section;
 }
+// La preferencia del cliente informa el cambio; NO registra pagos ni dinero entregado.
+function avisoCambio(section,d,productos,domicilio){
+  if(d.pagoPreferido!=='efectivo'||d.pagoConEfectivo==null)return;
+  const billete=entero(d.pagoConEfectivo);
+  if(billete===null||billete<=0)return;
+  parrafo(section,'💵 El cliente indica que pagará con: '+pesosCobro(billete),'fuerte');
+  if(productos===null||domicilio===null){
+    parrafo(section,'⏳ Calcularemos el cambio cuando el restaurante confirme el valor del domicilio.');
+    return;
+  }
+  const total=productos+domicilio,vueltas=billete-total;
+  parrafo(section,vueltas>=0
+    ? '💰 Cambio que debes llevar: '+pesosCobro(vueltas)+' (total con domicilio: '+pesosCobro(total)+')'
+    : '⚠️ El efectivo indicado no alcanza. Faltan '+pesosCobro(-vueltas)+'. Aclara el pago con el cliente.',
+    vueltas<0?'cobro-error':'cobro-ok');
+}
 function resumenReporte(section, d) {
   const r = d.cobroReportado;
   if (!r || typeof r !== 'object') return false;
@@ -94,6 +110,7 @@ export function mostrarCobroDomiciliario(padre, pedidoId, d, db, auth) {
   if (productos !== null && domicilio !== null) {
     parrafo(section, 'TOTAL POR COBRAR: '+pesosCobro(productos+domicilio), 'cobro-total');
   }
+  avisoCambio(section,d,productos,domicilio);
   if (resumenReporte(section,d)) return;
   const estado = String(d.estadoEntrega || '').toLowerCase();
   if (estado === 'entregado') {
@@ -206,6 +223,7 @@ export function mostrarCobroAdmin(padre, pedidoId, d, db) {
   if(productos!==null && domicilio!==null) {
     parrafo(section,'Total cliente: '+pesosCobro(productos+domicilio),'cobro-total');
   }
+  avisoCambio(section,d,productos,domicilio);
   const reporte=Boolean(d.cobroReportado);
   if(!reporte && d.estadoEntrega!=='entregado') {
     const form=document.createElement('form');
