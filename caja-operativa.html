@@ -74,8 +74,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 </div>
 <section class="card" id="seccionCobrosDomi">
 <h2>💰 Total de ventas</h2>
-<p class="pequeno">Ventas del turno de mesas, para llevar y domicilios: efectivo más transferencias, sin sumar la base. Los cobros reportados por domiciliarios aún pendientes de registrar se muestran aquí para seguimiento, pero no se cuentan dos veces al pasar a caja.</p>
-<div class="totalVentas"><strong id="totalVentas">$0</strong><span>Total de ventas reportadas del turno</span></div>
+<p class="pequeno">El domicilio entra en ventas cuando el repartidor pulsa «Registrar pago del cliente» y Firebase guarda el reporte, no al aceptar el pedido. Se suman efectivo y transferencias (también pagos mixtos), sin incluir la base. Los cobros pendientes de conciliación cuentan como ventas reportadas, pero no como efectivo ya entregado ni transferencias verificadas. Cada venta se cuenta una sola vez.</p>
+<div class="totalVentas"><strong id="totalVentas">$0</strong><span>Total de ventas cobradas o reportadas del turno</span></div>
 <div class="metricaGrid">
 <div class="metrica"><strong id="domiEfectivoReportado">$0</strong><span>Efectivo reportado</span></div>
 <div class="metrica"><strong id="domiTransferenciaReportada">$0</strong><span>Transferencias reportadas</span></div>
