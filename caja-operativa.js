@@ -62,6 +62,9 @@ function limpiarSubs(){
 function pintarResumen(){
   const ocupada=control?.estado==='abierta';
   const abierta=ocupada&&turno?.estado==='abierta'&&control.turnoId===turno.id;
+  // Los accesos de arriba solo llevan al formulario correspondiente; jamás ejecutan el cierre.
+  $('accesoAbrirCaja').hidden=!usuario||!servidor||ocupada||cargando;
+  $('accesoCerrarCaja').hidden=!usuario||!servidor||!abierta||cargando;
   $('seccionApertura').hidden=ocupada;
   $('seccionTurno').hidden=!abierta;
   $('seccionMovimiento').hidden=!abierta;
