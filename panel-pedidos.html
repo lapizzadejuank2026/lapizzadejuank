@@ -1256,6 +1256,36 @@
         'Tipo de pedido: ' + lugarPedido
       ));
 
+      if (['efectivo','transferencia','tarjeta'].includes(d.pagoPreferido)) {
+        const descripcionPago=d.pagoPreferido==='efectivo'?'Efectivo':
+          d.pagoPreferido==='tarjeta'?'Tarjeta con datáfono':'Transferencia';
+        tarjeta.append(linea('💳 El cliente prefiere pagar por: ' +descripcionPago+' · Sin confirmar cobro'));
+        if(d.pagoPreferido==='tarjeta' && modalidadPedido.includes('domicilio')){
+          const avisoDatafono=linea('⚠️ LLEVAR DATÁFONO AL DOMICILIO. Confirmar que esté disponible y cargado antes de salir.');
+          avisoDatafono.style.cssText='font-weight:800;background:#fff0b0;color:#4c2b00;padding:10px;border-radius:8px';
+          tarjeta.append(avisoDatafono);
+        }
+        const pagoCon=Number(d.pagoConEfectivo);
+        if(d.pagoPreferido==='efectivo'&&d.pagoConEfectivo!=null&&
+          Number.isSafeInteger(pagoCon)&&pagoCon>0){
+          const pesosCambio=n=>'$'+n.toLocaleString('es-CO');
+          tarjeta.append(linea('💵 El cliente indica que pagará con: '+pesosCambio(pagoCon)));
+          const subtotal=Number(d.total),valorDomicilio=Number(d.domicilioValor);
+          const tieneDomicilio=modalidadPedido.includes('domicilio');
+          const precioConocido=!tieneDomicilio||
+            (d.domicilioValor!=null&&Number.isSafeInteger(valorDomicilio)&&valorDomicilio>=0);
+          if(Number.isSafeInteger(subtotal)&&subtotal>=0&&precioConocido){
+            const total=subtotal+(tieneDomicilio?valorDomicilio:0);
+            const vueltas=pagoCon-total;
+            tarjeta.append(linea(vueltas>=0
+              ? '💰 Cambio a preparar: '+pesosCambio(vueltas)+' (total '+pesosCambio(total)+')'
+              : '⚠️ El efectivo indicado no cubre el total. Faltan '+pesosCambio(-vueltas)+'. Confirma con el cliente.'));
+          }else if(tieneDomicilio){
+            tarjeta.append(linea('⏳ Cambio por calcular cuando se confirme el precio del domicilio.'));
+          }
+        }
+      }
+
       tarjeta.append(linea(
         'Dirección: ' + (d.direccion || cliente.direccion || 'No indicada')
       ));
