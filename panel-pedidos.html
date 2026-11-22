@@ -1260,6 +1260,11 @@
       tarjeta.append(linea(
         'Tipo de pedido: ' + lugarPedido
       ));
+      if (['efectivo','transferencia'].includes(d.pagoPreferido)) {
+        tarjeta.append(linea('💳 El cliente prefiere pagar por: ' +
+          (d.pagoPreferido==='efectivo'?'Efectivo':'Transferencia') +
+          ' · Sin confirmar cobro'));
+      }
 
       tarjeta.append(linea(
         'Dirección: ' + (d.direccion || cliente.direccion || 'No indicada')
