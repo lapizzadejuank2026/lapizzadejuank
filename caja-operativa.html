@@ -38,6 +38,11 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .verificado input{width:auto;display:inline-block;vertical-align:middle;margin:0 8px 0 0}
 .verificado label{display:block;margin:0;font-weight:normal}
 .enlaces{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:15px}
+details>summary{cursor:pointer;font-weight:bold;font-size:19px;color:var(--gold);padding:3px 0 6px}
+details>summary:focus-visible{outline:3px solid white;outline-offset:3px}
+details.detallesInternos{margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:10px}
+details.detallesInternos>summary{font-size:16px}
+details.card[open]>summary{margin-bottom:12px}
 [hidden]{display:none!important}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid white;outline-offset:3px}
 @media(max-width:640px){.metricaGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.fila2{grid-template-columns:1fr}header{padding:17px 10px}h1{font-size:24px}}
@@ -47,7 +52,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 <header><h1>💰 Caja · La Pizza de Juanca</h1><p>Apertura, ingresos, gastos y cierre</p></header>
 <main>
 <div class="banner"><strong>Versión conectada a Firebase — fase de pruebas.</strong>
-Los movimientos de esta pantalla se guardarán en Firestore solamente cuando se autoricen las reglas de seguridad del administrador. Usa datos ficticios hasta comprobar el sistema. Los pedidos y las ventas de mesas todavía no se contabilizan automáticamente para evitar duplicados.</div>
+Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase de pruebas: verifica los resultados antes de usar dinero real. Los cobros de mesas ya se registran al liberar la mesa; los domicilios requieren entrega y conciliación, y las ventas para llevar aún se registran manualmente. Un pedido sin cobrar no es ingreso de caja.</div>
 <nav class="enlaces"><a href="panel-pedidos.html">← Centro de control</a><a href="caja.html">🧪 Caja anterior de demostración</a></nav>
 <section class="card" id="vistaAcceso">
 <h2>🔐 Acceso del administrador</h2>
@@ -64,18 +69,6 @@ Los movimientos de esta pantalla se guardarán en Firestore solamente cuando se 
 <p id="conexion" class="estado" role="status">Conectando con Firebase...</p>
 <p id="controlActivo" class="resumen"></p>
 </div>
-<section class="card" id="seccionCobrosDomi">
-<h2>🛵 Cobros de domiciliarios · Firebase</h2>
-<p class="pequeno">Aquí aparecen los pagos que reportan los domiciliarios, separados en efectivo y transferencia. <strong>Las cifras reportadas aún NO son ingresos del turno.</strong> Cuando tú hayas recibido el efectivo y comprobado la transferencia, concilia el pedido en el panel de pedidos y luego pulsa «Registrar cobro en caja». Solo así entra en los totales de caja, una vez por pedido.</p>
-<div class="metricaGrid">
-<div class="metrica"><strong id="domiEfectivoReportado">—</strong><span>Efectivo reportado sin registrar</span></div>
-<div class="metrica"><strong id="domiTransferenciaReportada">—</strong><span>Transferencias reportadas sin registrar</span></div>
-<div class="metrica"><strong id="domiEfectivoListo">—</strong><span>Efectivo conciliado, listo para caja</span></div>
-<div class="metrica"><strong id="domiTransferenciaLista">—</strong><span>Transferencias verificadas, listas para caja</span></div>
-</div>
-<p id="estadoCobrosDomi" class="estado" role="status">Esperando la conexión con Firebase...</p>
-<div id="listaCobrosDomi"></div>
-</section>
 <section class="card" id="seccionApertura">
 <h2>🔓 Abrir nueva caja</h2>
 <p class="pequeno">Solo se permite un turno abierto. La base es dinero inicial, no una venta.</p>
@@ -96,6 +89,18 @@ Los movimientos de esta pantalla se guardarán en Firestore solamente cuando se 
 </div>
 <p class="pequeno">Movimientos registrados: <strong id="resumenMovimientos">0</strong>. Este resumen refleja solo movimientos de caja guardados, no todos los pedidos recibidos.</p>
 </section>
+<details class="card" id="seccionCobrosDomi">
+<summary>🛵 Cobros de domiciliarios pendientes e históricos</summary>
+<p class="pequeno">Aquí aparecen los pagos que reportan los domiciliarios, separados en efectivo y transferencia. <strong>Las cifras reportadas aún NO son ingresos del turno.</strong> Cuando tú hayas recibido el efectivo y comprobado la transferencia, concilia el pedido en el panel de pedidos y luego pulsa «Registrar cobro en caja». Solo así entra en los totales de caja, una vez por pedido.</p>
+<div class="metricaGrid">
+<div class="metrica"><strong id="domiEfectivoReportado">—</strong><span>Efectivo reportado sin registrar</span></div>
+<div class="metrica"><strong id="domiTransferenciaReportada">—</strong><span>Transferencias reportadas sin registrar</span></div>
+<div class="metrica"><strong id="domiEfectivoListo">—</strong><span>Efectivo conciliado, listo para caja</span></div>
+<div class="metrica"><strong id="domiTransferenciaLista">—</strong><span>Transferencias verificadas, listas para caja</span></div>
+</div>
+<p id="estadoCobrosDomi" class="estado" role="status">Esperando la conexión con Firebase...</p>
+<div id="listaCobrosDomi"></div>
+</details>
 <section class="card" id="seccionMovimiento" hidden>
 <h2>➕ Registrar entrada o salida</h2>
 <p class="pequeno">Para ventas, registra el cobro una sola vez usando el número del pedido o de la cuenta. No registres pedidos que todavía no se han pagado.</p>
@@ -148,12 +153,22 @@ Los movimientos de esta pantalla se guardarán en Firestore solamente cuando se 
 <button id="cerrarCajaBoton" class="peligro" disabled type="button">🔒 Cerrar turno</button>
 <p id="estadoCierreCaja" class="estado" role="status"></p>
 </section>
-<section class="card">
-<h2>🕘 Historial de cierres</h2><p class="pequeno">Últimos 15 turnos cerrados guardados en Firebase.</p>
+<details class="card" id="seccionHistorialDia">
+<summary>📅 Consultar historial de ventas por día</summary>
+<p class="pequeno">Selecciona una fecha para ver las ventas cobradas, efectivo, transferencias y gastos de sus turnos cerrados. Los turnos se agrupan por el día de apertura en horario de Colombia, incluso si cierran después de medianoche. Los cobros sin registrar no se cuentan como ventas.</p>
+<label for="fechaHistorial">Seleccionar día</label>
+<select id="fechaHistorial" disabled><option value="">Cargando fechas...</option></select>
+<p id="estadoHistorialDia" class="estado" role="status"></p>
+<div id="resumenHistorialDia"></div>
+<div id="movimientosHistorialDia"></div>
+<details class="detallesInternos">
+<summary>🕘 Ver últimos 15 cierres individuales</summary>
 <div id="historialTurnos"></div>
-</section>
+</details>
+</details>
 </section>
 </main>
 <script type="module" src="caja-operativa.js"></script>
 <script type="module" src="caja-cobros-domiciliarios.js"></script>
+<script type="module" src="caja-historial-dia.js"></script>
 </body></html>
