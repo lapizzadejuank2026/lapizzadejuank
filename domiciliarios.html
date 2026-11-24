@@ -113,8 +113,9 @@
       <p class="ayuda">La función para ofrecer un pedido a todos y adjudicarlo al primero que acepte se habilitará posteriormente.</p>
     </section>
     <section class="caja" id="vista-historial" hidden>
-      <h2>🕘 Mi historial de entregas</h2>
-      <div id="lista-historial"><div class="vacio">Todavía no hay entregas finalizadas.</div></div>
+      <h2>🕘 Mi historial de hoy</h2>
+      <p class="ayuda" id="fecha-historial"></p>
+      <div id="lista-historial"><div class="vacio">Todavía no hay entregas completadas hoy.</div></div>
     </section>
     <section class="caja" id="vista-cuenta" hidden>
       <h2>Mi cuenta</h2>
@@ -176,7 +177,18 @@
     $('efectivo-hoy').textContent='$'+total.toLocaleString('es-CO');
     $('detalle-efectivo').textContent='Efectivo de hoy pendiente de entregar. Los cobros de días anteriores siguen registrados para administración.';
   }
-  setInterval(()=>{if(!$('portal').hidden && escuchandoPedidos && $('efectivo-hoy').textContent!=='Sin datos')actualizarEfectivoHoy();},30000);
+  // Actualizar el día colombiano también cuando se deja abierta la aplicación.
+  let diaHistorialMostrado=null;
+  function revisarCambioDeDia(){
+    if($('portal').hidden || !escuchandoPedidos || $('efectivo-hoy').textContent==='Sin datos')return;
+    actualizarEfectivoHoy();
+    const hoy=diaBogota(new Date());
+    if(diaHistorialMostrado!==hoy)mostrarHistorialHoy();
+  }
+  setInterval(revisarCambioDeDia,1000*15);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)revisarCambioDeDia();});
+  window.addEventListener('pageshow',revisarCambioDeDia);
+  window.addEventListener('focus',revisarCambioDeDia);
 
   const estadosFinales=new Set(['entregado','cancelado']);
   const pasosEntrega=[
@@ -302,20 +314,35 @@
     }
     return card;
   }
+  // Solo se muestran entregas completadas en la fecha local de Colombia.
+  // No se elimina ningún pedido ni se modifica la conciliación de caja.
+  function entregasDelDia(pedidos,hoy){
+    return pedidos.filter(({d})=>
+      String(d.estadoEntrega||'').trim().toLowerCase()==='entregado' &&
+      diaBogota(d.entregaActualizadaEn)===hoy
+    ).sort((a,b)=>(b.d.entregaActualizadaEn?.toMillis?.()||b.d.entregaActualizadaEn?.getTime?.()||0)-(a.d.entregaActualizadaEn?.toMillis?.()||a.d.entregaActualizadaEn?.getTime?.()||0));
+  }
+  function mostrarHistorialHoy(){
+    const ahora=new Date();
+    const hoy=diaBogota(ahora);
+    diaHistorialMostrado=hoy;
+    const historial=entregasDelDia(pedidosPropios,hoy);
+    $('fecha-historial').textContent=new Intl.DateTimeFormat('es-CO',{timeZone:'America/Bogota',weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(ahora)+' · '+historial.length+' entrega(s) completada(s)';
+    const historico=$('lista-historial');
+    historico.replaceChildren();
+    for(const p of historial)historico.append(tarjetaEntrega(p));
+    if(!historial.length)historico.innerHTML='<div class="vacio">No tienes entregas completadas hoy.</div>';
+    $('tab-historial').textContent='🕘 Historial ('+historial.length+')';
+  }
   function mostrarPedidos(){
     actualizarEfectivoHoy();
     const abiertos=pedidosPropios.filter(p=>!estadosFinales.has(String(p.d.estadoEntrega||'pendiente').toLowerCase()));
-    const historial=pedidosPropios.filter(p=>estadosFinales.has(String(p.d.estadoEntrega||'pendiente').toLowerCase()));
     const lista=$('lista-entregas');
-    const historico=$('lista-historial');
     lista.replaceChildren();
-    historico.replaceChildren();
     for(const p of abiertos)lista.append(tarjetaEntrega(p));
-    for(const p of historial)historico.append(tarjetaEntrega(p));
     if(!abiertos.length)lista.innerHTML='<div class="vacio">🛵 Aún no tienes entregas pendientes.</div>';
-    if(!historial.length)historico.innerHTML='<div class="vacio">No hay entregas finalizadas.</div>';
     $('tab-pedidos').textContent='📦 Mis pedidos ('+abiertos.length+')';
-    $('tab-historial').textContent='🕘 Historial ('+historial.length+')';
+    mostrarHistorialHoy();
     $('estado-entregas').textContent=abiertos.length
       ?'✅ '+abiertos.length+' entrega(s) pendiente(s).'
       :'No tienes entregas pendientes.';
@@ -343,6 +370,7 @@
   }
 
   function seleccionarVista(nombre){
+    if(nombre==='historial')revisarCambioDeDia();
     for(const n of vistas){
       $('vista-'+n).hidden=n!==nombre;
       $('tab-'+n).setAttribute('aria-selected',String(n===nombre));
