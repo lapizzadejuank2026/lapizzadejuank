@@ -118,7 +118,7 @@
 <link rel="stylesheet" href="nav-admin-fija.css">
 </head>
 <body>
-<header><h1 id="panel-nombre">🍕 La Pizza de Juan K</h1><div>Centro de control · Pedidos, productos y equipo</div></header>
+<header><h1 id="panel-nombre">🍕 La Pizza de Juan K</h1><div>Centro de control del restaurante</div></header>
 <main>
   <section id="acceso" class="caja">
     <h2>Acceso del negocio</h2>
@@ -146,18 +146,20 @@
       </div>
       <p class="inicio-pie">La recepción continúa escuchando pedidos mientras trabajas en las secciones internas. Los cobros solo se registran desde los módulos correspondientes.</p>
     </section>
-    <nav class="tabs" id="tabs-administrador" aria-label="Secciones del administrador">
+    <nav class="tabs" id="tabs-administrador" aria-label="Secciones del administrador" hidden>
       <button id="tab-pedidos" type="button" role="tab" aria-controls="vista-pedidos" aria-selected="true">🔔 Pedidos <span id="nuevos-tab" class="cantidad" hidden>0</span></button>
       <button id="tab-productos" type="button" role="tab" aria-controls="vista-productos" aria-selected="false">📦 Productos</button>
       <button id="tab-equipo" type="button" role="tab" aria-controls="vista-equipo" aria-selected="false">👥 Equipo y roles</button>
       <button id="tab-configuracion" type="button" role="tab" aria-controls="vista-configuracion" aria-selected="false">⚙️ Configuración</button>
     </nav>
-    <nav class="enlaces-local" id="enlaces-local-admin" aria-label="Herramientas de salón y caja">
+    <nav class="enlaces-local" id="enlaces-local-admin" aria-label="Herramientas de salón y caja" hidden>
       <a href="salon-operativo.html">🍽️ Mesas y barra · Firebase (pruebas)</a>
       <a href="caja-operativa.html">💰 Caja en Firebase · pruebas</a>
     </nav>
-    <section id="vista-pedidos" role="tabpanel" aria-labelledby="tab-pedidos">
+    <section id="vista-pedidos" role="region" aria-labelledby="titulo-recepcion">
     <div class="caja">
+      <h2 id="titulo-recepcion" class="seccion-titulo">🔔 Pedidos · Recepción</h2>
+      <p class="hint">Aquí recibes y administras las comandas. Para Productos, Equipo, Mesas, Caja o Configuración utiliza el botón «Inicio» de abajo.</p>
       <p id="usuario"></p>
       <button id="activar">🔔 Activar alarma sonora</button>
       <button id="salir" class="secundario">Cerrar sesión</button>
@@ -371,8 +373,10 @@
 
   function cambiarVista(nombre) {
     vistaInicio.hidden = nombre !== 'inicio';
-    tabsAdministrador.hidden = nombre === 'inicio';
-    enlacesLocalAdmin.hidden = nombre === 'inicio';
+    // La pantalla de Pedidos queda limpia: las otras secciones se abren solo desde Inicio.
+    // Se conservan los nodos de pestañas porque el monitor y el contador los utilizan.
+    tabsAdministrador.hidden = true;
+    enlacesLocalAdmin.hidden = true;
     vistaPedidos.hidden = nombre !== 'pedidos';
     vistaProductos.hidden = nombre !== 'productos';
     vistaEquipo.hidden = nombre !== 'equipo';
