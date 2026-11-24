@@ -47,7 +47,10 @@
     .tamano .check input{margin:0}
     a{color:#ffe09b}
     [hidden]{display:none!important}
-    .integrado header,.integrado #panel > .caja:first-child{display:none!important}
+    .integrado header,.integrado .productos-volver{display:none!important}
+    .productos-volver{padding:4px 0;margin:4px 0 12px}
+    .productos-volver a{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid #54728c;border-radius:10px;background:#18334e;color:#fff;text-decoration:none;font-weight:700;font-size:14px}
+    .productos-volver a:focus-visible{outline:2px solid #ffd575;outline-offset:3px}
     details.caja>summary{cursor:pointer;font-size:19px;font-weight:700;padding:3px 0;list-style-position:inside}
     .grupo-compacto{display:flex;gap:10px;align-items:center;justify-content:space-between;background:#1c1c1c;border:1px solid #454545;border-radius:10px;padding:10px;margin:7px 0;flex-wrap:wrap}
     .grupo-compacto .acciones{min-width:180px;flex:0 1 230px}
@@ -112,12 +115,9 @@
     </section>
 
     <section id="panel" hidden>
-      <div class="caja">
-        <p id="usuario"></p>
-        <a href="panel-pedidos.html">← Volver a recepción de pedidos</a>
-        <button id="salir" class="secundario" type="button">Cerrar sesión</button>
-        <p class="ayuda">Los productos visibles se sincronizan con el menú de clientes a través de Firebase.</p>
-      </div>
+      <nav class="productos-volver" aria-label="Volver a la pantalla anterior">
+        <a id="volver-productos" href="panel-pedidos.html#vista-productos">← Volver</a>
+      </nav>
 
       <details class="caja" id="panelModificadores" open>
         <summary>🧩 Crear y asignar modificadores <small id="cantidadModificadores" class="ayuda">(0 grupos)</small></summary>
@@ -222,7 +222,7 @@
   </script>
   <script type="module">
     import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
-    import {getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
+    import {getAuth,signInWithEmailAndPassword,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
     import {getFirestore,collection,addDoc,doc,updateDoc,onSnapshot,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
     // Storage se importa al seleccionar una foto. Una falla en ese servicio
     // no debe impedir iniciar sesión o modificar precios y productos.
@@ -310,7 +310,19 @@
         $('clave').value='';
       }catch(error){$('errorLogin').textContent='No se pudo ingresar. Revisa tu correo y contraseña.';}
     });
-    $('salir').addEventListener('click',()=>signOut(auth));
+    $('volver-productos').addEventListener('click',evento=>{
+      // Si se abrió en otra pestaña o desde un enlace directo, regresar al módulo
+      // Productos del centro de control, nunca cerrar la sesión.
+      try {
+        const origen=new URL(document.referrer);
+        const raiz=new URL('./',location.href);
+        if(history.length>1 && origen.origin===location.origin &&
+           origen.pathname.startsWith(raiz.pathname) && origen.pathname!==location.pathname) {
+          evento.preventDefault();
+          history.back();
+        }
+      } catch (_) { /* El href proporciona el retorno cuando no hay historial. */ }
+    });
     window.__pizzaEditorListo=true;
 
     onAuthStateChanged(auth,user=>{
@@ -318,7 +330,6 @@
       $('acceso').hidden=!!user;
       $('panel').hidden=!user;
       if(!user){productos=[];$('productos-negocio').textContent='La Pizza de Juan K';return;}
-      $('usuario').textContent='Sesión: '+user.email;
       $('lista').textContent='Cargando productos...';
       dejarDeEscuchar=onSnapshot(collection(db,'productos'),snapshot=>{
         const configuracion=snapshot.docs.find(x=>x.id==='__configuracion_negocio')?.data();
