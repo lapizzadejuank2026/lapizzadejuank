@@ -11,6 +11,7 @@
   <link rel="apple-touch-icon" href="juanca-icon-192.jpg">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="La Pizza de Juan K">
+  <script src="config-publica.js?v=20261124"></script>
   <script defer src="clientes-instalacion.js?v=2"></script>
   <style>
     :root { --bg:#0b0b0d; --surface:#171719; --card:#212124; --text:#fff; --muted:#bdbdc3; --red:#b81932; --red2:#e7324b; --gold:#e3b84a; --border:#343438; --round:19px; }
@@ -43,6 +44,9 @@
     .cart-pill { white-space:nowrap; }
     .cart-pill span { background:#fff; color:#171719; font-size:12px; border-radius:20px; padding:1px 7px; margin-left:4px; }
     .hero { padding:46px 0 39px; background:radial-gradient(ellipse at 84% 30%, #4e1b1d 0, transparent 42%),linear-gradient(120deg,#101013,#1f1214); border-bottom:1px solid #333; }
+    #portada-negocio{display:block;width:min(100%,720px);max-height:245px;object-fit:cover;border-radius:14px;margin:0 auto 18px}
+    #portada-negocio[hidden]{display:none!important}
+    #menu-horarios{white-space:pre-line;line-height:1.45;margin-top:12px;font-size:13px;color:var(--gold)}
     .hero-inner { display:flex; align-items:center; justify-content:space-between; gap:30px; }
     .eyebrow { display:inline-block; text-transform:uppercase; font-size:12px; letter-spacing:.14em; color:var(--gold); font-weight:900; }
     .hero h1 { font-size:clamp(34px,5.3vw,62px); max-width:670px; letter-spacing:-.055em; line-height:1.05; margin:15px 0; }
@@ -188,11 +192,13 @@
   </header>
 
   <section class="hero" id="inicio">
+    <div class="wrap"><img id="portada-negocio" alt="Portada del restaurante" hidden onerror="this.hidden=true;"></div>
     <div class="wrap hero-inner">
       <div>
         <h1 class="sr-only" id="marca-titulo-accesible">La Pizza de Juan K</h1>
         <span class="eyebrow" id="marca-frase">Ingredientes deliciosos · Mucho sabor</span>
         <p id="marca-bienvenida">Bienvenidos a nuestra pizzería. Elige tu tamaño, combina tus sabores favoritos y arma tu pedido.</p>
+        <div id="menu-horarios" role="status"></div>
         <div class="notice"><strong>MENÚ DE PEDIDOS:</strong> Puedes usar el carrito para hacer tu pedido. <strong>Tus pedidos serán enviados a <span id="marca-aviso-nombre">La Pizza de Juan K</span>. El valor del domicilio y el método de pago se confirmarán con el restaurante. No se realizan cobros automáticos</strong>.</div>
       </div>
       <div class="hero-pizza" aria-hidden="true">🍕</div>
@@ -323,7 +329,20 @@
       frase: 'Ingredientes deliciosos · Mucho sabor',
       bienvenida: 'Bienvenidos a nuestra pizzería. Elige tu tamaño, combina tus sabores favoritos y arma tu pedido.'
     };
+    let horariosMenu=window.PulsoConfig.normalizarHorarios(null);
+    function pintarHorariosMenu(){
+      const general=window.PulsoConfig.estadoHorario(horariosMenu.general);
+      const lineas=[(general.abierto?'🟢 Abierto':'🔴 Cerrado')+' · Hoy: '+general.hoy];
+      for(const [clave,nombre] of [['domicilio','Domicilios'],['recoger','Recoger en el local']]){
+        if(horariosMenu[clave]){const servicio=window.PulsoConfig.estadoHorario(horariosMenu[clave]);lineas.push(nombre+': '+(servicio.abierto?'Abierto':'Cerrado')+' · '+servicio.hoy);}
+      }
+      document.getElementById('menu-horarios').textContent=lineas.join('\n');
+    }
+    pintarHorariosMenu();setInterval(pintarHorariosMenu,30000);
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)pintarHorariosMenu();});
     window.aplicarConfiguracionNegocio = (datos) => {
+      horariosMenu=window.PulsoConfig.normalizarHorarios(datos?.horarios);pintarHorariosMenu();
+      window.PulsoConfig.aplicarApariencia(datos,'menu');
       const texto = campo => typeof datos?.[campo] === 'string' && datos[campo].trim()
         ? datos[campo].trim() : informacionNegocioPorDefecto[campo];
       nombreNegocioActual = texto('nombre');
