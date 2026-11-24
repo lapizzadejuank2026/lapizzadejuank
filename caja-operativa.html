@@ -49,6 +49,7 @@ details.card[open]>summary{margin-bottom:12px}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid white;outline-offset:3px}
 @media(max-width:640px){.metricaGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.fila2{grid-template-columns:1fr}header{padding:17px 10px}h1{font-size:24px}}
 </style>
+<link rel="stylesheet" href="nav-admin-fija.css">
 </head>
 <body>
 <header><h1>💰 Caja · La Pizza de Juanca</h1><p>Apertura, ingresos, gastos y cierre</p></header>
@@ -179,4 +180,33 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
 <script type="module" src="caja-operativa.js"></script>
 <script type="module" src="caja-cobros-domiciliarios.js"></script>
 <script type="module" src="caja-historial-dia.js"></script>
+<script>
+(function(){
+  const destino=document.getElementById('seccionMovimiento');
+  const acceso=document.getElementById('vistaAcceso');
+  const apertura=document.getElementById('seccionApertura');
+  const principal=document.getElementById('vistaCaja');
+  const enlaces=[...document.querySelectorAll('.nav-admin-fija a')];
+  function actualizar(){
+    const movimientos=location.hash==='#seccionMovimiento';
+    enlaces.forEach(a=>a.removeAttribute('aria-current'));
+    const actual=enlaces[movimientos?4:3];if(actual)actual.setAttribute('aria-current','page');
+    if(!movimientos)return;
+    const target=principal.hidden?acceso:destino.hidden?apertura:destino;
+    requestAnimationFrame(()=>target.scrollIntoView({behavior:'smooth',block:'start'}));
+  }
+  window.addEventListener('hashchange',actualizar);
+  window.addEventListener('load',actualizar);
+  const obs=new MutationObserver(()=>{if(location.hash==='#seccionMovimiento')actualizar();});
+  obs.observe(destino,{attributes:true,attributeFilter:['hidden']});
+  obs.observe(principal,{attributes:true,attributeFilter:['hidden']});
+})();
+</script>
+<nav class="nav-admin-fija" aria-label="Navegación fija del administrador">
+<a href="panel-pedidos.html#panel-inicio" aria-label="Inicio del centro de control"><span class="nav-admin-icono" aria-hidden="true">🏠</span><span>Inicio</span></a>
+<a href="panel-pedidos.html#vista-pedidos" aria-label="Pedidos de recepción"><span class="nav-admin-icono" aria-hidden="true">🔔</span><span>Pedidos</span></a>
+<a href="salon-operativo.html" aria-label="Mesas y barra"><span class="nav-admin-icono" aria-hidden="true">🍽️</span><span>Mesas</span></a>
+<a href="caja-operativa.html" aria-label="Resumen de caja" aria-current="page"><span class="nav-admin-icono" aria-hidden="true">💰</span><span>Caja</span></a>
+<a href="caja-operativa.html#seccionMovimiento" aria-label="Registro de entradas y salidas"><span class="nav-admin-icono" aria-hidden="true">🧾</span><span>Entradas /<br>salidas</span></a>
+</nav>
 </body></html>
