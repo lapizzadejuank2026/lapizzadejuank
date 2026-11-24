@@ -196,10 +196,6 @@
 
   <main class="wrap main-layout">
     <div>
-      <div class="instalar-clientes" hidden>
-      <button type="button" class="instalar-clientes-btn">📲 Instalar nuestra aplicación</button>
-      <p class="instalar-clientes-ayuda" role="status" hidden></p>
-    </div>
       <section aria-labelledby="menuTitle" id="menu">
         <div class="section-heading"><div><h2 id="menuTitle">Nuestro menú</h2><p class="hint">Escoge tus favoritos y agrégalos al carrito.</p></div></div>
         <div id="catalogStatus" class="hint" role="status">Cargando catálogo actualizado...</div>
@@ -222,6 +218,10 @@
       <div class="tracking-content" id="trackingContenido" role="status" aria-live="polite">Todavía no hay un pedido reciente guardado en este dispositivo.</div>
       <p class="hint">No necesitas registrarte. Si borras los datos del navegador o cambias de celular, es posible que pierdas acceso al seguimiento.</p>
     </section>
+    <div class="instalar-clientes" style="grid-column:1 / -1" hidden>
+      <button type="button" class="instalar-clientes-btn">📲 Instalar nuestra aplicación</button>
+      <p class="instalar-clientes-ayuda" role="status" hidden></p>
+    </div>
   </main>
   <footer>© <span id="marca-pie">La Pizza de Juan K</span> · Pedidos por nuestro menú digital.</footer>
 
