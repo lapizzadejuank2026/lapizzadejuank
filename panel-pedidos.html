@@ -99,6 +99,19 @@
     .config-logo-preview { width:92px; height:92px; object-fit:contain; border-radius:14px; background:#fff; padding:8px; display:block; margin:10px 0; border:1px solid #777; }
     .config-logo-note { color:#c9c9c9; font-size:13px; line-height:1.4; margin:2px 0 7px; }
     #config-mensaje { color:#ffe09c; white-space:pre-wrap; }
+    /* Portada del centro de control, distinta de la recepción de pedidos. */
+    .inicio-panel{padding:3px 0 18px}
+    .inicio-hero{padding:21px 18px;background:linear-gradient(135deg,#35241b,#1a1a1a);border:1px solid #765b26;border-radius:15px;margin:14px 0}
+    .inicio-hero h2{font-size:23px;color:#ffd77d;margin:0 0 8px}
+    .inicio-hero p{margin:0;color:#e4dfd7;line-height:1.5}
+    .inicio-accesos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:13px}
+    .inicio-acceso{display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-height:125px;padding:18px 14px;background:#292929;color:white;text-decoration:none;border:1px solid #5e5140;border-radius:13px}
+    .inicio-acceso:hover,.inicio-acceso:focus-visible{border-color:#f6bd42;background:#352d24;outline-offset:2px}
+    .inicio-acceso .icono{font-size:29px;line-height:1}
+    .inicio-acceso strong{font-size:17px;color:#f6bd42}
+    .inicio-acceso small{font-size:12px;color:#ddd;line-height:1.35}
+    .inicio-pie{font-size:13px;color:#d3d3d3;line-height:1.5;margin:18px 0}
+    @media(min-width:680px){.inicio-accesos{grid-template-columns:repeat(3,minmax(0,1fr))}}
     button:focus-visible { outline:3px solid #fff; outline-offset:2px; }
     @media(max-width:520px) { header{padding:18px 12px} h1{font-size:23px} main{padding:10px 10px 24px} .caja,.pedido{padding:15px} .tabs{gap:6px} .tabs button{font-size:14px;padding:14px 5px} }
   </style>
@@ -106,7 +119,6 @@
 </head>
 <body>
 <header><h1 id="panel-nombre">🍕 La Pizza de Juan K</h1><div>Centro de control · Pedidos, productos y equipo</div></header>
-<div id="panel-inicio"></div>
 <main>
   <section id="acceso" class="caja">
     <h2>Acceso del negocio</h2>
@@ -119,13 +131,28 @@
   </section>
 
   <section id="panel" hidden>
-    <nav class="tabs" aria-label="Secciones del administrador">
+    <section id="panel-inicio" class="inicio-panel" aria-labelledby="titulo-inicio" hidden>
+      <div class="inicio-hero">
+        <h2 id="titulo-inicio">🏠 Inicio · La Pizza de Juanca</h2>
+        <p>Tu centro de trabajo. Entra a la sección que necesitas sin buscarla entre todas las pantallas.</p>
+      </div>
+      <div class="inicio-accesos" aria-label="Accesos principales del negocio">
+        <a class="inicio-acceso" href="#vista-pedidos"><span class="icono" aria-hidden="true">🔔</span><strong>Pedidos</strong><small>Recibir comandas y administrar domicilios</small></a>
+        <a class="inicio-acceso" href="salon-operativo.html"><span class="icono" aria-hidden="true">🍽️</span><strong>Mesas y barra</strong><small>Abrir cuentas, enviar comandas y cobrar</small></a>
+        <a class="inicio-acceso" href="caja-operativa.html"><span class="icono" aria-hidden="true">💰</span><strong>Caja</strong><small>Resumen del turno, ventas y cierres</small></a>
+        <a class="inicio-acceso" href="#vista-productos"><span class="icono" aria-hidden="true">📦</span><strong>Productos</strong><small>Menú, precios y fotografías</small></a>
+        <a class="inicio-acceso" href="#vista-equipo"><span class="icono" aria-hidden="true">👥</span><strong>Equipo y roles</strong><small>Personal, permisos y domiciliarios</small></a>
+        <a class="inicio-acceso" href="#vista-configuracion"><span class="icono" aria-hidden="true">⚙️</span><strong>Configuración</strong><small>Marca, logo y bienvenida del negocio</small></a>
+      </div>
+      <p class="inicio-pie">La recepción continúa escuchando pedidos mientras trabajas en las secciones internas. Los cobros solo se registran desde los módulos correspondientes.</p>
+    </section>
+    <nav class="tabs" id="tabs-administrador" aria-label="Secciones del administrador">
       <button id="tab-pedidos" type="button" role="tab" aria-controls="vista-pedidos" aria-selected="true">🔔 Pedidos <span id="nuevos-tab" class="cantidad" hidden>0</span></button>
       <button id="tab-productos" type="button" role="tab" aria-controls="vista-productos" aria-selected="false">📦 Productos</button>
       <button id="tab-equipo" type="button" role="tab" aria-controls="vista-equipo" aria-selected="false">👥 Equipo y roles</button>
       <button id="tab-configuracion" type="button" role="tab" aria-controls="vista-configuracion" aria-selected="false">⚙️ Configuración</button>
     </nav>
-    <nav class="enlaces-local" aria-label="Herramientas de salón y caja">
+    <nav class="enlaces-local" id="enlaces-local-admin" aria-label="Herramientas de salón y caja">
       <a href="salon-operativo.html">🍽️ Mesas y barra · Firebase (pruebas)</a>
       <a href="caja-operativa.html">💰 Caja en Firebase · pruebas</a>
     </nav>
@@ -310,6 +337,16 @@
   let marcoCargado = false;
   let observadorMarco;
 
+  const vistaInicio = document.getElementById('panel-inicio');
+  const tabsAdministrador = document.getElementById('tabs-administrador');
+  const enlacesLocalAdmin = document.getElementById('enlaces-local-admin');
+  const navAdminFija = document.querySelector('.nav-admin-fija');
+  const enlaceNavInicio = navAdminFija?.querySelector('a[href$="#panel-inicio"]');
+  const enlaceNavPedidos = navAdminFija?.querySelector('a[href$="#vista-pedidos"]');
+  const urlVista = {
+    '#panel-inicio':'inicio','#vista-pedidos':'pedidos','#vista-productos':'productos',
+    '#vista-equipo':'equipo','#vista-configuracion':'configuracion'
+  };
   const tabPedidos = document.getElementById('tab-pedidos');
   const tabProductos = document.getElementById('tab-productos');
   const tabEquipo = document.getElementById('tab-equipo');
@@ -333,6 +370,9 @@
   let jornadaVisible=diaColombia(new Date());
 
   function cambiarVista(nombre) {
+    vistaInicio.hidden = nombre !== 'inicio';
+    tabsAdministrador.hidden = nombre === 'inicio';
+    enlacesLocalAdmin.hidden = nombre === 'inicio';
     vistaPedidos.hidden = nombre !== 'pedidos';
     vistaProductos.hidden = nombre !== 'productos';
     vistaEquipo.hidden = nombre !== 'equipo';
@@ -341,12 +381,40 @@
     tabPedidos.setAttribute('aria-selected', String(nombre === 'pedidos'));
     tabProductos.setAttribute('aria-selected', String(nombre === 'productos'));
     tabEquipo.setAttribute('aria-selected', String(nombre === 'equipo'));
+    // La barra fija conserva el estado correcto entre Inicio y Pedidos.
+    if(enlaceNavInicio){
+      if(nombre==='inicio')enlaceNavInicio.setAttribute('aria-current','page');
+      else enlaceNavInicio.removeAttribute('aria-current');
+    }
+    if(enlaceNavPedidos){
+      if(nombre==='pedidos')enlaceNavPedidos.setAttribute('aria-current','page');
+      else enlaceNavPedidos.removeAttribute('aria-current');
+    }
     if (nombre === 'productos' && !marcoCargado) {
       marcoCargado = true;
       marcoProductos.src = 'admin-productos.html?integrado=1&v=modificadores-marca-editable-20261120';
     }
     if (nombre === 'equipo' && auth.currentUser && !equipoCargado) escucharEquipo();
   }
+  function cambiarVistaDesdeEnlace(){
+    const nombre=urlVista[window.location.hash];
+    if(nombre&&auth.currentUser){
+      cambiarVista(nombre);
+      const destino=nombre==='inicio'?vistaInicio:
+        nombre==='pedidos'?vistaPedidos:
+        nombre==='productos'?vistaProductos:
+        nombre==='equipo'?vistaEquipo:vistaConfiguracion;
+      requestAnimationFrame(()=>destino.scrollIntoView({block:'start'}));
+    }
+  }
+  // Los accesos con # deben funcionar incluso si se pulsa dos veces el mismo enlace.
+  for(const enlace of document.querySelectorAll('a[href^="#vista-"], a[href$="#panel-inicio"], a[href$="#vista-pedidos"]')){
+    enlace.addEventListener('click',()=>{
+      const hash=new URL(enlace.href).hash;
+      if(urlVista[hash]&&auth.currentUser)cambiarVista(urlVista[hash]);
+    });
+  }
+  window.addEventListener('hashchange',cambiarVistaDesdeEnlace);
   tabPedidos.addEventListener('click', () => cambiarVista('pedidos'));
   tabProductos.addEventListener('click', () => cambiarVista('productos'));
   tabEquipo.addEventListener('click', () => cambiarVista('equipo'));
@@ -1486,6 +1554,8 @@
 
     document.getElementById('usuario').textContent =
       'Sesión: ' + user.email;
+    // Inicio y Pedidos abren vistas diferentes, respetando el enlace que se pulsó.
+    cambiarVista(urlVista[window.location.hash] || 'pedidos');
 
     estado.textContent = 'Conectando con Firestore...';
     equipoEstado.textContent = 'Consultando personal disponible...';
