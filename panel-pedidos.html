@@ -137,6 +137,10 @@
     .inicio-acceso strong{font-size:17px;color:#f6bd42}
     .inicio-acceso small{font-size:12px;color:#ddd;line-height:1.35}
     .inicio-pie{font-size:13px;color:#d3d3d3;line-height:1.5;margin:18px 0}
+    .inicio-sesion{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:16px 0;padding:16px;border-radius:13px;border:1px solid #595959;background:#242424}
+    .inicio-sesion>div{flex:1;min-width:190px}.inicio-sesion h2{margin:0 0 6px;font-size:18px}
+    .inicio-sesion p{margin:0;color:#d3d3d3;font-size:13px;line-height:1.45}
+    .inicio-sesion button{flex:0 0 auto;width:auto;padding:11px 16px;margin:0}
     @media(min-width:680px){.inicio-accesos{grid-template-columns:repeat(3,minmax(0,1fr))}}
     button:focus-visible { outline:3px solid #fff; outline-offset:2px; }
     @media(max-width:520px) { header{padding:18px 12px} h1{font-size:23px} main{padding:10px 10px 24px} .caja,.pedido{padding:15px} .tabs{gap:6px} .tabs button{font-size:14px;padding:14px 5px} }
@@ -182,6 +186,13 @@
         <a class="inicio-acceso" href="#vista-configuracion"><span class="icono" aria-hidden="true">⚙️</span><strong>Configuración</strong><small>Marca, logo y bienvenida del negocio</small></a>
       </div>
       <p class="inicio-pie">La recepción continúa escuchando pedidos mientras trabajas en las secciones internas. Los cobros solo se registran desde los módulos correspondientes.</p>
+      <section class="inicio-sesion" aria-labelledby="titulo-sesion-inicio">
+        <div>
+          <h2 id="titulo-sesion-inicio">🔐 Sesión y seguridad</h2>
+          <p>Cuando termines de trabajar, cierra aquí tu sesión administrativa. Esto no cierra el turno de Caja ni borra movimientos.</p>
+        </div>
+        <button id="salir" class="secundario" type="button">Cerrar sesión</button>
+      </section>
     </section>
     <nav class="tabs" id="tabs-administrador" aria-label="Secciones del administrador" hidden>
       <button id="tab-pedidos" type="button" role="tab" aria-controls="vista-pedidos" aria-selected="true">🔔 Pedidos <span id="nuevos-tab" class="cantidad" hidden>0</span></button>
@@ -204,7 +215,6 @@
       </nav>
       <p id="canal-estado" class="recepcion-nota" aria-live="polite">Mostrando pedidos a domicilio.</p>
       <p id="usuario"></p>
-      <button id="salir" class="secundario">Cerrar sesión</button>
       <p id="estado" class="alerta" role="status">Conectando con Firestore...</p>
       <p id="contador" aria-live="polite"></p>
       <div class="jornada-filtros" aria-label="Filtrar pedidos por jornada">
