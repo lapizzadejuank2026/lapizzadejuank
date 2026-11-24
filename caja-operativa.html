@@ -177,6 +177,13 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
 </section>
 </section>
 </main>
+<nav class="nav-admin-fija" aria-label="Navegación fija del administrador">
+<a href="panel-pedidos.html#panel-inicio" aria-label="Inicio del centro de control"><span class="nav-admin-icono" aria-hidden="true">🏠</span><span>Inicio</span></a>
+<a href="panel-pedidos.html#vista-pedidos" aria-label="Pedidos de recepción"><span class="nav-admin-icono" aria-hidden="true">🔔</span><span>Pedidos</span></a>
+<a href="salon-operativo.html" aria-label="Mesas y barra"><span class="nav-admin-icono" aria-hidden="true">🍽️</span><span>Mesas</span></a>
+<a href="caja-operativa.html" aria-label="Resumen de caja" aria-current="page"><span class="nav-admin-icono" aria-hidden="true">💰</span><span>Caja</span></a>
+<a href="caja-operativa.html#seccionMovimiento" aria-label="Registro de entradas y salidas"><span class="nav-admin-icono" aria-hidden="true">🧾</span><span>Entradas /<br>salidas</span></a>
+</nav>
 <script type="module" src="caja-operativa.js"></script>
 <script type="module" src="caja-cobros-domiciliarios.js"></script>
 <script type="module" src="caja-historial-dia.js"></script>
@@ -202,11 +209,5 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
   obs.observe(principal,{attributes:true,attributeFilter:['hidden']});
 })();
 </script>
-<nav class="nav-admin-fija" aria-label="Navegación fija del administrador">
-<a href="panel-pedidos.html#panel-inicio" aria-label="Inicio del centro de control"><span class="nav-admin-icono" aria-hidden="true">🏠</span><span>Inicio</span></a>
-<a href="panel-pedidos.html#vista-pedidos" aria-label="Pedidos de recepción"><span class="nav-admin-icono" aria-hidden="true">🔔</span><span>Pedidos</span></a>
-<a href="salon-operativo.html" aria-label="Mesas y barra"><span class="nav-admin-icono" aria-hidden="true">🍽️</span><span>Mesas</span></a>
-<a href="caja-operativa.html" aria-label="Resumen de caja" aria-current="page"><span class="nav-admin-icono" aria-hidden="true">💰</span><span>Caja</span></a>
-<a href="caja-operativa.html#seccionMovimiento" aria-label="Registro de entradas y salidas"><span class="nav-admin-icono" aria-hidden="true">🧾</span><span>Entradas /<br>salidas</span></a>
-</nav>
+
 </body></html>
