@@ -104,7 +104,7 @@
     body > header.cabecera-fija-app{position:fixed;inset:0 0 auto 0;width:100%;z-index:80;padding:10px 12px 9px}
     .cabecera-panel .cabecera-marca h1{font-size:clamp(17px,4.2vw,24px);line-height:1.15}
     .cabecera-panel .cabecera-marca div{font-size:12px}
-    @media(max-width:520px){body > header.cabecera-fija-app{padding:9px 10px 7px}.recepcion-canales button{min-height:61px}}
+    @media(max-width:520px){body > header.cabecera-fija-app{padding:9px 10px 7px}}
     /* Campana de alarma persistente en cabecera: nunca confundir preferencia con sonido real. */
     .cabecera-panel-inner{max-width:850px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
     .cabecera-marca{min-width:0;flex:1;text-align:left}
@@ -123,14 +123,15 @@
     .cabecera-panel .campana-control:focus-visible{outline:3px solid white;outline-offset:3px}
     @media(max-width:520px){.cabecera-panel-inner{gap:8px}.cabecera-panel .campana-control{flex-basis:88px;min-height:63px}}
     /* Recepción: tres canales independientes con contadores de comandas nuevas. */
-    .recepcion-canales{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;position:relative;padding:8px 0 0;background:transparent}
-    .recepcion-canales button{margin:0;min-width:0;min-height:75px;padding:10px 5px;background:#2c2c2c;color:#f0f0f0;border:1px solid #656565;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:13px}
+    .recepcion-canales{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;position:relative;padding:7px 0 0;background:transparent}
+    .recepcion-canales button{margin:0;min-width:0;min-height:54px;padding:7px 4px;background:#a71919;color:#fff;border:1px solid #ec9a9a;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;line-height:1.1}
     .recepcion-canales button[aria-pressed="true"]{background:#f6bd42;color:#21170c;border-color:#f6bd42}
     .recepcion-canales .canal-titulo{display:block;white-space:normal;line-height:1.2}
-    .recepcion-canales .canal-cantidad{display:inline-block;min-width:27px;padding:3px 8px;background:#aa2b27;color:white;border-radius:999px;font-size:13px;font-weight:800}
+    .recepcion-canales .canal-cantidad{display:inline-block;min-width:23px;padding:2px 6px;background:#fff6e6;color:#9a1717;border-radius:999px;font-size:12px;font-weight:800}
+    .recepcion-canales button[aria-pressed="true"] .canal-cantidad{background:#a71919;color:#fff}
     .recepcion-canales .canal-cantidad[hidden]{display:none}
     .recepcion-nota{color:#f0d6a2;font-size:13px;margin:1px 0 12px;line-height:1.45}
-    @media(max-width:450px){.recepcion-canales{gap:5px}.recepcion-canales button{font-size:12px;min-height:72px;padding:7px 3px}}
+    @media(max-width:450px){.recepcion-canales{gap:5px}.recepcion-canales button{font-size:11.5px;min-height:50px;padding:5px 3px}}
     /* Portada del centro de control, distinta de la recepción de pedidos. */
     .inicio-panel{padding:3px 0 18px}
     .inicio-hero{padding:21px 18px;background:linear-gradient(135deg,#35241b,#1a1a1a);border:1px solid #765b26;border-radius:15px;margin:14px 0}
