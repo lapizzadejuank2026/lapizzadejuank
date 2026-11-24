@@ -23,16 +23,18 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom, 0px))}
 .nav-admin-fija a:focus-visible{outline:3px solid white;outline-offset:-3px}
 .nav-admin-fija a:active{background:#554020;color:white}
 /* Cabecera que permanece arriba en Inicio, Pedidos, Mesas y Caja. */
-:root{--cabecera-alto:82px;--recepcion-canales-alto:95px}
-header.cabecera-fija-app{
- position:sticky;top:0;z-index:60;
+:root{--cabecera-alto:95px;--recepcion-canales-alto:0px}
+html{scroll-padding-top:calc(var(--cabecera-alto) + 8px)}
+body{padding-top:var(--cabecera-alto)}
+body > header.cabecera-fija-app{
+ position:fixed;top:0;left:0;right:0;width:100%;z-index:80;
  background:#a71919;box-shadow:0 4px 12px #0006;
 }
 #panel-inicio,#vista-productos,#vista-equipo,#vista-configuracion{
  scroll-margin-top:calc(var(--cabecera-alto) + 10px);
 }
-#vista-pedidos{scroll-margin-top:calc(var(--cabecera-alto) + var(--recepcion-canales-alto) + 12px)}
-#vista-pedidos .pedido{scroll-margin-top:calc(var(--cabecera-alto) + var(--recepcion-canales-alto) + 15px)}
+#vista-pedidos{scroll-margin-top:calc(var(--cabecera-alto) + 12px)}
+#vista-pedidos .pedido{scroll-margin-top:calc(var(--cabecera-alto) + 15px)}
 #seccionMovimiento,#seccionTurno,#vistaMesas{
  scroll-margin-top:calc(var(--cabecera-alto) + 12px);
 }
