@@ -38,6 +38,8 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .verificado input{width:auto;display:inline-block;vertical-align:middle;margin:0 8px 0 0}
 .verificado label{display:block;margin:0;font-weight:normal}
 .enlaces{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:15px}
+.sesionAcciones{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.sesionAcciones>div{flex:1;min-width:200px}.sesionAcciones h2{font-size:18px;margin-bottom:4px}.sesionAcciones p{margin:0}.sesionAcciones button{padding:10px 14px}
 details>summary{cursor:pointer;font-weight:bold;font-size:19px;color:var(--gold);padding:3px 0 6px}
 details>summary:focus-visible{outline:3px solid white;outline-offset:3px}
 details.detallesInternos{margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:10px}
@@ -65,7 +67,7 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
 </section>
 <section id="vistaCaja" hidden>
 <div class="card">
-<div class="acciones"><p>Sesión: <strong id="usuarioCaja">...</strong></p><button id="salirCaja" class="secundario" type="button">Cerrar sesión</button></div>
+<p class="pequeno">Sesión administrativa: <strong id="usuarioCaja">...</strong></p>
 <p id="conexion" class="estado" role="status">Conectando con Firebase...</p>
 <p id="controlActivo" class="resumen"></p>
 </div>
@@ -166,6 +168,12 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
 <div id="historialTurnos"></div>
 </details>
 </details>
+<section class="card" id="seccionSesion">
+<div class="sesionAcciones">
+<div><h2>🔐 Sesión y seguridad</h2><p class="pequeno">Al terminar de usar Caja, cierra tu sesión de administrador. Cerrar sesión no cierra el turno ni borra movimientos.</p></div>
+<button id="salirCaja" class="secundario" type="button">Cerrar sesión</button>
+</div>
+</section>
 </section>
 </main>
 <script type="module" src="caja-operativa.js"></script>
