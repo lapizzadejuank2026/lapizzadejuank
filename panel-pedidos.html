@@ -209,7 +209,27 @@
     .recepcion-canales .canal-cantidad{display:inline-block;min-width:23px;padding:2px 6px;background:#fff6e6;color:#9a1717;border-radius:999px;font-size:12px;font-weight:800}
     .recepcion-canales button[aria-pressed="true"] .canal-cantidad{background:#a71919;color:#fff}
     .recepcion-canales .canal-cantidad[hidden]{display:none}
-    .recepcion-nota{color:#f0d6a2;font-size:13px;margin:1px 0 12px;line-height:1.45}
+    /* Recepción compacta: conservar estados y filtros sin desplazar el monitor. */
+    .recepcion-compacta{margin:4px 0 8px;padding:0}
+    .recepcion-resumen{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 10px}
+    .recepcion-resumen p{font-size:13px;line-height:1.35;margin:0;overflow-wrap:anywhere}
+    .recepcion-resumen #contador{color:#ddd}
+    .recepcion-compacta .jornada-filtros{margin:8px 0 0;gap:6px;flex-wrap:nowrap}
+    .recepcion-compacta .jornada-filtros button{margin:0;min-width:0;min-height:44px;padding:8px 5px;font-size:14px;line-height:1.15}
+    #vista-pedidos>.monitor{margin-top:8px;padding:13px}
+    #vista-pedidos .monitor h2{font-size:20px;margin:0 0 5px}
+    #vista-pedidos .monitor .monitor-intro{margin:4px 0 8px;font-size:13px;line-height:1.35}
+    #vista-pedidos .mapa-mesas{margin:6px 0 12px;padding:10px}
+    #vista-pedidos .mapa-mesas h3{font-size:17px;margin:0 0 4px}
+    #vista-pedidos #mapa-estado{font-size:12px;line-height:1.3;margin:4px 0}
+    #vista-pedidos .mapa-resumen{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:7px 0}
+    #vista-pedidos .mapa-resumen .mapa-saldo{grid-column:auto}
+    #vista-pedidos .mapa-resumen>div{padding:7px 3px;min-width:0}
+    #vista-pedidos .mapa-resumen strong{font-size:clamp(13px,3.7vw,20px)}
+    #vista-pedidos .mapa-resumen small{display:block;font-size:11px;line-height:1.2}
+    #vista-pedidos .mapa-salas{margin:7px 0}
+    #vista-pedidos .mapa-grilla{margin:7px 0}
+    .recepcion-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
     @media(max-width:450px){.recepcion-canales{gap:5px}.recepcion-canales button{font-size:11.5px;min-height:50px;padding:5px 3px}}
     /* Portada del centro de control, distinta de la recepción de pedidos. */
     .inicio-panel{padding:3px 0 18px}
@@ -314,17 +334,17 @@
       <a href="caja-operativa.html">💰 Caja en Firebase · pruebas</a>
     </nav>
     <section id="vista-pedidos" role="region" aria-labelledby="titulo-recepcion">
-    <div class="caja">
-      <h2 id="titulo-recepcion" class="seccion-titulo">🔔 Pedidos · Recepción</h2>
-      <p class="hint">Cada canal muestra solo sus pedidos. Los números rojos indican comandas nuevas por confirmar y la alarma seguirá avisando por cualquiera de los tres.</p>
-      <p id="canal-estado" class="recepcion-nota" aria-live="polite">Mostrando pedidos a domicilio.</p>
-      <p id="estado" class="alerta" role="status">Conectando con Firestore...</p>
-      <p id="contador" aria-live="polite"></p>
+    <div class="recepcion-compacta">
+      <h2 id="titulo-recepcion" class="recepcion-sr">Pedidos · Recepción</h2>
+      <div class="recepcion-resumen">
+        <p id="estado" class="alerta" role="status">Conectando con Firestore...</p>
+        <p id="contador" aria-live="polite"></p>
+      </div>
       <div class="jornada-filtros" aria-label="Filtrar pedidos por jornada">
         <button type="button" id="filtro-hoy" aria-pressed="true">📅 Hoy y pendientes</button>
-        <button type="button" id="filtro-historial" aria-pressed="false">🗂️ Historial completo</button>
+        <button type="button" id="filtro-historial" aria-pressed="false">🗂️ Historial</button>
       </div>
-      <p id="aviso-jornada" class="hint">El contador de hoy se reinicia a medianoche (hora de Colombia). El historial nunca se borra.</p>
+      <p id="aviso-jornada" class="recepcion-sr" aria-live="polite"></p>
     </div>
 
     <section class="caja monitor" aria-labelledby="monitor-titulo">
@@ -336,7 +356,7 @@
         <div id="mapa-resumen" class="mapa-resumen" hidden>
           <div><strong id="mapa-libres">—</strong><small>🟢 Libres</small></div>
           <div><strong id="mapa-ocupadas">—</strong><small>🟠 Ocupadas</small></div>
-          <div class="mapa-saldo"><strong id="mapa-total">—</strong><small>Total por cobrar · mesas y barra</small></div>
+          <div class="mapa-saldo"><strong id="mapa-total">—</strong><small>Por cobrar (total)</small></div>
         </div>
         <div id="mapa-salas" class="mapa-salas" aria-label="Salas del restaurante"></div>
         <div id="mapa-grilla" class="mapa-grilla" aria-label="Seleccionar mesa o barra"></div>
@@ -1609,10 +1629,9 @@
     const esDomicilio=canalPedidos==='domicilio';
     const esMesa=canalPedidos==='mesa';
     document.getElementById('monitor-titulo').textContent=esDomicilio?'🛵 Monitor de domicilios':esMesa?'🍽️ Monitor de mesas':'🛍️ Monitor de pedidos para llevar';
-    document.querySelector('.monitor-intro').textContent=esDomicilio
-      ?'Sigue en tiempo real las entregas asignadas. Pulsa un pedido para ir a sus detalles; la alarma de pedidos nuevos funciona por separado.'
-      :esMesa?'Consulta las comandas de mesas por confirmar y las recibidas por el restaurante. El cobro se gestiona en Mesas y barra.'
-      :'Consulta los pedidos para recoger en el local y confirma su recepción. Pulsa un pedido para ver sus detalles.';
+    const introMonitor=document.querySelector('.monitor-intro');
+    introMonitor.hidden=esMesa;
+    introMonitor.textContent=esDomicilio?'Toca una entrega para ver su detalle.':'Toca un pedido para ver su detalle.';
     document.querySelector('.monitor-metricas').setAttribute('aria-label',esDomicilio?'Resumen de entregas':'Resumen del canal seleccionado');
     const metricas=[['monitor-pendientes',esDomicilio?'Por aceptar':'Por confirmar',true],['monitor-proceso',esDomicilio?'Aceptados / recogidos':'Recibidos / procesados',true],['monitor-ruta','En camino',esDomicilio],['monitor-entregados','Entregados',esDomicilio]];
     for(const [id,etiqueta,visible] of metricas){
@@ -1799,11 +1818,8 @@
       ? pedidosDelCanal
       : pedidosDelCanal.filter(p=>pedidoDeHoy(p)||pendienteAnterior(p));
     const nuevosVisibles=visibles.filter(p=>String(p.d.estado||'nuevo').toLowerCase()==='nuevo').length;
-    document.getElementById('canal-estado').textContent=
-      etiquetasCanal[canalPedidos]+': '+visibles.length+' pedido(s) en la lista · '+nuevosPorCanal[canalPedidos]+
-      ' nuevo(s) por confirmar en total.'+(canalPedidos==='domicilio'?' Los pedidos antiguos sin modalidad también se muestran aquí.':'');
     document.getElementById('contador').textContent =
-      '📅 Pedidos de hoy ('+etiquetasCanal[canalPedidos]+'): '+hoy.length+' · 🔔 Sin confirmar: '+nuevosPorCanal[canalPedidos];
+      (filtroPedidos==='historial'?'Historial: '+pedidosDelCanal.length:'Hoy: '+hoy.length+(pendientesViejos.length?' + '+pendientesViejos.length+' anteriores':''))+' · Pendientes: '+nuevosPorCanal[canalPedidos];
     document.getElementById('filtro-hoy').setAttribute('aria-pressed',String(filtroPedidos==='hoy'));
     document.getElementById('filtro-historial').setAttribute('aria-pressed',String(filtroPedidos==='historial'));
     document.getElementById('aviso-jornada').textContent=filtroPedidos==='hoy'
@@ -1812,7 +1828,7 @@
       : 'Mostrando el historial de '+pedidosDelCanal.length+' pedido(s) de '+etiquetasCanal[canalPedidos].toLowerCase()+'. El contador de hoy sigue independiente.';
 
     estado.textContent = hayNuevos
-      ? '🔔 Hay '+cuantosNuevos+' pedido(s) nuevos por confirmar entre todos los canales.'
+      ? '🔔 Nuevos (todos): '+cuantosNuevos
       : 'Sin pedidos nuevos';
 
     if (!visibles.length) {
