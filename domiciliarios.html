@@ -51,6 +51,10 @@
     .entrega .productos{white-space:pre-wrap;background:#101010;padding:10px;border-radius:8px}
     .entrega button{width:100%;margin-top:12px}
     .entrega a{overflow-wrap:anywhere}
+    .contacto-cliente{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+    .contacto-cliente a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 12px;border:1px solid #777;border-radius:9px;text-decoration:none;font-size:14px;font-weight:bold}
+    .contacto-cliente a.whatsapp-cliente{background:#174b34;color:#d8ffe7;border-color:#42ae75}
+    .contacto-cliente a:focus-visible{outline:3px solid white;outline-offset:2px}
     [hidden]{display:none!important}
     a{color:#ffe09b}
     button:focus-visible,input:focus-visible{outline:3px solid white;outline-offset:2px}
@@ -203,6 +207,16 @@
       return cantidad+' × '+nombre+sabores;
     }).join('\n')||'Sin detalles de productos';
   }
+  function numeroWhatsApp(numero){
+    const valor=String(numero||'').trim();
+    if(!/^\+?[\d\s().-]+$/.test(valor))return '';
+    const digitos=valor.replace(/\D/g,'');
+    if(valor.startsWith('+'))return /^[1-9]\d{7,14}$/.test(digitos)?digitos:'';
+    if(valor.startsWith('00'))return /^[1-9]\d{7,14}$/.test(digitos.slice(2))?digitos.slice(2):'';
+    if(/^\d{10}$/.test(digitos))return '57'+digitos;
+    if(/^57\d{10}$/.test(digitos))return digitos;
+    return '';
+  }
   function tarjetaEntrega(pedido){
     const d=pedido.d;
     const estado=String(d.estadoEntrega||'pendiente').toLowerCase();
@@ -217,10 +231,25 @@
     const numero=String(cliente.telefono||d.telefono||'').trim();
     if(numero){
       texto(card,'Teléfono: '+numero);
+      const contacto=document.createElement('div');
+      contacto.className='contacto-cliente';
       const telefono=document.createElement('a');
       telefono.href='tel:'+numero.replace(/[^0-9+]/g,'');
       telefono.textContent='📞 Llamar al cliente';
-      card.append(telefono);
+      contacto.append(telefono);
+      const numeroWA=numeroWhatsApp(numero);
+      if(numeroWA && !estadosFinales.has(estado)){
+        const whatsapp=document.createElement('a');
+        whatsapp.className='whatsapp-cliente';
+        whatsapp.textContent='💬 WhatsApp';
+        whatsapp.target='_blank';
+        whatsapp.rel='noopener noreferrer';
+        const negocio=$('panel-nombre').textContent.trim()||'el restaurante';
+        const mensaje='Hola, soy el domiciliario de '+negocio+'. ¿Podrías enviarme tu ubicación por WhatsApp para facilitar la entrega de tu pedido? Muchas gracias.';
+        whatsapp.href='https://wa.me/'+numeroWA+'?text='+encodeURIComponent(mensaje);
+        contacto.append(whatsapp);
+      }
+      card.append(contacto);
     }
     texto(card,'Dirección: '+(d.direccion||cliente.direccion||'Sin dirección'));
     texto(card,'Municipio: '+(d.municipio||cliente.municipio||'Sin municipio'));
