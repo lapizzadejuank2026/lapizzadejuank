@@ -335,6 +335,10 @@
           <label>Nombre comercial visible para los clientes
             <input id="config-nombre" maxlength="70" required placeholder="La Pizza de Juan K">
           </label>
+          <label>WhatsApp de atención al cliente (opcional)
+            <input id="config-whatsapp" type="tel" inputmode="tel" maxlength="30" placeholder="+57 300 123 4567" aria-describedby="config-whatsapp-ayuda">
+          </label>
+          <p class="hint" id="config-whatsapp-ayuda">Número público del restaurante. En Colombia puedes escribir los 10 dígitos; para otros países usa el código internacional con +. Si lo dejas vacío, no se mostrará el botón de WhatsApp.</p>
           <label>Lema bajo el nombre
             <input id="config-lema" maxlength="110" required placeholder="Desde 2013 · Sabor de la casa">
           </label>
@@ -586,6 +590,15 @@
     frase: document.getElementById('config-frase'),
     bienvenida: document.getElementById('config-bienvenida')
   };
+  const configWhatsapp = document.getElementById('config-whatsapp');
+  function normalizarWhatsapp(valor) {
+    const limpio = valor.trim();
+    if (!limpio) return '';
+    if (!/^\+?[0-9\s().-]+$/.test(limpio)) return null;
+    let digitos = limpio.replace(/\D/g,'');
+    if (!limpio.startsWith('+') && digitos.length === 10) digitos = '57'+digitos;
+    return /^[1-9][0-9]{7,14}$/.test(digitos) ? digitos : null;
+  }
   const configMensaje = document.getElementById('config-mensaje');
   const configGuardar = document.getElementById('config-guardar');
   const configArchivo = document.getElementById('config-logo');
@@ -649,6 +662,7 @@
         : configuracionPredeterminada[campo];
       input.value = valor;
     }
+    configWhatsapp.value = typeof datos?.whatsapp === 'string' && datos.whatsapp ? '+'+datos.whatsapp.replace(/\D/g,'') : '';
     logoURLActual = datos && typeof datos.logoURL === 'string' &&
       (/^https:\/\//i.test(datos.logoURL) || /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(datos.logoURL))
       ? datos.logoURL : '';
@@ -665,6 +679,9 @@
       if (!valor) {configMensaje.textContent='Completa todos los campos.';input.focus();return;}
       datos[campo]=valor;
     }
+    const whatsapp = normalizarWhatsapp(configWhatsapp.value);
+    if (whatsapp === null) {configMensaje.textContent='Escribe un número de WhatsApp válido con código de país.';configWhatsapp.focus();return;}
+    datos.whatsapp = whatsapp;
     const imagen = configArchivo.files?.[0];
     if (imagen && (!['image/jpeg','image/png','image/webp'].includes(imagen.type) || imagen.size > 5*1024*1024)) {
       configMensaje.textContent='Selecciona una imagen JPG, PNG o WEBP de máximo 5 MB.';
