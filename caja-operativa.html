@@ -2,8 +2,8 @@
 <html lang="es">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#a71919">
-<title>Caja conectada | La Pizza de Juanca</title>
+<meta name="theme-color" content="#07172e">
+<title>Caja | Pulso Food</title>
 <style>
 :root{color-scheme:dark;--gold:#f6bd42;--bg:#111;--panel:#232323;--line:#505050}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:#fff;font-family:Arial,Helvetica,sans-serif}
@@ -57,11 +57,20 @@ body > header.cabecera-fija-app{
 }
 body > header.cabecera-fija-app h1{font-size:clamp(19px,4.5vw,25px);line-height:1.18}
 body > header.cabecera-fija-app p{font-size:13px;line-height:1.25}
+
+/* Identidad Pulso Food, igual a Inicio y Pedidos. */
+body > header.cabecera-fija-app.pulso-cabecera{background:linear-gradient(110deg,#07172e,#102e50);border-bottom:1px solid #2e6487;padding:10px 12px 9px;text-align:left}
+.pulso-cabecera .pulso-inner{max-width:850px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.pulso-cabecera .pulso-marca{min-width:0;flex:1}
+.pulso-cabecera .pulso-logo{display:block;width:150px;max-width:100%;height:58px;object-fit:contain;object-position:left center}
+.pulso-cabecera #panel-nombre{font-size:12px;color:#ffe4c9;margin:5px 0 0;line-height:1.25;overflow-wrap:anywhere}
+body > header.pulso-cabecera .pulso-seccion{font-size:13px;color:#e5edf8;margin:0;text-align:right;line-height:1.25;flex:0 1 43%;overflow-wrap:anywhere}
+@media(max-width:520px){body > header.cabecera-fija-app.pulso-cabecera{padding:9px 10px 7px}.pulso-cabecera .pulso-inner{gap:8px}}
 </style>
 <link rel="stylesheet" href="nav-admin-fija.css?v=barra-lateral-20261123"><script defer src="cabecera-fija-admin.js?v=cabecera-fija-20261123c"></script>
 </head>
 <body>
-<header class="cabecera-fija-app"><h1>🍕 La Pizza de Juanca</h1><p>💰 Caja · Apertura, ingresos, gastos y cierre</p></header>
+<header class="cabecera-fija-app pulso-cabecera"><div class="pulso-inner"><div class="pulso-marca"><img class="pulso-logo" src="Logo-Pulso-Food.png" alt="Pulso Food — Tu herramienta, tu control"><p id="panel-nombre">La Pizza de Juanca</p></div><h1 id="pulso-seccion" class="pulso-seccion">Caja</h1></div></header>
 <main>
 <div class="banner"><strong>Versión conectada a Firebase — fase de pruebas.</strong>
 Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase de pruebas: verifica los resultados antes de usar dinero real. Los cobros de mesas ya se registran al liberar la mesa; los domicilios requieren entrega y conciliación, y las ventas para llevar aún se registran manualmente. Un pedido sin cobrar no es ingreso de caja.</div>
@@ -193,7 +202,7 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
 <a href="caja-operativa.html" aria-label="Resumen de caja" aria-current="page"><span class="nav-admin-icono" aria-hidden="true">💰</span><span>Caja</span></a>
 <a href="caja-operativa.html#seccionMovimiento" aria-label="Registro de entradas y salidas"><span class="nav-admin-icono" aria-hidden="true">🧾</span><span>Entradas /<br>salidas</span></a>
 </nav>
-<script type="module" src="caja-operativa.js"></script>
+<script type="module" src="caja-operativa.js?v=pulso-20261124"></script>
 <script type="module" src="caja-cobros-domiciliarios.js"></script>
 <script type="module" src="caja-historial-dia.js"></script>
 <script>
@@ -205,6 +214,8 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
   const enlaces=[...document.querySelectorAll('.nav-admin-fija a')];
   function actualizar(){
     const movimientos=location.hash==='#seccionMovimiento';
+    document.getElementById('pulso-seccion').textContent=movimientos?'Entradas y salidas':'Caja';
+    document.title=(movimientos?'Entradas y salidas':'Caja')+' | Pulso Food';
     enlaces.forEach(a=>a.removeAttribute('aria-current'));
     const actual=enlaces[movimientos?4:3];if(actual)actual.setAttribute('aria-current','page');
     if(!movimientos)return;

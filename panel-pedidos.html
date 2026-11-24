@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Panel de pedidos | La Pizza de Juan K</title>
+  <title>Centro de control | Pulso Food</title>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font-family: Arial, sans-serif; background: #121212; color: #fff; }
@@ -550,7 +550,7 @@
   tabConfiguracion.addEventListener('click', () => cambiarVista('configuracion'));
 
   const configuracionPredeterminada = {
-    nombre: 'La Pizza de Juan K',
+    nombre: 'La Pizza de Juanca',
     lema: 'Desde 2013 · Sabor de la casa',
     frase: 'Ingredientes deliciosos · Mucho sabor',
     bienvenida: 'Bienvenidos a nuestra pizzería. Elige tu tamaño, combina tus sabores favoritos y arma tu pedido.'
@@ -661,7 +661,7 @@
       configArchivo.value = '';
       limpiarVistaTemporalLogo();
       configLogoVista.src = logoURL || 'chef.png';
-      document.getElementById('panel-nombre').textContent = '🍕 ' + datos.nombre;
+      document.getElementById('panel-nombre').textContent = datos.nombre;
       configMensaje.textContent='✅ Cambios guardados. El menú y la bienvenida mostrarán la información actualizada.';
     } catch (error) {
       const codigo = String(error?.code||'');

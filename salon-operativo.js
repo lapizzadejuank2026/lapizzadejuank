@@ -264,7 +264,23 @@ $('login').addEventListener('submit',async e=>{
  finally{$('entrar').disabled=false;}
 });
 $('salir').onclick=()=>signOut(auth);
+
+/* El nombre del restaurante proviene de la misma configuración que Inicio. */
+let detenerNombrePulso=null;
+function actualizarNombrePulso(sesion){
+  if(detenerNombrePulso){detenerNombrePulso();detenerNombrePulso=null;}
+  const nombre=document.getElementById('panel-nombre');
+  if(!nombre)return;
+  nombre.textContent='La Pizza de Juanca';
+  if(!sesion)return;
+  detenerNombrePulso=onSnapshot(doc(db,'productos','__configuracion_negocio'),snap=>{
+    const valor=snap.data()?.nombre;
+    nombre.textContent=typeof valor==='string'&&valor.trim()?valor.trim():'La Pizza de Juanca';
+  },error=>console.warn('No se pudo consultar el nombre del negocio:',error.code||error.message));
+}
+
 onAuthStateChanged(auth,u=>{
+  actualizarNombrePulso(u);
  limpiaTodo();user=u;
  $('vistaLogin').hidden=!!u;$('pantallaAdmin').hidden=!u;
  if(!u)return;
