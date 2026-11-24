@@ -2,8 +2,9 @@
 import {collection,query,where,onSnapshot} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
 export function crearMapaRecepcion(db,root){
  const $=id=>root.querySelector('#'+id);
- const grid=$('mapa-grilla'),detalle=$('mapa-detalle'),resumen=$('mapa-resumen'),estado=$('mapa-estado');
- let mesas=[],cuentas=new Map(),pedidos=[],pedidosOk=false,seleccion='',historialAbierto=false,visible=false;
+ const grid=$('mapa-grilla'),detalle=$('mapa-detalle'),resumen=$('mapa-resumen'),estado=$('mapa-estado'),tabs=$('mapa-salas');
+ let mesas=[],cuentas=new Map(),pedidos=[],pedidosOk=false,seleccion='',historialAbierto=false,visible=false,salaActual='principal';
+ const salaDe=m=>m.salaId||'principal';
  let parar=[],version=0,mesasOk=false,cuentasOk=false,error='';
  const valido=n=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0;
  const pesos=n=>'$'+n.toLocaleString('es-CO');
@@ -18,7 +19,7 @@ export function crearMapaRecepcion(db,root){
  function volverAlMapa(){seleccion='';historialAbierto=false;pintar();irAlMapa();}
  function botonVolver(){const b=nodo('button','← Volver a las mesas','mapa-volver');b.type='button';b.onclick=volverAlMapa;return b;}
  function pintar(){
-  root.hidden=!visible;grid.replaceChildren();detalle.replaceChildren();detalle.hidden=true;resumen.hidden=true;grid.hidden=!!seleccion;estado.hidden=!!seleccion;
+  root.hidden=!visible;grid.replaceChildren();tabs.replaceChildren();tabs.hidden=true;detalle.replaceChildren();detalle.hidden=true;resumen.hidden=true;grid.hidden=!!seleccion;estado.hidden=!!seleccion;
   if(!visible)return;
   if(!mesasOk||!cuentasOk){
    const mensaje=error||'Sincronizando mesas y cuentas con Firebase. El saldo aparecerá cuando esté confirmado.';
@@ -26,21 +27,26 @@ export function crearMapaRecepcion(db,root){
    if(seleccion){detalle.hidden=false;detalle.append(botonVolver(),nodo('p',mensaje,'hint'));}
    return;
   }
-  const activas=mesas.filter(m=>m.activa).sort((a,b)=>(a.orden??999)-(b.orden??999)||String(a.nombre||'').localeCompare(String(b.nombre||''),'es'));
+  const salas=[{id:'principal',nombre:'Sala principal'},...mesas.filter(m=>m.tipo==='sala').sort((a,b)=>(a.orden??999)-(b.orden??999))];
+  if(!salas.some(s=>s.id===salaActual))salaActual='principal';
+  const activas=mesas.filter(m=>m.activa&&m.tipo!=='sala').sort((a,b)=>(a.orden??999)-(b.orden??999)||String(a.nombre||'').localeCompare(String(b.nombre||''),'es'));
   const ocupadas=activas.filter(m=>!!m.cuentaId);
   const cuenta=m=>{const c=cuentas.get(m.cuentaId);return c&&c.mesaId===m.id&&valido(c.total)?c:null;};
   const completas=ocupadas.every(m=>!!cuenta(m));
-  estado.textContent=activas.length?'Toca una mesa para ver su cuenta y sus comandas.':'No hay mesas activas. Configúralas desde Mesas y barra.';
+  const sala=salas.find(s=>s.id===salaActual);
+  const puestos=activas.filter(m=>salaDe(m)===salaActual);
+  estado.textContent=puestos.length?'Toca una mesa o barra para ver su cuenta y sus comandas.':'No hay mesas ni barras activas en '+sala.nombre+'. Configúralas desde Mesas y barra.';
   if(!activas.some(m=>m.id===seleccion))seleccion='';
-  resumen.hidden=!!seleccion;grid.hidden=!!seleccion;estado.hidden=!!seleccion;
+  resumen.hidden=!!seleccion;grid.hidden=!!seleccion;estado.hidden=!!seleccion;tabs.hidden=!!seleccion;
+  if(!seleccion)for(const sala of salas){const b=nodo('button',sala.nombre);b.type='button';b.setAttribute('aria-pressed',String(sala.id===salaActual));b.onclick=()=>{salaActual=sala.id;pintar();};tabs.append(b);}
   $('mapa-libres').textContent=String(activas.length-ocupadas.length);
   $('mapa-ocupadas').textContent=String(ocupadas.length);
   $('mapa-total').textContent=completas?pesos(ocupadas.reduce((n,m)=>n+cuenta(m).total,0)):'Por sincronizar';
-  for(const m of seleccion?[]:activas){
+  for(const m of seleccion?[]:puestos){
    const c=cuenta(m);
    const b=nodo('button',null,m.cuentaId?'ocupada':'libre');b.type='button';
    b.setAttribute('aria-pressed',String(m.id===seleccion));
-   b.append(nodo('strong',m.nombre||'Mesa'),nodo('small',m.cuentaId?'🟠 Ocupada':'🟢 Libre'),nodo('strong',m.cuentaId?(c?pesos(c.total):'Por sincronizar'):pesos(0)));
+   b.append(nodo('strong',(m.tipo==='barra'?'🍹 ':'🍽️ ')+(m.nombre||'Mesa')),nodo('small',m.cuentaId?'🟠 Ocupada':'🟢 Libre'),nodo('strong',m.cuentaId?(c?pesos(c.total):'Por sincronizar'):pesos(0)));
    if(c)b.append(nodo('small',(Array.isArray(c.comandas)?c.comandas.length:0)+' comanda(s)'));
    b.onclick=()=>{if(seleccion!==m.id)historialAbierto=false;seleccion=m.id;pintar();irAlMapa();detalle.querySelector('h4')?.focus({preventScroll:true});};
    grid.append(b);
@@ -48,7 +54,7 @@ export function crearMapaRecepcion(db,root){
   const m=activas.find(x=>x.id===seleccion);if(!m)return;
   const c=cuenta(m);detalle.hidden=false;
   detalle.append(botonVolver());
-  const titulo=nodo('h4',m.nombre||'Mesa');titulo.tabIndex=-1;detalle.append(titulo);
+  const titulo=nodo('h4',m.nombre||'Mesa');titulo.tabIndex=-1;detalle.append(titulo,nodo('p',salas.find(s=>s.id===salaDe(m))?.nombre||'Sala no disponible','hint'));
   detalle.append(nodo('p',m.cuentaId?'🟠 Cuenta abierta':'🟢 Libre · sin cuenta abierta'),nodo('p','Por cobrar: '+(m.cuentaId?(c?pesos(c.total):'Por sincronizar'):pesos(0)),'mapa-total'));
   if(c){
    const cmds=Array.isArray(c.comandas)?c.comandas:[];
@@ -81,7 +87,7 @@ export function crearMapaRecepcion(db,root){
   detalle.append(botonVolver());
  }
  function detener(){
-  version++;for(const fn of parar)fn();parar=[];mesas=[];cuentas.clear();pedidos=[];pedidosOk=false;seleccion='';historialAbierto=false;mesasOk=false;cuentasOk=false;error='';pintar();
+  version++;for(const fn of parar)fn();parar=[];mesas=[];cuentas.clear();pedidos=[];pedidosOk=false;seleccion='';historialAbierto=false;salaActual='principal';mesasOk=false;cuentasOk=false;error='';pintar();
  }
  function escuchar(){
   const v=version;
