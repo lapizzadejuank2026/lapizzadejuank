@@ -22,10 +22,14 @@
     p{line-height:1.5}
     .ayuda{font-size:14px;color:var(--suave)}
     .aviso{color:#ffdb86;background:#342b1c;padding:14px;border-radius:10px;font-size:14px;line-height:1.5}
-    .efectivo-diario{background:#282117;border:1px solid #80693a;border-radius:16px;padding:18px 20px;margin:13px 0;text-align:center}
-    .efectivo-diario .titulo-efectivo{margin:0;color:#ffdb86;font-size:17px;font-weight:bold}
-    .efectivo-diario .valor-efectivo{font-size:clamp(30px,8vw,43px);font-weight:800;margin:7px 0;color:#fff}
-    .efectivo-diario .detalle-efectivo{margin:0;color:#ddd;font-size:13px}
+    .pulso-derecha{flex:0 1 48%;min-width:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+    .efectivo-diario{background:#0a192b;border:1px solid #49769a;border-radius:9px;padding:5px 9px;margin:0;text-align:center;max-width:100%}
+    .efectivo-diario .titulo-efectivo{margin:0;color:#ffdb86;font-size:11px;font-weight:bold;line-height:1.2}
+    .efectivo-diario .valor-efectivo{font-size:clamp(15px,4.2vw,21px);font-weight:800;margin:2px 0 0;color:#fff;line-height:1.15;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+    .jornada-pie{padding:13px 15px;margin-top:20px}
+    .jornada-pie h2{font-size:16px;margin:0 0 3px}
+    .jornada-pie .detalle-efectivo{margin:10px 0 0;color:var(--suave);font-size:12px;line-height:1.4}
+    @media(max-width:360px){.efectivo-diario{padding:4px 6px}.pulso-rider{font-size:15px}}
     label{display:block;font-size:15px;font-weight:bold;margin:13px 0 6px}
     input{display:block;width:100%;border:1px solid #bbb;background:#fff;color:#111;border-radius:10px;padding:13px;font:inherit;margin-top:7px}
     button{font:inherit;cursor:pointer;border:0;border-radius:11px;padding:14px 13px;font-weight:bold}
@@ -67,7 +71,13 @@
       <img class="pulso-logo" src="Logo-Pulso-Food.png" alt="Pulso Food — Tu herramienta, tu control">
       <p id="panel-nombre">La Pizza de Juanca</p>
     </div>
-    <h1 class="pulso-rider">Rider</h1>
+    <div class="pulso-derecha">
+      <h1 class="pulso-rider">Rider</h1>
+      <section id="recaudo-cabecera" class="efectivo-diario" aria-live="polite" aria-atomic="true" aria-describedby="detalle-efectivo" hidden>
+        <p class="titulo-efectivo">Efectivo hoy</p>
+        <p class="valor-efectivo" id="efectivo-hoy">Calculando…</p>
+      </section>
+    </div>
   </div>
 </header>
 <main>
@@ -88,15 +98,6 @@
     <p class="ayuda">Solo pueden ingresar domiciliarios activos autorizados por La Pizza de Juanca. No uses la cuenta del administrador.</p>
   </section>
   <section id="portal" hidden>
-    <div class="caja cabecera">
-      <div><h2>Mi jornada</h2><p id="correo-sesion" class="ayuda"></p></div>
-      <button class="secundario" id="salir" type="button">Salir</button>
-    </div>
-    <section class="efectivo-diario" aria-live="polite" aria-atomic="true">
-      <p class="titulo-efectivo">💵 Efectivo recaudado hoy</p>
-      <p class="valor-efectivo" id="efectivo-hoy">Calculando…</p>
-      <p class="detalle-efectivo" id="detalle-efectivo">Efectivo reportado hoy y aún sin recibir por administración.</p>
-    </section>
     <p class="aviso" id="aviso-entregas" role="status">🔒 Cuenta individual verificada. Solo se consultarán los pedidos asignados a este domiciliario.</p>
     <p class="ayuda" style="padding:0 4px">💰 Al marcar «Voy en camino», registra cómo pagó el cliente (efectivo, transferencia o mixto) antes de cerrar la entrega. El restaurante confirma las transferencias.</p>
     <nav class="pestanas" aria-label="Secciones de la aplicación">
@@ -122,6 +123,13 @@
       <p id="cuenta-correo"></p>
       <p id="cuenta-nombre" class="ayuda"></p><p class="ayuda">Tu cuenta es individual. El administrador gestiona tus asignaciones y tus permisos.</p>
     </section>
+    <footer class="caja jornada-pie">
+      <div class="cabecera">
+        <div><h2>Mi jornada</h2><p id="correo-sesion" class="ayuda"></p></div>
+        <button class="secundario" id="salir" type="button">Salir</button>
+      </div>
+      <p class="detalle-efectivo" id="detalle-efectivo">Efectivo reportado hoy y aún sin recibir por administración.</p>
+    </footer>
   </section>
   <p class="ayuda" style="text-align:center"><a href="index.html">← Volver a La Pizza de Juanca</a></p>
 </main>
@@ -384,6 +392,7 @@
     escuchandoPedidos=false;
     pedidosPropios=[];
     mensajeBloqueo=mensaje;
+    $('recaudo-cabecera').hidden=true;
     $('portal').hidden=true;
     $('acceso').hidden=false;
     $('mensaje-acceso').textContent=mensaje;
@@ -467,6 +476,7 @@
     pedidosPropios=[];
     detenerVerificacion();
     detenerVerificacion=()=>{};
+    $('recaudo-cabecera').hidden=true;
     $('portal').hidden=true;
     $('acceso').hidden=false;
     if(!user){
@@ -512,6 +522,7 @@
       $('cuenta-nombre').textContent='Nombre: '+(datos.nombre||'No registrado');
       $('acceso').hidden=true;
       $('portal').hidden=false;
+      $('recaudo-cabecera').hidden=false;
       if(!escuchandoPedidos){
         escuchandoPedidos=true;
         escucharPedidos(user);
