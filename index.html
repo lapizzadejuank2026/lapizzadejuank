@@ -10,6 +10,7 @@
   <link rel="apple-touch-icon" href="juanca-icon-192.jpg">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="La Pizza de Juan K">
+  <script src="config-publica.js?v=20261124"></script>
   <script defer src="clientes-instalacion.js?v=2"></script>
   <style>
     :root { --rojo:#f20707; --amarillo:#ffe600; --negro:#080808; }
@@ -27,6 +28,9 @@
     .pedir { background:var(--rojo); color:var(--amarillo); text-decoration:none; border-radius:7px; font-weight:900; padding:12px 17px; font-size:18px; }
     main { min-height:65vh; padding:24px 22px 85px; max-width:720px; margin:auto; text-align:center; }
     h1 { font-family:Georgia,serif; font-size:clamp(36px,8vw,56px); line-height:1.08; margin:6px 0 24px; font-weight:900; }
+    #portada-negocio{width:100%;max-height:250px;object-fit:cover;border-radius:14px;margin:0 0 20px}
+    #portada-negocio[hidden]{display:none!important}
+    #horarios-hoy{white-space:pre-line;line-height:1.55}
     .eslogan { font-size:clamp(18px,4vw,25px); margin-bottom:28px; }
     .servicios { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-bottom:24px; }
     .servicio { border:2px solid transparent; background:white; padding:9px 2px 12px; border-radius:10px; cursor:pointer; color:#141414; font-size:clamp(13px,3.8vw,21px); }
@@ -60,12 +64,13 @@
       <span hidden aria-label="Chef pizzero">👨‍🍳🍕</span>
     </div>
     <div class="acciones">
-      <span class="estado" id="estado"><span class="punto"></span> Abierto</span>
+      <span class="estado" id="estado"><span class="punto"></span> Consultando</span>
       <a class="pedir" href="index-1.html?v=menu-marca-editable-20261120" id="pedir">Pedir</a>
     </div>
   </header>
 
   <main>
+    <img id="portada-negocio" alt="Portada del restaurante" hidden onerror="this.hidden=true;">
     <h1>Bienvenid@s</h1>
     <p class="eslogan">Más delicioso pa' dónde 🍕</p>
 
@@ -88,7 +93,7 @@
   <footer>
     <div>Menú digital de <span id="nombre-negocio-bienvenida">La Pizza de Juan K</span></div>
     <div>Servicio en el local, para llevar y a domicilio</div>
-    <div>Horario habitual: 3:00 p. m. a 11:00 p. m.</div>
+    <div id="horarios-hoy">Horario de atención: 15:00 – 23:00</div>
   </footer>
 
   <div class="modal-fondo" id="wifi-modal" role="dialog" aria-modal="true" aria-labelledby="wifi-titulo">
@@ -110,14 +115,20 @@
       });
     });
 
-    // Estado visual según hora local de Colombia; horario habitual 15:00-23:00.
-    function actualizarEstado() {
-      const hora = Number(new Intl.DateTimeFormat('en-GB', { timeZone:'America/Bogota', hour:'2-digit', hourCycle:'h23' }).format(new Date()));
-      const abierto = hora >= 15 && hora < 23;
-      document.getElementById('estado').innerHTML = `<span class="punto ${abierto ? '' : 'cerrado'}"></span> ${abierto ? 'Abierto' : 'Cerrado'}`;
+    let horariosNegocio=window.PulsoConfig.normalizarHorarios(null);
+    function actualizarEstado(){
+      const general=window.PulsoConfig.estadoHorario(horariosNegocio.general);
+      const estado=document.getElementById('estado');
+      estado.innerHTML='<span class="punto '+(general.abierto?'':'cerrado')+'"></span> '+(general.abierto?'Abierto':'Cerrado');
+      const lineas=['Horario de hoy: '+general.hoy];
+      for(const [clave,nombre] of [['domicilio','Domicilios'],['recoger','Recoger en el local']]){
+        if(horariosNegocio[clave]){const servicio=window.PulsoConfig.estadoHorario(horariosNegocio[clave]);lineas.push(nombre+': '+(servicio.abierto?'Abierto':'Cerrado')+' · '+servicio.hoy);}
+      }
+      document.getElementById('horarios-hoy').textContent=lineas.join('\n');
     }
-    actualizarEstado();
-    setInterval(actualizarEstado, 60000);
+    window.aplicarHorarioBienvenida=datos=>{horariosNegocio=window.PulsoConfig.normalizarHorarios(datos?.horarios);actualizarEstado();};
+    actualizarEstado();setInterval(actualizarEstado,30000);
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)actualizarEstado();});
 
     const modal = document.getElementById('wifi-modal');
     const botonWifi = document.getElementById('wifi');
@@ -150,6 +161,8 @@
     const logo = document.getElementById('logo-bienvenida');
     const nombrePie = document.getElementById('nombre-negocio-bienvenida');
     const aplicarMarca = datos => {
+      window.aplicarHorarioBienvenida(datos);
+      window.PulsoConfig.aplicarApariencia(datos,"bienvenida");
       const nombre = typeof datos?.nombre==='string' && datos.nombre.trim()
         ? datos.nombre.trim() : 'La Pizza de Juan K';
       nombrePie.textContent = nombre;
