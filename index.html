@@ -10,12 +10,13 @@
   <link rel="apple-touch-icon" href="juanca-icon-192.jpg">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="La Pizza de Juan K">
-  <script src="config-publica.js?v=20261124"></script>
+  <script src="config-publica.js?v=tipografia-20261124"></script>
   <script defer src="clientes-instalacion.js?v=2"></script>
   <style>
     :root { --rojo:#f20707; --amarillo:#ffe600; --negro:#080808; }
     * { box-sizing:border-box; }
-    body { margin:0; background:#fff; color:#13131a; font-family:Arial,Helvetica,sans-serif; }
+    button,input,select,textarea{font-family:inherit}
+    body { margin:0; background:#fff; color:#13131a; font-family:var(--fuente-negocio,Arial,Helvetica,sans-serif); }
     .barra { height:12px; background:var(--rojo); }
     header { background:var(--negro); display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 18px; }
     .chef { width:76px; height:86px; flex:none; background:white; border-radius:12px; display:grid; place-items:center; overflow:hidden; }
@@ -27,7 +28,7 @@
     .punto.cerrado { border-color:#d04444; }
     .pedir { background:var(--rojo); color:var(--amarillo); text-decoration:none; border-radius:7px; font-weight:900; padding:12px 17px; font-size:18px; }
     main { min-height:65vh; padding:24px 22px 85px; max-width:720px; margin:auto; text-align:center; }
-    h1 { font-family:Georgia,serif; font-size:clamp(36px,8vw,56px); line-height:1.08; margin:6px 0 24px; font-weight:900; }
+    h1 { font-family:var(--fuente-negocio,Georgia,serif); font-size:clamp(36px,8vw,56px); line-height:1.08; margin:6px 0 24px; font-weight:900; }
     #portada-negocio{width:100%;max-height:250px;object-fit:cover;border-radius:14px;margin:0 0 20px}
     #portada-negocio[hidden]{display:none!important}
     #horarios-hoy{white-space:pre-line;line-height:1.55}
@@ -38,7 +39,7 @@
     .servicio[aria-pressed="true"] { border-color:var(--rojo); background:#fff1f1; }
     .direccion { display:flex; align-items:center; justify-content:center; gap:12px; font-size:clamp(15px,3.5vw,20px); line-height:1.4; margin:22px 0 34px; }
     .pin { font-size:27px; color:var(--rojo); }
-    .boton-grande { display:block; width:100%; border:3px solid #080808; background:var(--rojo); color:var(--amarillo); text-decoration:none; border-radius:12px; box-shadow:9px 10px 0 #000; font-family:Georgia,serif; font-size:clamp(24px,6vw,35px); font-weight:900; padding:14px 15px; margin:0 auto 35px; cursor:pointer; }
+    .boton-grande { display:block; width:100%; border:3px solid #080808; background:var(--rojo); color:var(--amarillo); text-decoration:none; border-radius:12px; box-shadow:9px 10px 0 #000; font-family:var(--fuente-negocio,Georgia,serif); font-size:clamp(24px,6vw,35px); font-weight:900; padding:14px 15px; margin:0 auto 35px; cursor:pointer; }
     .boton-grande:active { transform:translate(3px,3px); box-shadow:6px 7px 0 #000; }
     footer { background:#000; color:white; text-align:center; padding:34px 24px 45px; }
     footer div { padding:18px 0; border-bottom:1px solid #333; }
