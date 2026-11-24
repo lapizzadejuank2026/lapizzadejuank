@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#07172e">
   <title>Rider | Pulso Food</title>
+  <link rel="manifest" href="rider.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="rider-icon-192.png">
+  <link rel="apple-touch-icon" href="rider-icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pulso Food Rider">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <script defer src="rider-instalacion.js?v=1"></script>
   <style>
     :root{color-scheme:dark;--fondo:#101010;--panel:#232323;--rojo:#ad2020;--oro:#f5bd43;--texto:#fff;--suave:#d3d3d3}
     *{box-sizing:border-box}
@@ -76,6 +83,9 @@
     .disponibilidad:disabled{opacity:.65;cursor:not-allowed}
     #estado-disponibilidad{font-size:12px;color:#ffdb86;margin:6px 0}
     @media(max-width:340px){.pulso-cabecera .pestanas button{font-size:11px}.pulso-rider-btn{font-size:15px}}
+    .instalar-rider{margin-top:12px;text-align:center}
+    .instalar-rider button{width:100%;background:#163b5d;border:1px solid #49769a;color:#fff;padding:12px 10px;font-size:14px}
+    .instalar-rider p{font-size:13px;color:#d3d3d3;margin:8px 0 0}
   </style>
 </head>
 <body>
@@ -113,6 +123,7 @@
       </label>
       <button id="entrar" class="principal" type="submit">🔐 Iniciar sesión</button>
     </form>
+    <div class="instalar-rider" hidden><button class="instalar-rider-btn" type="button">📲 Instalar Pulso Food Rider</button><p class="instalar-rider-ayuda" role="status" hidden></p></div>
     <button id="recuperar-clave" type="button" class="secundario" style="width:100%;margin-top:8px">✉️ No tengo contraseña / Recuperar acceso</button>
     <p id="mensaje-acceso" class="estado" role="status" aria-live="polite">Escribe el correo y la contraseña que te entregó el administrador.</p>
     <p class="ayuda">Solo pueden ingresar domiciliarios activos autorizados por La Pizza de Juanca. No uses la cuenta del administrador.</p>
@@ -136,6 +147,7 @@
     </section>
     <section class="caja" id="vista-cuenta" hidden>
       <h2>Mi cuenta</h2>
+      <div class="instalar-rider" hidden><button class="instalar-rider-btn" type="button">📲 Instalar Pulso Food Rider</button><p class="instalar-rider-ayuda" role="status" hidden></p></div>
       <p id="cuenta-correo"></p>
       <p id="cuenta-nombre" class="ayuda"></p><p class="ayuda">Tu cuenta es individual. El administrador gestiona tus asignaciones y tus permisos.</p>
       <div class="cabecera jornada-pie">
