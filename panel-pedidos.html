@@ -115,6 +115,11 @@
     .pulso-food-identidad h1 span:first-child{color:#fff}
     .pulso-food-identidad h1 span:last-child{color:#b0ff23}
     .cabecera-panel #panel-nombre{font-size:12px;color:#ffe4c9;margin-top:5px}
+    .vista-previa-menu{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex:0 0 auto;min-height:54px;padding:7px 10px;border:1px solid #8dc5df;border-radius:10px;background:#153b5d;color:#fff;text-decoration:none;font-weight:700;font-size:12px;line-height:1.15;text-align:center;white-space:nowrap}
+    .vista-previa-menu:hover{background:#215376}
+    .vista-previa-menu:focus-visible{outline:2px solid #fff;outline-offset:3px}
+    .vista-previa-menu[hidden]{display:none!important}
+    @media(max-width:380px){.vista-previa-menu{padding:6px 7px;font-size:11px}}
     /* Campana de alarma persistente en cabecera: nunca confundir preferencia con sonido real. */
     .cabecera-panel-inner{max-width:850px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
     .cabecera-marca{min-width:0;flex:1;text-align:left}
@@ -175,6 +180,10 @@
       </div>
       <div id="panel-nombre">La Pizza de Juanca</div>
     </div>
+    <a id="vista-previa-productos" class="vista-previa-menu" href="index-1.html?v=menu-marca-editable-20261120" target="_blank" rel="noopener noreferrer" aria-label="Vista previa del menú de clientes (abre otra pestaña)" hidden>
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M10 18.5h4"/></svg>
+        <span>Vista previa</span>
+      </a>
     <button id="activar" class="campana-control" type="button" aria-label="Activar alarma sonora" aria-pressed="false" data-estado="apagada" hidden>
       <span id="icono-alarma" class="campana-icono" aria-hidden="true">🔕</span>
       <span id="texto-alarma" class="campana-texto">Activar alarma</span>
@@ -269,7 +278,6 @@
         <p class="hint">Agrega productos, cambia precios, organiza categorías y administra fotografías. La recepción y su alarma siguen activas mientras trabajas aquí.</p>
         <p><a class="portal-link" href="admin-productos.html?v=modificadores-marca-editable-20261120#panelModificadores" target="_blank" rel="noopener">🧩 Abrir modificadores de productos</a></p>
         <p class="hint">Si no ves la sección dentro del panel, usa el enlace de arriba para abrir el editor directamente.</p>
-        <p><a class="portal-link" href="index-1.html?v=menu-marca-editable-20261120" target="_blank" rel="noopener">👀 Probar menú de clientes con modificadores</a></p>
       </div>
       <iframe id="marco-productos" title="Editor de productos" loading="lazy"></iframe>
     </section>
@@ -532,6 +540,7 @@
     enlacesLocalAdmin.hidden = true;
     vistaPedidos.hidden = nombre !== 'pedidos';
     vistaProductos.hidden = nombre !== 'productos';
+    document.getElementById('vista-previa-productos').hidden = nombre !== 'productos' || !auth.currentUser;
     vistaEquipo.hidden = nombre !== 'equipo';
     vistaConfiguracion.hidden = nombre !== 'configuracion';
     tabConfiguracion.setAttribute('aria-selected', String(nombre === 'configuracion'));
@@ -549,7 +558,7 @@
     }
     if (nombre === 'productos' && !marcoCargado) {
       marcoCargado = true;
-      marcoProductos.src = 'admin-productos.html?integrado=1&v=modificadores-marca-editable-20261120';
+      marcoProductos.src = 'admin-productos.html?integrado=1&v=vista-previa-20261124';
     }
     if (nombre === 'equipo' && auth.currentUser && !equipoCargado) escucharEquipo();
   }
