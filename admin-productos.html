@@ -61,7 +61,30 @@
     .grupo-compacto .acciones{min-width:180px;flex:0 1 230px}
     .grupo-compacto .acciones button{padding:8px;margin:0}
     .grupo-compacto small{display:block;color:#bbb;margin-top:3px}
-    #formModificador{background:#191919;border-radius:10px;padding:12px;margin-top:12px}
+    #formModificador{background:#191919;border-radius:10px;padding:12px;margin-top:10px}
+    .mod-lista-titulo{display:flex;align-items:center;gap:8px;font-size:19px;margin:0 0 12px}
+    .mod-lista-titulo small{font-size:13px;color:#c9dce9}
+    #crearGrupoModificador{background:#153b5d;border:1px solid #6ba4c7;color:#fff;margin:0 0 8px}
+    #buscarGrupoModificador{margin:4px 0 12px}
+    .mod-grupo{border:1px solid #454e58;border-radius:10px;margin:8px 0;background:#22272e;overflow:hidden}
+    .mod-grupo>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 12px;cursor:pointer}
+    .mod-grupo>summary::-webkit-details-marker{display:none}
+    .mod-grupo>summary strong{display:block;overflow-wrap:anywhere}
+    .mod-grupo>summary small{display:block;color:#bcc6cf;font-size:12px;margin-top:5px}
+    .mod-grupo-flecha{font-size:19px;color:#b8d9ef;flex-shrink:0}
+    .mod-grupo[open] .mod-grupo-flecha{transform:rotate(180deg)}
+    .mod-grupo-cuerpo{padding:0 8px 9px;border-top:1px solid #454e58}
+    .mod-asociaciones{margin:12px 0;border:1px solid #51738e;border-radius:10px;padding:9px;background:#172b3e}
+    .mod-asociaciones>summary{cursor:pointer;font-weight:bold;color:#d7edff;padding:4px}
+    #listaAsociacionesMod{max-height:290px;overflow:auto;overscroll-behavior:contain;margin-top:8px}
+    .mod-cat-asociacion{font-size:13px;color:#a7d0ec;margin:12px 0 5px}
+    .mod-asociacion-item{display:flex;align-items:center;gap:9px;font-weight:normal;margin:0;padding:7px 3px;border-bottom:1px solid #ffffff14}
+    .mod-asociacion-item input{width:19px;height:19px;flex:0 0 19px;margin:0;accent-color:#f6bd42}
+    .mod-asociacion-item span{min-width:0;overflow-wrap:anywhere}
+    .mod-lista-estado{color:#ffd575;font-size:13px;white-space:pre-wrap}
+    .mod-condicion{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0;color:#c9dce9;font-size:13px}
+    .mod-condicion label{display:flex;align-items:center;gap:5px;margin:0;font-weight:normal}
+    .mod-condicion input{width:17px;height:17px;margin:0;accent-color:#f6bd42}
     .mod-opciones-lista{margin:10px 0}
     .mod-fila-opcion{display:grid;grid-template-columns:minmax(0,1fr) minmax(106px,145px) 42px;gap:8px;align-items:end;padding:9px;margin:8px 0;background:#272727;border:1px solid #474747;border-radius:9px}
     .mod-fila-opcion label{margin:0;font-size:13px}
@@ -128,14 +151,33 @@
         <a id="volver-productos" href="panel-pedidos.html#vista-productos">← Volver</a>
       </nav>
 
-      <details class="caja" id="panelModificadores" open hidden>
-        <summary>🧩 Crear y asignar modificadores <small id="cantidadModificadores" class="ayuda">(0 grupos)</small></summary>
-        <p class="mod-note">Crea un grupo una sola vez y asígnalo a los productos que tú elijas, sin importar su categoría. Ejemplo: “Sabores gaseosa” con mínimo 1 y máximo 1 en la gaseosa de 1,5 litros; “Cubiertos” en lasaña, churrasco y pechuga.</p>
+      <section class="caja" id="panelModificadores" hidden>
+        <h2 class="mod-lista-titulo">🧩 Categorías de modificadores <small id="cantidadModificadores">(0 grupos)</small></h2>
+        <button id="crearGrupoModificador" type="button">＋ Crear categoría</button>
+        <input id="buscarGrupoModificador" type="search" placeholder="Buscar categoría" aria-label="Buscar categoría de modificadores" autocomplete="off">
+        <p id="estadoListaMod" class="mod-lista-estado" role="status"></p>
+        <div id="nuevoGrupoMod"></div>
+        <div id="listaModificadores">Cargando modificadores...</div>
+        <div id="reservaFormMod" hidden>
         <form id="formModificador">
           <input id="idModificador" type="hidden">
           <label>Nombre del grupo
             <input id="nombreModificador" maxlength="80" placeholder="Ej.: Sabores de pizza" required>
           </label>
+          <details class="mod-asociaciones" id="panelAsociacionesMod">
+            <summary>Asociar / desasociar <span id="cantidadAsociacionesMod">(0)</span></summary>
+            <input id="buscarAsociacionMod" type="search" placeholder="Buscar producto" aria-label="Buscar producto para asociar" autocomplete="off">
+            <div id="listaAsociacionesMod"></div>
+            <p class="ayuda">Marca los productos que usarán este grupo. Los cambios se aplican al guardar. Los límites particulares de los productos ya asociados se conservan.</p>
+          </details>
+          <div class="mod-condicion" role="group" aria-label="Condición del grupo">
+            <label><input type="radio" name="condicionMod" id="modOpcional" checked> Opcional</label>
+            <label><input type="radio" name="condicionMod" id="modObligatorio"> Obligatorio</label>
+          </div>
+          <div class="mod-condicion" role="group" aria-label="Cantidad de opciones">
+            <label><input type="radio" name="cantidadMod" id="modUna" checked> Una opción</label>
+            <label><input type="radio" name="cantidadMod" id="modVarias"> Varias opciones</label>
+          </div>
           <div class="fila">
             <label>Selecciones mínimas <small>(0 = opcional)</small>
               <input id="minModificador" type="number" min="0" max="50" step="1" value="0" required>
@@ -150,13 +192,12 @@
           <label class="check"><input id="activoModificador" type="checkbox" checked> Grupo visible para clientes</label>
           <div class="mod-controls">
             <button id="guardarModificador" type="submit">💾 Guardar modificador</button>
-            <button id="limpiarModificador" type="button" class="secundario">Nuevo / limpiar</button>
+            <button id="limpiarModificador" type="button" class="secundario">Cancelar</button>
           </div>
           <p id="mensajeModificador" role="status" class="ayuda"></p>
         </form>
-        <h3>Grupos creados</h3>
-        <div id="listaModificadores">Todavía no hay modificadores.</div>
-      </details>
+        </div>
+      </section>
       <section class="caja" id="panelFormularioProducto">
         <h2 id="tituloForm">Agregar producto</h2>
         <form id="formProducto">
@@ -232,7 +273,7 @@
   <script type="module">
     import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
     import {getAuth,signInWithEmailAndPassword,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-    import {getFirestore,collection,addDoc,doc,updateDoc,onSnapshot,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+    import {getFirestore,collection,addDoc,doc,updateDoc,onSnapshot,serverTimestamp,runTransaction} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
     // Storage se importa al seleccionar una foto. Una falla en ese servicio
     // no debe impedir iniciar sesión o modificar precios y productos.
 
@@ -272,7 +313,7 @@
       $('panelModificadores').hidden=!modificadores;
       $('panelFormularioProducto').hidden=modificadores;
       $('panelListaProductos').hidden=modificadores;
-      if(modificadores)$('panelModificadores').open=true;
+      
       $('editor-tab-productos').setAttribute('aria-pressed',String(!modificadores));
       $('editor-tab-modificadores').setAttribute('aria-pressed',String(modificadores));
     }
@@ -357,7 +398,7 @@
       dejarDeEscuchar();
       $('acceso').hidden=!!user;
       $('panel').hidden=!user;
-      if(!user){productos=[];$('productos-negocio').textContent='La Pizza de Juan K';return;}
+      if(!user){productos=[];cerrarGrupo();$('productos-negocio').textContent='La Pizza de Juan K';return;}
       $('lista').textContent='Cargando productos...';
       dejarDeEscuchar=onSnapshot(collection(db,'productos'),snapshot=>{
         const configuracion=snapshot.docs.find(x=>x.id==='__configuracion_negocio')?.data();
@@ -385,7 +426,7 @@
       const grupos=productos.filter(p=>p.tipo==='grupo-modificadores')
         .sort((a,b)=>String(a.nombre||'').localeCompare(String(b.nombre||''),'es'));
       if(!grupos.length){
-        holder.textContent='Aún no hay grupos. Abre “Modificadores de productos” abajo y crea uno.';
+        holder.textContent='Aún no hay grupos. Abre la pestaña Modificadores y crea uno.';
         return;
       }
       for(const g of grupos){
@@ -500,7 +541,64 @@
 
     // Los modificadores se guardan en la colección productos, que ya cuenta
     // con las reglas de acceso del administrador. No se crean colecciones nuevas.
+    let grupoAbierto=null, cambiosMod=false, guardandoMod=false;
+    const asociacionesCambiadas=new Map();
     const avisoModificador=texto=>$('mensajeModificador').textContent=texto;
+    const avisoListaMod=texto=>$('estadoListaMod').textContent=texto;
+    const esProductoAsociable=p=>!['pizza-tamano','pizza-sabor','grupo-modificadores'].includes(p.tipo);
+    const tieneGrupo=(p,id)=>!!id&&Array.isArray(p.gruposModificadores)&&p.gruposModificadores.some(x=>x.id===id);
+    const normalizarBusqueda=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+    function seleccionAsociacion(p){
+      return asociacionesCambiadas.has(p.id)?asociacionesCambiadas.get(p.id):tieneGrupo(p,$('idModificador').value);
+    }
+    function pintarAsociacionesMod(){
+      const lista=$('listaAsociacionesMod'), q=normalizarBusqueda($('buscarAsociacionMod').value);
+      lista.replaceChildren();
+      const disponibles=productos.filter(esProductoAsociable).sort((a,b)=>
+        String(a.categoria||'').localeCompare(String(b.categoria||''),'es')||String(a.nombre||'').localeCompare(String(b.nombre||''),'es'));
+      $('cantidadAsociacionesMod').textContent='('+disponibles.filter(seleccionAsociacion).length+')';
+      let categoriaAnterior=null, visibles=0;
+      for(const p of disponibles){
+        const categoria=p.categoria||'Sin categoría';
+        if(q&&!normalizarBusqueda(categoria+' '+p.nombre).includes(q))continue;
+        if(categoria!==categoriaAnterior){
+          const titulo=document.createElement('h4');titulo.className='mod-cat-asociacion';titulo.textContent=categoria;
+          lista.append(titulo);categoriaAnterior=categoria;
+        }
+        const label=document.createElement('label');label.className='mod-asociacion-item';
+        const check=document.createElement('input');check.type='checkbox';check.checked=seleccionAsociacion(p);
+        const nombre=document.createElement('span');nombre.textContent=(p.nombre||'Sin nombre')+(p.activo===false?' (oculto)':'');
+        check.addEventListener('change',()=>{
+          if(check.checked===tieneGrupo(p,$('idModificador').value))asociacionesCambiadas.delete(p.id);
+          else asociacionesCambiadas.set(p.id,check.checked);
+          cambiosMod=true;
+          $('cantidadAsociacionesMod').textContent='('+disponibles.filter(seleccionAsociacion).length+')';
+        });
+        label.append(check,nombre);lista.append(label);visibles++;
+      }
+      if(!visibles)lista.textContent=q?'No hay coincidencias.':'Todavía no hay productos para asociar.';
+    }
+    $('buscarAsociacionMod').addEventListener('input',pintarAsociacionesMod);
+    function sincronizarCondicionMod(){
+      $('modOpcional').checked=Number($('minModificador').value)===0;
+      $('modObligatorio').checked=!$('modOpcional').checked;
+      $('modUna').checked=Number($('maxModificador').value)===1;
+      $('modVarias').checked=!$('modUna').checked;
+    }
+    $('minModificador').addEventListener('input',sincronizarCondicionMod);
+    $('maxModificador').addEventListener('input',sincronizarCondicionMod);
+    $('modOpcional').addEventListener('change',()=>{$('minModificador').value=0;sincronizarCondicionMod();});
+    $('modObligatorio').addEventListener('change',()=>{$('minModificador').value=Math.max(1,Number($('minModificador').value)||0);sincronizarCondicionMod();});
+    $('modUna').addEventListener('change',()=>{$('maxModificador').value=1;$('minModificador').value=Math.min(1,Number($('minModificador').value)||0);sincronizarCondicionMod();});
+    $('modVarias').addEventListener('change',()=>{$('maxModificador').value=Math.max(2,Number($('maxModificador').value)||1);sincronizarCondicionMod();});
+    $('formModificador').addEventListener('input',e=>{if(e.target.id!=='buscarAsociacionMod')cambiosMod=true;});
+    $('formModificador').addEventListener('change',e=>{if(e.target.id!=='buscarAsociacionMod')cambiosMod=true;});
+    function permitirCambioGrupo(){return !guardandoMod&&(!cambiosMod||confirm('Tienes cambios sin guardar. ¿Deseas descartarlos?'));}
+    function cerrarGrupo(){
+      grupoAbierto=null;cambiosMod=false;asociacionesCambiadas.clear();
+      $('reservaFormMod').append($('formModificador'));
+      pintarModificadores();
+    }
     function crearFilaOpcionModificador(nombre='',precio=0,descripcion=''){
       const contenedor=$('filasOpcionesModificador');
       if(contenedor.children.length>=50){avisoModificador('Máximo 50 opciones por grupo.');return;}
@@ -521,7 +619,7 @@
       quitar.className='mod-eliminar-opcion';quitar.textContent='×';
       quitar.setAttribute('aria-label','Quitar opción');
       quitar.addEventListener('click',()=>{
-        fila.remove();
+        cambiosMod=true;fila.remove();
         if(!contenedor.children.length)crearFilaOpcionModificador();
       });
       const detalles=document.createElement('details');detalles.className='mod-descripcion-editor';
@@ -546,13 +644,21 @@
       $('activoModificador').checked=true;
       $('filasOpcionesModificador').replaceChildren();
       crearFilaOpcionModificador();
-      $('guardarModificador').textContent='💾 Guardar modificador';
+      $('guardarModificador').textContent='💾 Guardar categoría';
+      asociacionesCambiadas.clear();$('buscarAsociacionMod').value='';$('panelAsociacionesMod').open=false;
+      sincronizarCondicionMod();cambiosMod=false;avisoModificador('');
     }
     $('agregarOpcionModificador').addEventListener('click',()=>{
       const input=crearFilaOpcionModificador();
-      if(input)input.focus();
+      if(input){cambiosMod=true;input.focus();}
     });
-    $('limpiarModificador').addEventListener('click',()=>{limpiarModificador();avisoModificador('Listo para crear otro grupo.');});
+    $('limpiarModificador').addEventListener('click',()=>{if(permitirCambioGrupo())cerrarGrupo();});
+    $('crearGrupoModificador').addEventListener('click',()=>{
+      if(!permitirCambioGrupo())return;
+      limpiarModificador();grupoAbierto='nuevo';$('buscarGrupoModificador').value='';
+      pintarModificadores();$('nombreModificador').focus();
+    });
+    $('buscarGrupoModificador').addEventListener('input',pintarModificadores);
     function leerOpcionesModificador(){
       const filas=Array.from($('filasOpcionesModificador').querySelectorAll('.mod-fila-opcion'));
       const usadas=new Set();
@@ -578,7 +684,8 @@
     }
     limpiarModificador();
     function editarModificador(g){
-      $('panelModificadores').open=true;
+      limpiarModificador();
+      grupoAbierto=g.id;
       $('idModificador').value=g.id;
       $('nombreModificador').value=g.nombre||'';
       $('minModificador').value=g.minSeleccion??0;
@@ -588,40 +695,54 @@
       if(!$('filasOpcionesModificador').children.length)crearFilaOpcionModificador();
       $('activoModificador').checked=g.activo!==false;
       $('guardarModificador').textContent='💾 Guardar cambios';
-      avisoModificador('Editando '+g.nombre+'.');
-      $('nombreModificador').focus();
+      sincronizarCondicionMod();cambiosMod=false;
+      pintarModificadores();
     }
     function pintarModificadores(){
       const grupos=productos.filter(x=>x.tipo==='grupo-modificadores').sort((a,b)=>
         String(a.nombre||'').localeCompare(String(b.nombre||''),'es'));
       $('cantidadModificadores').textContent='('+grupos.length+' grupos)';
-      const lista=$('listaModificadores');lista.replaceChildren();
-      if(!grupos.length){lista.textContent='Todavía no hay modificadores. Crea el primero arriba.';return;}
+      const lista=$('listaModificadores'),form=$('formModificador');
+      const activo=document.activeElement, focoEnForm=form.contains(activo);
+      // El formulario único mantiene sus valores cuando se refresca el catálogo.
+      $('reservaFormMod').append(form);lista.replaceChildren();$('nuevoGrupoMod').replaceChildren();
+      if(grupoAbierto==='nuevo'){
+        const caja=document.createElement('div');caja.className='mod-grupo-cuerpo';
+        caja.append(form);$('nuevoGrupoMod').append(caja);
+      }
+      const q=normalizarBusqueda($('buscarGrupoModificador').value);
+      let visibles=0;
       for(const g of grupos){
-        const div=document.createElement('div');div.className='grupo-compacto';
-        const resumen=document.createElement('div');
+        if(g.id!==grupoAbierto&&q&&!normalizarBusqueda(g.nombre).includes(q))continue;
+        visibles++;
+        const div=document.createElement('details');div.className='mod-grupo';div.open=grupoAbierto===g.id;
+        const resumen=document.createElement('summary');
+        const texto=document.createElement('div');
         const titulo=document.createElement('strong');titulo.textContent=g.nombre||'Sin nombre';
         const info=document.createElement('small');
-        const usos=productos.filter(p=>p.tipo!=='grupo-modificadores' && (p.gruposModificadores||[]).some(x=>x.id===g.id)).length;
-        info.textContent=(g.opciones||[]).length+' opciones · '+usos+' productos vinculados · min '+(g.minSeleccion??0)+' / max '+(g.maxSeleccion??1)+(g.activo===false?' · Oculto':'');
-        resumen.append(titulo,info);
-        const acciones=document.createElement('div');acciones.className='acciones';
-        const editar=document.createElement('button');editar.type='button';editar.textContent='✏️ Editar';editar.addEventListener('click',()=>editarModificador(g));
-        const visibilidad=document.createElement('button');visibilidad.type='button';visibilidad.textContent=g.activo===false?'👁 Mostrar':'🙈 Ocultar';
-        visibilidad.addEventListener('click',async()=>{
-          visibilidad.disabled=true;
-          try{
-            await updateDoc(doc(db,'productos',g.id),{activo:g.activo===false,actualizadoEn:serverTimestamp()});
-            avisoModificador('Visibilidad del grupo actualizada.');
-          }catch(e){avisoModificador('No se pudo actualizar: '+(e.message||'revisa permisos.'));visibilidad.disabled=false;}
+        const usos=productos.filter(p=>esProductoAsociable(p)&&tieneGrupo(p,g.id)).length;
+        info.textContent=(g.opciones||[]).length+' opciones · '+usos+' productos'+(g.activo===false?' · Oculto':'');
+        texto.append(titulo,info);
+        const flecha=document.createElement('span');flecha.className='mod-grupo-flecha';flecha.textContent='⌄';flecha.setAttribute('aria-hidden','true');
+        resumen.append(texto,flecha);
+        resumen.addEventListener('click',e=>{
+          e.preventDefault();
+          if(!permitirCambioGrupo())return;
+          if(grupoAbierto===g.id)cerrarGrupo();else editarModificador(g);
         });
-        acciones.append(editar,visibilidad);div.append(resumen,acciones);lista.append(div);
+        div.append(resumen);
+        if(grupoAbierto===g.id){
+          const cuerpo=document.createElement('div');cuerpo.className='mod-grupo-cuerpo';cuerpo.append(form);div.append(cuerpo);
+        }
+        lista.append(div);
       }
+      if(!visibles)lista.textContent=q?'No se encontraron categorías.':'Todavía no hay modificadores. Crea una categoría.';
+      if(grupoAbierto!==null){pintarAsociacionesMod();if(focoEnForm&&form.contains(activo))activo.focus({preventScroll:true});}
     }
     $('formModificador').addEventListener('submit',async e=>{
       e.preventDefault();
-      const boton=$('guardarModificador');boton.disabled=true;
-      avisoModificador('Guardando modificador...');
+      const boton=$('guardarModificador');if(guardandoMod)return;guardandoMod=true;boton.disabled=true;
+      avisoModificador('Guardando categoría y asociaciones...');
       try{
         if(!auth.currentUser)throw new Error('Inicia sesión como administrador.');
         const nombre=$('nombreModificador').value.trim();
@@ -634,11 +755,48 @@
         const datos={tipo:'grupo-modificadores',nombre,categoriaObjetivo:'',minSeleccion,maxSeleccion,opciones,
           activo:$('activoModificador').checked,actualizadoEn:serverTimestamp()};
         const id=$('idModificador').value;
-        if(id)await updateDoc(doc(db,'productos',id),datos);
-        else await addDoc(collection(db,'productos'),{...datos,creadoEn:serverTimestamp()});
-        limpiarModificador();avisoModificador('✅ Grupo guardado. Ahora puedes asignarlo a cualquier producto.');
+        const refGrupo=id?doc(db,'productos',id):doc(collection(db,'productos'));
+        const cambios=new Map(asociacionesCambiadas);
+        const ids=new Set(productos.filter(p=>esProductoAsociable(p)&&tieneGrupo(p,id)).map(p=>p.id));
+        for(const pid of cambios.keys())ids.add(pid);
+        if(cambios.size>499)throw new Error('Guarda las asociaciones en grupos de máximo 499 productos.');
+        const resultado=await runTransaction(db,async tx=>{
+          if(id){const actual=await tx.get(refGrupo);if(!actual.exists())throw new Error('La categoría ya no existe.');}
+          const refs=[...ids].map(pid=>doc(db,'productos',pid));
+          const snaps=await Promise.all(refs.map(ref=>tx.get(ref)));
+          const cambiosProducto=[];
+          for(const snap of snaps){
+            if(!snap.exists()){if(cambios.has(snap.id))throw new Error('Un producto ya no existe. Actualiza y vuelve a intentar.');continue;}
+            const p=snap.data();
+            if(!esProductoAsociable(p)||p.tipo==='configuracion-negocio')throw new Error('El producto cambió de tipo. Actualiza el catálogo.');
+            const vinculos=Array.isArray(p.gruposModificadores)?p.gruposModificadores:[];
+            const existente=vinculos.find(x=>x.id===refGrupo.id);
+            const quiere=cambios.has(snap.id)?cambios.get(snap.id):!!existente;
+            if(quiere&&existente&&(Number(existente.max)>opciones.length||Number(existente.min)>Number(existente.max)))
+              throw new Error('Revisa los límites de '+(p.nombre||'un producto')+' en Productos antes de reducir las opciones.');
+            if(cambios.has(snap.id)&&quiere!==!!existente){
+              const nuevos=quiere?[...vinculos,{id:refGrupo.id,min:minSeleccion,max:maxSeleccion}]:vinculos.filter(x=>x.id!==refGrupo.id);
+              cambiosProducto.push({ref:snap.ref,id:snap.id,vinculos:nuevos});
+            }
+          }
+          if(id)tx.update(refGrupo,datos);
+          else tx.set(refGrupo,{...datos,creadoEn:serverTimestamp()});
+          for(const p of cambiosProducto)tx.update(p.ref,{gruposModificadores:p.vinculos,actualizadoEn:serverTimestamp()});
+          return cambiosProducto.map(p=>({id:p.id,vinculos:p.vinculos}));
+        });
+        // Evita que un formulario de producto ya abierto vuelva a guardar la asociación anterior.
+        const productoEditando=resultado.find(p=>p.id===$('idProducto').value);
+        if(productoEditando){
+          const fila=[...$('asignacionModificadores').querySelectorAll('.vinculo-mod')].find(f=>f.dataset.grupoId===refGrupo.id);
+          const vinculo=productoEditando.vinculos.find(v=>v.id===refGrupo.id);
+          if(fila){const check=fila.querySelector('input[type="checkbox"]');check.checked=!!vinculo;
+            if(vinculo){fila.querySelector('[data-campo="min"]').value=vinculo.min;fila.querySelector('[data-campo="max"]').value=vinculo.max;}
+            check.dispatchEvent(new Event('change'));
+          }
+        }
+        cambiosMod=false;cerrarGrupo();avisoListaMod('✅ Categoría y asociaciones guardadas.');
       }catch(error){avisoModificador('❌ '+(error.code==='permission-denied'?'Faltan permisos de Firestore.':error.message||'No se pudo guardar.'));}
-      finally{boton.disabled=false;}
+      finally{guardandoMod=false;boton.disabled=false;}
     });
 
     $('formProducto').addEventListener('submit',async e=>{
