@@ -60,7 +60,8 @@ label input[type=checkbox]{width:auto;margin:0 8px 0 0}
  .mesa{min-height:90px;font-size:14px}
  .opcionesSabores{grid-template-columns:1fr}
 }
-</style></head>
+</style><link rel="stylesheet" href="nav-admin-fija.css">
+</head>
 <body><header><h1>🍽️ Mesas y barra · La Pizza de Juanca</h1><p>Comandas, cuentas y cobros conectados a caja</p></header>
 <main>
 <p class="nota"><strong>Fase de pruebas con Firebase.</strong> Aquí las comandas y los pagos sí se enviarán a Firestore cuando estén autorizadas las reglas. Todavía no está validado para ventas reales. Prueba con valores ficticios, revisa los permisos y no mezcles los movimientos de prueba con las ventas del negocio.</p>
@@ -148,4 +149,11 @@ label input[type=checkbox]{width:auto;margin:0 8px 0 0}
 </main>
 <script src="impresion-ticket.js"></script>
 <script type="module" src="salon-operativo.js"></script>
+<nav class="nav-admin-fija" aria-label="Navegación fija del administrador">
+<a href="panel-pedidos.html#panel-inicio" aria-label="Inicio del centro de control"><span class="nav-admin-icono" aria-hidden="true">🏠</span><span>Inicio</span></a>
+<a href="panel-pedidos.html#vista-pedidos" aria-label="Pedidos de recepción"><span class="nav-admin-icono" aria-hidden="true">🔔</span><span>Pedidos</span></a>
+<a href="salon-operativo.html" aria-label="Mesas y barra" aria-current="page"><span class="nav-admin-icono" aria-hidden="true">🍽️</span><span>Mesas</span></a>
+<a href="caja-operativa.html" aria-label="Resumen de caja"><span class="nav-admin-icono" aria-hidden="true">💰</span><span>Caja</span></a>
+<a href="caja-operativa.html#seccionMovimiento" aria-label="Registro de entradas y salidas"><span class="nav-admin-icono" aria-hidden="true">🧾</span><span>Entradas /<br>salidas</span></a>
+</nav>
 </body></html>
