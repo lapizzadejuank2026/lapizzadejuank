@@ -633,7 +633,7 @@
       (/^https:\/\//i.test(datos.logoURL) || /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(datos.logoURL))
       ? datos.logoURL : '';
     if (!configArchivo.files.length) configLogoVista.src = logoURLActual || 'chef.png';
-    document.getElementById('panel-nombre').textContent = camposConfiguracion.nombre.value;
+    document.getElementById('panel-nombre').textContent = (camposConfiguracion.nombre.value || 'La Pizza de Juanca').replace(/^La Pizza de Juan K$/i, 'La Pizza de Juanca');
   }
   mostrarConfiguracion(null);
   document.getElementById('config-form').addEventListener('submit', async evento => {
