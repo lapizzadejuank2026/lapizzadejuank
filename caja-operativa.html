@@ -48,8 +48,17 @@ details.card[open]>summary{margin-bottom:12px}
 [hidden]{display:none!important}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid white;outline-offset:3px}
 @media(max-width:640px){.metricaGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.fila2{grid-template-columns:1fr}header{padding:17px 10px}h1{font-size:24px}}
+
+/* Encabezado verdaderamente fijo: no depende de la hoja de estilos en caché. */
+body{padding-top:var(--cabecera-alto,95px)}
+body > header.cabecera-fija-app{
+ position:fixed;inset:0 0 auto 0;width:100%;z-index:80;
+ background:#a71919;box-shadow:0 5px 15px #0009;
+}
+body > header.cabecera-fija-app h1{font-size:clamp(19px,4.5vw,25px);line-height:1.18}
+body > header.cabecera-fija-app p{font-size:13px;line-height:1.25}
 </style>
-<link rel="stylesheet" href="nav-admin-fija.css"><script defer src="cabecera-fija-admin.js"></script>
+<link rel="stylesheet" href="nav-admin-fija.css?v=cabecera-fija-20261123c"><script defer src="cabecera-fija-admin.js?v=cabecera-fija-20261123c"></script>
 </head>
 <body>
 <header class="cabecera-fija-app"><h1>🍕 La Pizza de Juanca</h1><p>💰 Caja · Apertura, ingresos, gastos y cierre</p></header>
