@@ -102,9 +102,11 @@
     button:focus-visible { outline:3px solid #fff; outline-offset:2px; }
     @media(max-width:520px) { header{padding:18px 12px} h1{font-size:23px} main{padding:10px 10px 24px} .caja,.pedido{padding:15px} .tabs{gap:6px} .tabs button{font-size:14px;padding:14px 5px} }
   </style>
+<link rel="stylesheet" href="nav-admin-fija.css">
 </head>
 <body>
 <header><h1 id="panel-nombre">🍕 La Pizza de Juan K</h1><div>Centro de control · Pedidos, productos y equipo</div></header>
+<div id="panel-inicio"></div>
 <main>
   <section id="acceso" class="caja">
     <h2>Acceso del negocio</h2>
@@ -1523,5 +1525,12 @@
     );
   });
 </script>
+<nav class="nav-admin-fija" aria-label="Navegación fija del administrador">
+<a href="panel-pedidos.html#panel-inicio" aria-label="Inicio del centro de control"><span class="nav-admin-icono" aria-hidden="true">🏠</span><span>Inicio</span></a>
+<a href="panel-pedidos.html#vista-pedidos" aria-label="Pedidos de recepción" aria-current="page"><span class="nav-admin-icono" aria-hidden="true">🔔</span><span>Pedidos</span></a>
+<a href="salon-operativo.html" aria-label="Mesas y barra"><span class="nav-admin-icono" aria-hidden="true">🍽️</span><span>Mesas</span></a>
+<a href="caja-operativa.html" aria-label="Resumen de caja"><span class="nav-admin-icono" aria-hidden="true">💰</span><span>Caja</span></a>
+<a href="caja-operativa.html#seccionMovimiento" aria-label="Registro de entradas y salidas"><span class="nav-admin-icono" aria-hidden="true">🧾</span><span>Entradas /<br>salidas</span></a>
+</nav>
 </body>
 </html>
