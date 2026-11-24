@@ -14,31 +14,40 @@ export function crearMapaRecepcion(db,root){
   const subtotal=Number(it.precio??it.precioUnitario)*Number(it.cantidad);
   b.append(nodo('div',(it.cantidad??'')+' × '+(it.nombre||it.producto||it.pizza||'Producto')+(Array.isArray(it.sabores)&&it.sabores.length?' · '+it.sabores.join(', '):'')+(valido(subtotal)?' — '+pesos(subtotal):'')));
  }}
+ function irAlMapa(){root.scrollIntoView({block:'start',behavior:'instant'});}
+ function volverAlMapa(){seleccion='';historialAbierto=false;pintar();irAlMapa();}
+ function botonVolver(){const b=nodo('button','← Volver a las mesas','mapa-volver');b.type='button';b.onclick=volverAlMapa;return b;}
  function pintar(){
-  root.hidden=!visible;grid.replaceChildren();detalle.replaceChildren();detalle.hidden=true;resumen.hidden=true;
+  root.hidden=!visible;grid.replaceChildren();detalle.replaceChildren();detalle.hidden=true;resumen.hidden=true;grid.hidden=!!seleccion;estado.hidden=!!seleccion;
   if(!visible)return;
-  if(!mesasOk||!cuentasOk){estado.textContent=error||'Sincronizando mesas y cuentas con Firebase. El saldo aparecerá cuando esté confirmado.';return;}
+  if(!mesasOk||!cuentasOk){
+   const mensaje=error||'Sincronizando mesas y cuentas con Firebase. El saldo aparecerá cuando esté confirmado.';
+   estado.textContent=mensaje;
+   if(seleccion){detalle.hidden=false;detalle.append(botonVolver(),nodo('p',mensaje,'hint'));}
+   return;
+  }
   const activas=mesas.filter(m=>m.activa).sort((a,b)=>(a.orden??999)-(b.orden??999)||String(a.nombre||'').localeCompare(String(b.nombre||''),'es'));
   const ocupadas=activas.filter(m=>!!m.cuentaId);
   const cuenta=m=>{const c=cuentas.get(m.cuentaId);return c&&c.mesaId===m.id&&valido(c.total)?c:null;};
   const completas=ocupadas.every(m=>!!cuenta(m));
   estado.textContent=activas.length?'Toca una mesa para ver su cuenta y sus comandas.':'No hay mesas activas. Configúralas desde Mesas y barra.';
-  resumen.hidden=false;
+  if(!activas.some(m=>m.id===seleccion))seleccion='';
+  resumen.hidden=!!seleccion;grid.hidden=!!seleccion;estado.hidden=!!seleccion;
   $('mapa-libres').textContent=String(activas.length-ocupadas.length);
   $('mapa-ocupadas').textContent=String(ocupadas.length);
   $('mapa-total').textContent=completas?pesos(ocupadas.reduce((n,m)=>n+cuenta(m).total,0)):'Por sincronizar';
-  if(!activas.some(m=>m.id===seleccion))seleccion='';
-  for(const m of activas){
+  for(const m of seleccion?[]:activas){
    const c=cuenta(m);
    const b=nodo('button',null,m.cuentaId?'ocupada':'libre');b.type='button';
    b.setAttribute('aria-pressed',String(m.id===seleccion));
    b.append(nodo('strong',m.nombre||'Mesa'),nodo('small',m.cuentaId?'🟠 Ocupada':'🟢 Libre'),nodo('strong',m.cuentaId?(c?pesos(c.total):'Por sincronizar'):pesos(0)));
    if(c)b.append(nodo('small',(Array.isArray(c.comandas)?c.comandas.length:0)+' comanda(s)'));
-   b.onclick=()=>{if(seleccion!==m.id)historialAbierto=false;seleccion=m.id;pintar();detalle.querySelector('h4')?.focus({preventScroll:true});};
+   b.onclick=()=>{if(seleccion!==m.id)historialAbierto=false;seleccion=m.id;pintar();irAlMapa();detalle.querySelector('h4')?.focus({preventScroll:true});};
    grid.append(b);
   }
   const m=activas.find(x=>x.id===seleccion);if(!m)return;
   const c=cuenta(m);detalle.hidden=false;
+  detalle.append(botonVolver());
   const titulo=nodo('h4',m.nombre||'Mesa');titulo.tabIndex=-1;detalle.append(titulo);
   detalle.append(nodo('p',m.cuentaId?'🟠 Cuenta abierta':'🟢 Libre · sin cuenta abierta'),nodo('p','Por cobrar: '+(m.cuentaId?(c?pesos(c.total):'Por sincronizar'):pesos(0)),'mapa-total'));
   if(c){
@@ -69,7 +78,7 @@ export function crearMapaRecepcion(db,root){
    if(anteriores.length>10)hist.append(nodo('p','Últimas 10 comandas; las demás están en el historial completo de pedidos.','hint'));
    detalle.append(hist);
   }
-  const cerrar=nodo('button','Cerrar detalle');cerrar.type='button';cerrar.onclick=()=>{seleccion='';historialAbierto=false;pintar();};detalle.append(cerrar);
+  detalle.append(botonVolver());
  }
  function detener(){
   version++;for(const fn of parar)fn();parar=[];mesas=[];cuentas.clear();pedidos=[];pedidosOk=false;seleccion='';historialAbierto=false;mesasOk=false;cuentasOk=false;error='';pintar();
