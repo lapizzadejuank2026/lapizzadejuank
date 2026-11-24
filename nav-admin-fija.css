@@ -1,0 +1,29 @@
+/* Navegación fija del administrador: accesos, sin operaciones financieras. */
+body{padding-bottom:calc(86px + env(safe-area-inset-bottom, 0px))}
+.nav-admin-fija{
+ position:fixed;bottom:0;left:0;right:0;z-index:70;
+ display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+ gap:2px;padding:7px max(6px,env(safe-area-inset-left, 6px))
+ calc(7px + env(safe-area-inset-bottom, 0px)) max(6px,env(safe-area-inset-right, 6px));
+ background:#171717;border-top:1px solid #756033;
+ box-shadow:0 -5px 16px #0008;
+}
+.nav-admin-fija a{
+ display:flex;flex-direction:column;align-items:center;justify-content:center;
+ min-width:0;min-height:53px;gap:2px;padding:5px 2px;
+ color:#e7e7e7;text-align:center;text-decoration:none;
+ border-radius:9px;border:1px solid transparent;
+ font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;line-height:1.12;
+ overflow-wrap:normal;
+}
+.nav-admin-fija a .nav-admin-icono{font-size:21px;line-height:1.15}
+.nav-admin-fija a[aria-current="page"],.nav-admin-fija a[aria-current="location"]{
+ background:#f6bd42;color:#17130e;
+}
+.nav-admin-fija a:focus-visible{outline:3px solid white;outline-offset:-3px}
+.nav-admin-fija a:active{background:#554020;color:white}
+#seccionMovimiento{scroll-margin-top:20px}
+@media(min-width:750px){
+ .nav-admin-fija{left:50%;right:auto;transform:translateX(-50%);width:min(100%,760px);border:1px solid #756033;border-radius:15px 15px 0 0}
+ .nav-admin-fija a{font-size:12px}
+}
