@@ -23,7 +23,7 @@
 
   function itemsNormalizados(datos){
     const lista=Array.isArray(datos?.productos)?datos.productos:
-      Array.isArray(datos?.items)?datos.items:[];
+      Array.isArray(datos?.items)?datos.items:Array.isArray(datos?.pizza)?datos.pizza:[];
     return lista.map(p=>{
       const cantidad=Number(p.cantidad??p.qty??1);
       const precio=monto(p.precioUnitario??p.precio??p.price);
@@ -33,20 +33,26 @@
         cantidad:Number.isFinite(cantidad)&&cantidad>0?cantidad:1,
         sabores:Array.isArray(p.sabores)?p.sabores.map(String):[],
         detalle:String(p.detalle||p.observaciones||''),
+        modificadores:(Array.isArray(p.modificadores)?p.modificadores:[]).map(g=>({grupo:String(g.grupo||g.nombre||''),opciones:(Array.isArray(g.opciones)?g.opciones:[]).map(o=>({nombre:String(o.nombre||''),precio:monto(o.precio)}))})),
         subtotal:subtotal!==null?subtotal:(precio!==null?precio*cantidad:null)
       };
     });
   }
-  function prepararPedido(id, datos){
+  function prepararPedido(id, datos, negocio={}){
     const d=datos||{};
     const cliente=(typeof d.cliente==='object' && d.cliente)||{};
     const modo=String(d.modalidad||d.tipoEntrega||'').toLowerCase();
     const mesa=modo==='mesa'||d.mesaId;
-    const domicilio=modo.includes('domicilio');
+    const domicilio=!mesa&&(modo.includes('domicilio')||modo.includes('delivery')||!!d.domiciliarioId||!!d.domiciliarioUid);
     const llevar=modo.includes('recoger')||modo.includes('llevar');
     return {
       encabezado:mesa?String(d.mesaNombre||d.mesaId||'Mesa'):domicilio?'🛵 DOMICILIO':llevar?'🛍️ PARA LLEVAR':'PEDIDO',
       numero:String(id||'').slice(0,8).toUpperCase(),
+      negocio:String(negocio.nombre||'LA PIZZA DE JUAN K'),
+      logo:/^https:\/\//i.test(negocio.logo||'')||/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(negocio.logo||'')?negocio.logo:'',
+      pagoPreferido:String(d.pagoPreferido||''),pagoCon:monto(d.pagoConEfectivo),
+      cobro:d.cobroReportado||null,verificado:d.cobroVerificado===true,
+      repartidor:String(d.domiciliarioNombre||''),
       fecha:fecha(d.creadoEn),
       nombre:String(cliente.nombre||d.nombre||d.clienteNombre||''),
       telefono:String(cliente.telefono||d.telefono||''),
@@ -98,7 +104,7 @@
       const subtotal=monto(item.subtotal);
       return '<div class="producto"><div class="principal"><span>'+html(item.cantidad)+' × '+html(item.nombre)+
         '</span><span>'+(subtotal!==null?'$'+pesos(subtotal):'')+'</span></div>'+
-        sabores+detalle+'</div>';
+        sabores+(item.modificadores||[]).map(g=>'<div class="detalle">'+(g.grupo?html(g.grupo)+': ':'')+g.opciones.map(o=>html(o.nombre)+(o.precio>0?' (+$'+pesos(o.precio)+')':'')).join(' / ')+'</div>').join('')+detalle+'</div>';
     }).join('');
     const totalProductos=monto(datos.subtotal);
     const domicilio=monto(datos.domicilio);
@@ -120,18 +126,19 @@
       '@page{margin:3mm}}'+
       '</style></head><body>'+
       '<div class="acciones"><button type="button" onclick="window.print()">🖨️ Imprimir una copia</button><button type="button" onclick="window.close()">Cerrar</button></div>'+
-      '<article class="ticket"><h1>LA PIZZA DE JUANCA</h1><h2>'+html(datos.titulo||'PEDIDO')+'</h2>'+
+      '<article class="ticket">'+(datos.logo?'<div class="centrado"><img alt="" style="max-width:22mm;max-height:18mm;object-fit:contain" src="'+html(datos.logo)+'"></div>':'')+'<h1>'+html(datos.negocio||'LA PIZZA DE JUAN K')+'</h1><h2>'+html(datos.titulo||'PEDIDO')+'</h2>'+
       (datos.prueba?'<p class="centrado"><strong>SOLO DEMOSTRACIÓN — SIN VALIDEZ COMERCIAL</strong></p>':'')+
       '<p class="centrado"><strong>'+html(datos.encabezado||'PEDIDO')+'</strong>'+
       (datos.numero?' · #'+html(datos.numero):'')+'</p>'+
       fila('Fecha:',datos.fecha)+fila('Impreso:',fecha(new Date()))+
       fila('Cliente:',datos.nombre)+fila('Teléfono:',datos.telefono)+
-      fila('Municipio:',datos.municipio)+fila('Dirección:',datos.direccion)+
+      fila('Municipio:',datos.municipio)+fila('Dirección:',datos.direccion)+fila('Repartidor:',datos.repartidor)+
       '<div class="linea"></div><strong>DETALLE</strong>'+lineas+
       '<div class="linea"></div>'+
       (totalProductos===null?'':fila('Subtotal productos:','$'+pesos(totalProductos)))+
       (datos.mostrarDomicilio?fila('Domicilio:',domicilio===null?'Por confirmar':'$'+pesos(domicilio)):'')+
       (totalFinal===null?'': '<p class="par total"><span>TOTAL:</span><span>$'+pesos(totalFinal)+'</span></p>')+
+      (datos.cobro?fila('Pago:',datos.verificado?'Conciliado':'Reportado, sin verificar')+fila('Método:',datos.cobro.metodo)+ (monto(datos.cobro.efectivo)>0?fila('Efectivo:','$'+pesos(datos.cobro.efectivo)):'')+(monto(datos.cobro.transferencia)>0?fila('Transferencia:','$'+pesos(datos.cobro.transferencia)):''):(datos.pagoPreferido?fila('Pago previsto:',datos.pagoPreferido):'')+(datos.pagoPreferido==='efectivo'&&datos.pagoCon!=null?fila('Paga con:','$'+pesos(datos.pagoCon))+(totalFinal!==null&&datos.pagoCon>=totalFinal?fila('Cambio:','$'+pesos(datos.pagoCon-totalFinal)):''):''))+
       (datos.observaciones?'<p><strong>Observaciones:</strong> '+html(datos.observaciones)+'</p>':'')+
       (datos.nota?'<p>'+html(datos.nota)+'</p>':'')+
       '<div class="linea"></div><div class="pie">Gracias por tu compra.<br>Comprobante interno / precuenta. No reemplaza una factura electrónica cuando esta sea obligatoria.</div>'+
@@ -141,5 +148,5 @@
     ventana.document.close();
     ventana.focus();
   }
-  window.ImpresionJuanca=Object.freeze({abrirTicket,prepararPedido,prepararCuentaMesa});
+  window.ImpresionJuanca=Object.freeze({abrirTicket,prepararPedido,prepararCuentaMesa,itemsNormalizados});
 })();
