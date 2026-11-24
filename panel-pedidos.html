@@ -139,7 +139,8 @@
     .inicio-pie{font-size:13px;color:#d3d3d3;line-height:1.5;margin:18px 0}
     .inicio-sesion{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:16px 0;padding:16px;border-radius:13px;border:1px solid #595959;background:#242424}
     .inicio-sesion>div{flex:1;min-width:190px}.inicio-sesion h2{margin:0 0 6px;font-size:18px}
-    .inicio-sesion p{margin:0;color:#d3d3d3;font-size:13px;line-height:1.45}
+    .inicio-sesion p{margin:0;color:#d3d3d3;font-size:13px;line-height:1.45;overflow-wrap:anywhere}
+    .inicio-sesion .inicio-sesion-correo{color:#ffe3a0;font-weight:700;margin-bottom:7px}
     .inicio-sesion button{flex:0 0 auto;width:auto;padding:11px 16px;margin:0}
     @media(min-width:680px){.inicio-accesos{grid-template-columns:repeat(3,minmax(0,1fr))}}
     button:focus-visible { outline:3px solid #fff; outline-offset:2px; }
@@ -189,6 +190,7 @@
       <section class="inicio-sesion" aria-labelledby="titulo-sesion-inicio">
         <div>
           <h2 id="titulo-sesion-inicio">🔐 Sesión y seguridad</h2>
+          <p id="usuario" class="inicio-sesion-correo"></p>
           <p>Cuando termines de trabajar, cierra aquí tu sesión administrativa. Esto no cierra el turno de Caja ni borra movimientos.</p>
         </div>
         <button id="salir" class="secundario" type="button">Cerrar sesión</button>
@@ -214,7 +216,6 @@
         <button id="canal-domicilio" type="button" aria-pressed="true"><span class="canal-titulo">🛵 Domicilios</span><span id="cantidad-domicilio" class="canal-cantidad" hidden>0</span></button>
       </nav>
       <p id="canal-estado" class="recepcion-nota" aria-live="polite">Mostrando pedidos a domicilio.</p>
-      <p id="usuario"></p>
       <p id="estado" class="alerta" role="status">Conectando con Firestore...</p>
       <p id="contador" aria-live="polite"></p>
       <div class="jornada-filtros" aria-label="Filtrar pedidos por jornada">
