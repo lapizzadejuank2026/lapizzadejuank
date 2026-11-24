@@ -6,6 +6,12 @@
   <meta name="theme-color" content="#111111">
   <meta name="description" content="Menú digital de La Pizza de Juan K. Pizzas, hamburguesas y más opciones. Haz tu pedido en línea.">
   <title>La Pizza De Juan K | Menú digital</title>
+  <link rel="manifest" href="clientes.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="clientes-icon-192.png">
+  <link rel="apple-touch-icon" href="clientes-icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="La Pizza de Juanca">
+  <script defer src="clientes-instalacion.js?v=1"></script>
   <style>
     :root { --bg:#0b0b0d; --surface:#171719; --card:#212124; --text:#fff; --muted:#bdbdc3; --red:#b81932; --red2:#e7324b; --gold:#e3b84a; --border:#343438; --round:19px; }
     * { box-sizing:border-box; }
@@ -156,6 +162,10 @@
     @media(max-width:850px) { .main-layout { grid-template-columns:1fr; } .cart-panel { position:static; } .hero-pizza { width:160px; height:160px; font-size:98px; } }
     @media(max-width:560px) { .head-inner { min-height:74px; } .brand-symbol { width:41px; height:41px; } .head-actions .outline-btn { display:none; } .hero { padding:30px 0; } .hero-inner { gap:5px; } .hero-pizza { width:105px; height:105px; font-size:64px; } .hero h1 { font-size:34px; } .hero p { font-size:14px; }  .product { grid-template-columns:112px minmax(0,1fr); min-height:135px; } .product-art { min-height:135px; font-size:51px; } .product-art img { min-height:135px; } .product-body { padding:13px 11px; } .product h3 { font-size:17px; } .product .price { font-size:17px; } .product .product-add { width:40px; height:40px; flex-basis:40px; font-size:27px; } .product-add-hint { font-size:11px; } .flavor-grid { grid-template-columns:1fr; } .form-grid { grid-template-columns:1fr; } .field.full { grid-column:auto; } .dialog-footer { flex-wrap:wrap; } .dialog-footer .primary-btn { flex:1; } }
     @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } * { transition:none!important; } }
+    .instalar-clientes{margin:14px 0;text-align:center}
+    .instalar-clientes-btn{max-width:100%;border:1px solid #be2031;border-radius:12px;background:#b81932;color:#fff;font:inherit;font-weight:700;padding:12px 18px;cursor:pointer}
+    .instalar-clientes-ayuda{font-size:13px;line-height:1.4;margin:7px 0}
+    .instalar-clientes[hidden],.instalar-clientes-ayuda[hidden]{display:none!important}
   </style>
 </head>
 <body>
@@ -186,6 +196,10 @@
 
   <main class="wrap main-layout">
     <div>
+      <div class="instalar-clientes" hidden>
+      <button type="button" class="instalar-clientes-btn">📲 Instalar nuestra aplicación</button>
+      <p class="instalar-clientes-ayuda" role="status" hidden></p>
+    </div>
       <section aria-labelledby="menuTitle" id="menu">
         <div class="section-heading"><div><h2 id="menuTitle">Nuestro menú</h2><p class="hint">Escoge tus favoritos y agrégalos al carrito.</p></div></div>
         <div id="catalogStatus" class="hint" role="status">Cargando catálogo actualizado...</div>
@@ -313,6 +327,7 @@
         alternativo.hidden = true;
         logo.src = url;
       }
+      window.prepararIconoClientes?.(url);
     };
     // Los sabores antiguos quedan como respaldo en Firebase y en el historial de GitHub.
     const saboresBase = [];

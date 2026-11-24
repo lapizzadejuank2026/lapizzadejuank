@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f20707">
   <title>La Pizza de Juan K | Bienvenidos</title>
+  <link rel="manifest" href="clientes.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="clientes-icon-192.png">
+  <link rel="apple-touch-icon" href="clientes-icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="La Pizza de Juanca">
+  <script defer src="clientes-instalacion.js?v=1"></script>
   <style>
     :root { --rojo:#f20707; --amarillo:#ffe600; --negro:#080808; }
     * { box-sizing:border-box; }
@@ -40,6 +46,10 @@
     .modal p { line-height:1.5; }
     .cerrar { border:0; padding:12px 22px; border-radius:9px; font-weight:700; background:var(--rojo); color:#fff; font-size:16px; cursor:pointer; }
     @media(max-width:390px) { header{padding:12px 10px;gap:6px}.chef{width:60px;height:72px}.estado{font-size:13px;padding:10px 7px}.pedir{font-size:16px;padding:10px 11px}main{padding:22px 15px 75px} }
+    .instalar-clientes{margin:14px 0;text-align:center}
+    .instalar-clientes-btn{max-width:100%;border:1px solid #be2031;border-radius:12px;background:#b81932;color:#fff;font:inherit;font-weight:700;padding:12px 18px;cursor:pointer}
+    .instalar-clientes-ayuda{font-size:13px;line-height:1.4;margin:7px 0}
+    .instalar-clientes[hidden],.instalar-clientes-ayuda[hidden]{display:none!important}
   </style>
 </head>
 <body>
@@ -69,6 +79,10 @@
 
     <a href="index-1.html?v=menu-marca-editable-20261120" class="boton-grande" id="menu">Menú</a>
     <button class="boton-grande" type="button" id="wifi">WiFi</button>
+    <div class="instalar-clientes" hidden>
+      <button type="button" class="instalar-clientes-btn">📲 Instalar nuestra aplicación</button>
+      <p class="instalar-clientes-ayuda" role="status" hidden></p>
+    </div>
   </main>
 
   <footer>
@@ -148,6 +162,7 @@
         if (logo.nextElementSibling) logo.nextElementSibling.hidden = true;
         logo.src = nuevaURL;
       }
+      window.prepararIconoClientes?.(nuevaURL);
     };
     let detenerConfiguracion = () => {};
     onAuthStateChanged(auth, async user => {

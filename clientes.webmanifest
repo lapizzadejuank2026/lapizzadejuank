@@ -1,0 +1,26 @@
+{
+  "id": "./index-1.html",
+  "name": "La Pizza de Juanca",
+  "short_name": "Pizza Juanca",
+  "description": "Menú y pedidos de La Pizza de Juanca",
+  "lang": "es-CO",
+  "start_url": "./index-1.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#b81932",
+  "icons": [
+    {
+      "src": "clientes-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "clientes-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
