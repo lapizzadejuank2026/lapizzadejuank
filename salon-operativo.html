@@ -60,7 +60,16 @@ label input[type=checkbox]{width:auto;margin:0 8px 0 0}
  .mesa{min-height:90px;font-size:14px}
  .opcionesSabores{grid-template-columns:1fr}
 }
-</style><link rel="stylesheet" href="nav-admin-fija.css"><script defer src="cabecera-fija-admin.js"></script>
+
+/* Encabezado verdaderamente fijo: no depende de la hoja de estilos en caché. */
+body{padding-top:var(--cabecera-alto,95px)}
+body > header.cabecera-fija-app{
+ position:fixed;inset:0 0 auto 0;width:100%;z-index:80;
+ background:#a71919;box-shadow:0 5px 15px #0009;
+}
+body > header.cabecera-fija-app h1{font-size:clamp(19px,4.5vw,25px);line-height:1.18}
+body > header.cabecera-fija-app p{font-size:13px;line-height:1.25}
+</style><link rel="stylesheet" href="nav-admin-fija.css?v=cabecera-fija-20261123c"><script defer src="cabecera-fija-admin.js?v=cabecera-fija-20261123c"></script>
 </head>
 <body><header class="cabecera-fija-app"><h1>🍕 La Pizza de Juanca</h1><p>🍽️ Mesas y barra · Comandas y cuentas</p></header>
 <main>
