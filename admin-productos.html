@@ -14,6 +14,11 @@
     .vista-previa-menu:focus-visible{outline:2px solid #fff;outline-offset:3px}
     .vista-previa-menu[hidden]{display:none!important}
     @media(max-width:380px){.vista-previa-menu{padding:6px 7px;font-size:11px}}
+    .subnav-productos{max-width:850px;margin:0 auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:8px 0 0}
+    .subnav-productos button{width:100%;min-height:44px;margin:0;padding:10px 5px;background:#153b5d;color:#fff;border:1px solid #4b87a7;border-radius:9px;font-size:14px;line-height:1.2;font-weight:700;cursor:pointer}
+    .subnav-productos button[aria-pressed="true"]{background:#f6bd42;color:#21170c;border-color:#f6bd42}
+    .subnav-productos button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+    .subnav-productos[hidden]{display:none!important}
     .productos-cabecera-fila{display:flex;align-items:center;justify-content:space-between;gap:12px}
     .productos-marca{display:flex;flex-direction:column;align-items:flex-start;min-width:0}
     .productos-logo{display:block;width:150px;max-width:100%;height:58px;object-fit:contain;object-position:left center}
@@ -100,6 +105,10 @@
       </a>
       </div>
       <h1>Administración de productos</h1>
+      <nav id="subnav-editor" class="subnav-productos" aria-label="Administración de productos y modificadores">
+        <button id="editor-tab-productos" type="button" aria-pressed="true">📦 Productos</button>
+        <button id="editor-tab-modificadores" type="button" aria-pressed="false">🧩 Modificadores</button>
+      </nav>
     </div>
   </header>
   <main>
@@ -119,7 +128,7 @@
         <a id="volver-productos" href="panel-pedidos.html#vista-productos">← Volver</a>
       </nav>
 
-      <details class="caja" id="panelModificadores" open>
+      <details class="caja" id="panelModificadores" open hidden>
         <summary>🧩 Crear y asignar modificadores <small id="cantidadModificadores" class="ayuda">(0 grupos)</small></summary>
         <p class="mod-note">Crea un grupo una sola vez y asígnalo a los productos que tú elijas, sin importar su categoría. Ejemplo: “Sabores gaseosa” con mínimo 1 y máximo 1 en la gaseosa de 1,5 litros; “Cubiertos” en lasaña, churrasco y pechuga.</p>
         <form id="formModificador">
@@ -148,7 +157,7 @@
         <h3>Grupos creados</h3>
         <div id="listaModificadores">Todavía no hay modificadores.</div>
       </details>
-      <section class="caja">
+      <section class="caja" id="panelFormularioProducto">
         <h2 id="tituloForm">Agregar producto</h2>
         <form id="formProducto">
           <input id="idProducto" type="hidden">
@@ -194,7 +203,7 @@
         </form>
         <p id="mensaje" role="status"></p>
       </section>
-      <section class="caja">
+      <section class="caja" id="panelListaProductos">
         <h2>Productos guardados</h2>
         <p class="ayuda">Edita un producto o usa Mostrar/Ocultar sin eliminarlo.</p>
         <div id="lista">Cargando productos...</div>
@@ -258,6 +267,25 @@
     if(window.self!==window.top && new URLSearchParams(location.search).get('integrado')==='1') {
       document.documentElement.classList.add('integrado');
     }
+    function cambiarSeccionEditor(seccion) {
+      const modificadores=seccion==='modificadores';
+      $('panelModificadores').hidden=!modificadores;
+      $('panelFormularioProducto').hidden=modificadores;
+      $('panelListaProductos').hidden=modificadores;
+      if(modificadores)$('panelModificadores').open=true;
+      $('editor-tab-productos').setAttribute('aria-pressed',String(!modificadores));
+      $('editor-tab-modificadores').setAttribute('aria-pressed',String(modificadores));
+    }
+    // Un solo editor conserva los datos de ambos formularios al cambiar de vista.
+    window.cambiarSeccionEditor=cambiarSeccionEditor;
+    for(const seccion of ['productos','modificadores']){
+      $('editor-tab-'+seccion).addEventListener('click',()=>{
+        cambiarSeccionEditor(seccion);
+        window.scrollTo({top:0,behavior:'auto'});
+      });
+    }
+    const seccionInicial=new URLSearchParams(location.search).get('seccion');
+    cambiarSeccionEditor(seccionInicial==='modificadores'||location.hash==='#panelModificadores'?'modificadores':'productos');
     let productos=[];
     let dejarDeEscuchar=()=>{};
     // El catálogo se gestiona exclusivamente desde el formulario Agregar producto.
