@@ -3,15 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#ae2020">
-  <title>Domiciliarios | La Pizza de Juanca</title>
+  <meta name="theme-color" content="#07172e">
+  <title>Rider | Pulso Food</title>
   <style>
     :root{color-scheme:dark;--fondo:#101010;--panel:#232323;--rojo:#ad2020;--oro:#f5bd43;--texto:#fff;--suave:#d3d3d3}
     *{box-sizing:border-box}
     body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--fondo);color:var(--texto)}
-    header{background:var(--rojo);padding:25px 17px;text-align:center}
-    header h1{margin:0 0 8px;font-size:26px}
-    header p{margin:0;color:#ffe8e8;font-size:15px}
+    header.pulso-cabecera{position:sticky;top:0;z-index:80;background:linear-gradient(110deg,#07172e,#102e50);border-bottom:1px solid #2e6487;box-shadow:0 4px 12px #0006;padding:10px 12px 9px;text-align:left}
+    .pulso-inner{max-width:850px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .pulso-marca{min-width:0;flex:1}
+    .pulso-logo{display:block;width:150px;max-width:100%;height:58px;object-fit:contain;object-position:left center}
+    #panel-nombre{font-size:12px;color:#ffe4c9;margin:5px 0 0;line-height:1.25;overflow-wrap:anywhere}
+    .pulso-rider{font-size:17px;color:#e5edf8;margin:0;line-height:1.25;text-align:right}
+    @media(max-width:520px){header.pulso-cabecera{padding:9px 10px 7px}.pulso-inner{gap:8px}}
     main{max-width:650px;margin:0 auto;padding:16px 14px 40px}
     .caja{background:var(--panel);border-radius:16px;padding:20px;margin:13px 0}
     h2{font-size:21px;margin:0 0 12px}
@@ -53,9 +57,14 @@
   </style>
 </head>
 <body>
-<header>
-  <h1>🛵 La Pizza de Juanca</h1>
-  <p>Aplicación de domiciliarios</p>
+<header class="pulso-cabecera">
+  <div class="pulso-inner">
+    <div class="pulso-marca">
+      <img class="pulso-logo" src="Logo-Pulso-Food.png" alt="Pulso Food — Tu herramienta, tu control">
+      <p id="panel-nombre">La Pizza de Juanca</p>
+    </div>
+    <h1 class="pulso-rider">Rider</h1>
+  </div>
 </header>
 <main>
   <section class="caja" id="acceso">
@@ -381,7 +390,20 @@
     signOut(auth);
   });
 
+  // Identidad del negocio: lectura del mismo documento usado por el centro de control.
+  // No modifica permisos ni interfiere con la autorización individual del Rider.
+  let detenerNombrePulso=()=>{};
   onAuthStateChanged(auth,user=>{
+    detenerNombrePulso();
+    detenerNombrePulso=()=>{};
+    $('panel-nombre').textContent='La Pizza de Juanca';
+    if(user){
+      detenerNombrePulso=onSnapshot(doc(db,'productos','__configuracion_negocio'),snap=>{
+        if(auth.currentUser?.uid!==user.uid)return;
+        const nombre=snap.data()?.nombre;
+        $('panel-nombre').textContent=typeof nombre==='string'&&nombre.trim()?nombre.trim():'La Pizza de Juanca';
+      },error=>console.warn('No se pudo consultar el nombre del negocio:',error.code||error.message));
+    }
     detenerPedidos();
     detenerPedidos=()=>{};
     escuchandoPedidos=false;
