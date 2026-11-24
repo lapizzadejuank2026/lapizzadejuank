@@ -99,6 +99,15 @@
     .config-logo-preview { width:92px; height:92px; object-fit:contain; border-radius:14px; background:#fff; padding:8px; display:block; margin:10px 0; border:1px solid #777; }
     .config-logo-note { color:#c9c9c9; font-size:13px; line-height:1.4; margin:2px 0 7px; }
     #config-mensaje { color:#ffe09c; white-space:pre-wrap; }
+    /* Recepción: tres canales independientes con contadores de comandas nuevas. */
+    .recepcion-canales{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;position:sticky;top:0;z-index:6;padding:10px 0;background:#121212}
+    .recepcion-canales button{margin:0;min-width:0;min-height:75px;padding:10px 5px;background:#2c2c2c;color:#f0f0f0;border:1px solid #656565;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:13px}
+    .recepcion-canales button[aria-pressed="true"]{background:#f6bd42;color:#21170c;border-color:#f6bd42}
+    .recepcion-canales .canal-titulo{display:block;white-space:normal;line-height:1.2}
+    .recepcion-canales .canal-cantidad{display:inline-block;min-width:27px;padding:3px 8px;background:#aa2b27;color:white;border-radius:999px;font-size:13px;font-weight:800}
+    .recepcion-canales .canal-cantidad[hidden]{display:none}
+    .recepcion-nota{color:#f0d6a2;font-size:13px;margin:1px 0 12px;line-height:1.45}
+    @media(max-width:450px){.recepcion-canales{gap:5px}.recepcion-canales button{font-size:12px;min-height:72px;padding:7px 3px}}
     /* Portada del centro de control, distinta de la recepción de pedidos. */
     .inicio-panel{padding:3px 0 18px}
     .inicio-hero{padding:21px 18px;background:linear-gradient(135deg,#35241b,#1a1a1a);border:1px solid #765b26;border-radius:15px;margin:14px 0}
@@ -159,7 +168,13 @@
     <section id="vista-pedidos" role="region" aria-labelledby="titulo-recepcion">
     <div class="caja">
       <h2 id="titulo-recepcion" class="seccion-titulo">🔔 Pedidos · Recepción</h2>
-      <p class="hint">Aquí recibes y administras las comandas. Para Productos, Equipo, Mesas, Caja o Configuración utiliza el botón «Inicio» de abajo.</p>
+      <p class="hint">Cada canal muestra solo sus pedidos. Los números rojos indican comandas nuevas por confirmar y la alarma seguirá avisando por cualquiera de los tres.</p>
+      <nav class="recepcion-canales" aria-label="Pedidos separados por canal">
+        <button id="canal-mesa" type="button" aria-pressed="false"><span class="canal-titulo">🍽️ Mesas</span><span id="cantidad-mesa" class="canal-cantidad" hidden>0</span></button>
+        <button id="canal-llevar" type="button" aria-pressed="false"><span class="canal-titulo">🛍️ Para llevar</span><span id="cantidad-llevar" class="canal-cantidad" hidden>0</span></button>
+        <button id="canal-domicilio" type="button" aria-pressed="true"><span class="canal-titulo">🛵 Domicilios</span><span id="cantidad-domicilio" class="canal-cantidad" hidden>0</span></button>
+      </nav>
+      <p id="canal-estado" class="recepcion-nota" aria-live="polite">Mostrando pedidos a domicilio.</p>
       <p id="usuario"></p>
       <button id="activar">🔔 Activar alarma sonora</button>
       <button id="salir" class="secundario">Cerrar sesión</button>
@@ -365,6 +380,28 @@
   let pedidosCache = [];
   let pedidosCargados = false;
   const marcoProductos = document.getElementById('marco-productos');
+  let canalPedidos='domicilio';
+  const canales=['mesa','llevar','domicilio'];
+  const etiquetasCanal={mesa:'Mesas',llevar:'Para llevar',domicilio:'Domicilios'};
+  function canalDePedido(d={}){
+    const modalidad=String(d.modalidad||d.tipoEntrega||'').trim().toLowerCase();
+    if(modalidad==='mesa'||modalidad.includes('mesa')||d.mesaId||d.cuentaMesaId)return 'mesa';
+    if(modalidad.includes('recoger')||modalidad.includes('llevar')||modalidad.includes('recogida')||
+       modalidad.includes('retiro')||modalidad.includes('mostrador'))return 'llevar';
+    if(modalidad.includes('domicilio')||modalidad.includes('delivery')||d.domiciliarioId||
+       d.domiciliarioUid)return 'domicilio';
+    // Los pedidos antiguos del menú público podían no tener modalidad. Mantenerlos
+    // visibles en Domicilios para evitar que desaparezcan de recepción.
+    return 'domicilio';
+  }
+  function seleccionarCanal(canal){
+    if(!canales.includes(canal))return;
+    canalPedidos=canal;
+    if(pedidosCargados)pintar(pedidosCache);
+  }
+  for(const canal of canales){
+    document.getElementById('canal-'+canal).addEventListener('click',()=>seleccionarCanal(canal));
+  }
   let filtroPedidos='hoy';
   const diaColombia=fecha=>new Intl.DateTimeFormat('en-CA',{
     timeZone:'America/Bogota',year:'numeric',month:'2-digit',day:'2-digit'
@@ -1198,7 +1235,9 @@
         ' · '+horaMovimiento(pedido.d);
       boton.append(cabecera,descripcion);
       boton.addEventListener('click',()=>{
-        document.getElementById('pedido-'+pedido.id)?.scrollIntoView({behavior:'smooth',block:'start'});
+        // La tarjeta de seguimiento puede referirse a un domicilio de otro filtro.
+        seleccionarCanal('domicilio');
+        requestAnimationFrame(()=>document.getElementById('pedido-'+pedido.id)?.scrollIntoView({behavior:'smooth',block:'start'}));
       });
       monitorLista.append(boton);
     }
@@ -1269,13 +1308,31 @@
     document.getElementById('nuevos-tab').textContent = String(cuantosNuevos);
     document.getElementById('nuevos-tab').hidden = !cuantosNuevos;
 
+    // Contadores globales: no dependen del canal seleccionado, ni del filtro de fecha.
+    const nuevosPorCanal={mesa:0,llevar:0,domicilio:0};
+    for(const p of pedidos){
+      if(String(p.d.estado||'nuevo').toLowerCase()==='nuevo')nuevosPorCanal[canalDePedido(p.d)]++;
+    }
+    for(const canal of canales){
+      const boton=document.getElementById('canal-'+canal);
+      const cifra=document.getElementById('cantidad-'+canal);
+      cifra.textContent=String(nuevosPorCanal[canal]);
+      cifra.hidden=nuevosPorCanal[canal]===0;
+      boton.setAttribute('aria-pressed',String(canalPedidos===canal));
+      boton.setAttribute('aria-label',etiquetasCanal[canal]+', '+nuevosPorCanal[canal]+' pedido(s) nuevos');
+    }
     const hoy=pedidos.filter(pedidoDeHoy);
     const pendientesViejos=pedidos.filter(p=>!pedidoDeHoy(p)&&pendienteAnterior(p));
+    const pedidosDelCanal=pedidos.filter(p=>canalDePedido(p.d)===canalPedidos);
     const visibles=filtroPedidos==='historial'
-      ? pedidos
-      : pedidos.filter(p=>pedidoDeHoy(p)||pendienteAnterior(p));
+      ? pedidosDelCanal
+      : pedidosDelCanal.filter(p=>pedidoDeHoy(p)||pendienteAnterior(p));
+    const nuevosVisibles=visibles.filter(p=>String(p.d.estado||'nuevo').toLowerCase()==='nuevo').length;
+    document.getElementById('canal-estado').textContent=
+      etiquetasCanal[canalPedidos]+': '+visibles.length+' pedido(s) en la lista · '+nuevosPorCanal[canalPedidos]+
+      ' nuevo(s) por confirmar en total.'+(canalPedidos==='domicilio'?' Los pedidos antiguos sin modalidad también se muestran aquí.':'');
     document.getElementById('contador').textContent =
-      '📅 Pedidos de hoy: '+hoy.length+' · 🔔 Sin confirmar: '+cuantosNuevos;
+      '📅 Pedidos de hoy (todos los canales): '+hoy.length+' · 🔔 Sin confirmar (todos): '+cuantosNuevos;
     document.getElementById('filtro-hoy').setAttribute('aria-pressed',String(filtroPedidos==='hoy'));
     document.getElementById('filtro-historial').setAttribute('aria-pressed',String(filtroPedidos==='historial'));
     document.getElementById('aviso-jornada').textContent=filtroPedidos==='hoy'
@@ -1284,13 +1341,13 @@
       : 'Mostrando el historial de '+pedidos.length+' pedido(s). El contador de hoy sigue independiente.';
 
     estado.textContent = hayNuevos
-      ? '🔔 Hay pedidos pendientes de confirmar'
+      ? '🔔 Hay '+cuantosNuevos+' pedido(s) nuevos por confirmar entre todos los canales.'
       : 'Sin pedidos nuevos';
 
     if (!visibles.length) {
       lista.append(linea(filtroPedidos==='hoy'
-        ? 'No hay pedidos para hoy ni entregas antiguas pendientes. Abre «Historial completo» para consultar anteriores.'
-        : 'Todavía no hay pedidos registrados.'));
+        ? 'No hay pedidos de '+etiquetasCanal[canalPedidos].toLowerCase()+' para hoy ni pendientes antiguos. Puedes consultar «Historial completo».'
+        : 'No hay pedidos registrados en '+etiquetasCanal[canalPedidos].toLowerCase()+'.'));
     }
 
     for (const { id, d } of visibles) {
