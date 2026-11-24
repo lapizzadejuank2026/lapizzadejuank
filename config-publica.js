@@ -43,13 +43,26 @@
   }
   const colorValido=s=>typeof s==='string'&&/^#[0-9a-f]{6}$/i.test(s);
   const portadaValida=s=>typeof s==='string'&&/^https:\/\//i.test(s)&&s.length<=1800;
+  // Familias locales: sin descargas externas, con alternativas para Android y iOS.
+  const tipografias=Object.freeze({
+    original:{nombre:'Original del menú',familia:''},
+    moderna:{nombre:'Moderna',familia:'system-ui, -apple-system, "Segoe UI", sans-serif'},
+    clasica:{nombre:'Clásica',familia:'Arial, Helvetica, sans-serif'},
+    elegante:{nombre:'Elegante',familia:'Georgia, "Times New Roman", serif'},
+    editorial:{nombre:'Editorial',familia:'"Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif'},
+    condensada:{nombre:'Compacta',familia:'"Arial Narrow", "Roboto Condensed", "Liberation Sans Narrow", sans-serif'},
+    artesanal:{nombre:'Artesanal',familia:'"Trebuchet MS", Verdana, sans-serif'}
+  });
+  const tipografiaValida=s=>typeof s==='string'&&Object.prototype.hasOwnProperty.call(tipografias,s);
   function aplicarApariencia(datos,contexto){
     const a=datos?.apariencia||{},root=document.documentElement;
     const principal=colorValido(a.principal)?a.principal:null,acento=colorValido(a.acento)?a.acento:null;
     const pares=contexto==='bienvenida'?{'--rojo':principal,'--amarillo':acento}:{'--red':principal,'--gold':acento};
     for(const [k,v] of Object.entries(pares)){if(v)root.style.setProperty(k,v);else root.style.removeProperty(k);}
+    const familia=tipografiaValida(a.tipografia)?tipografias[a.tipografia].familia:'';
+    if(familia)root.style.setProperty('--fuente-negocio',familia);else root.style.removeProperty('--fuente-negocio');
     const imagen=document.getElementById('portada-negocio');
     if(imagen){const url=portadaValida(a.portadaURL)?a.portadaURL:'';imagen.hidden=!url;if(url&&imagen.getAttribute('src')!==url)imagen.src=url;else if(!url)imagen.removeAttribute('src');}
   }
-  window.PulsoConfig={dias,minutos,predeterminado,normalizarHorarios,validarSemana,estadoHorario,colorValido,portadaValida,aplicarApariencia};
+  window.PulsoConfig={dias,minutos,predeterminado,normalizarHorarios,validarSemana,estadoHorario,colorValido,portadaValida,tipografias,tipografiaValida,aplicarApariencia};
 })();
