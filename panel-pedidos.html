@@ -105,6 +105,13 @@
     .cabecera-panel .cabecera-marca h1{font-size:clamp(17px,4.2vw,24px);line-height:1.15}
     .cabecera-panel .cabecera-marca div{font-size:12px}
     @media(max-width:520px){body > header.cabecera-fija-app{padding:9px 10px 7px}}
+    /* Identidad Pulso Food: solo cambia la marca visual, sin alterar controles. */
+    .pulso-food-identidad{display:flex;align-items:center;gap:9px;min-width:0}
+    .pulso-food-icono{width:100px;max-width:36%;height:34px;flex-shrink:0}
+    .cabecera-panel .pulso-food-identidad h1{margin:0;font-size:clamp(19px,4.4vw,26px);white-space:nowrap;line-height:1.1}
+    .pulso-food-identidad h1 span:first-child{color:#fff}
+    .pulso-food-identidad h1 span:last-child{color:#b0ff23}
+    .cabecera-panel #panel-nombre{font-size:12px;color:#ffe4c9;margin-top:5px}
     /* Campana de alarma persistente en cabecera: nunca confundir preferencia con sonido real. */
     .cabecera-panel-inner{max-width:850px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
     .cabecera-marca{min-width:0;flex:1;text-align:left}
@@ -160,8 +167,14 @@
 <header class="cabecera-panel cabecera-fija-app">
   <div class="cabecera-panel-inner">
     <div class="cabecera-marca">
-      <h1 id="panel-nombre">🍕 La Pizza de Juan K</h1>
-      <div>Centro de control del restaurante</div>
+      <div class="pulso-food-identidad" aria-label="Pulso Food">
+        <svg class="pulso-food-icono" viewBox="0 0 180 38" role="img" aria-label="Pulso eléctrico y tenedor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 23 H36 L46 5 L61 35 L76 12 L88 28 L99 23 H139" fill="none" stroke="#00e9ff" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+          <path d="M139 23 H155 Q161 23 161 17 V8 M161 23 H168 Q174 23 174 17 V8 M168 23 V33" fill="none" stroke="#a6ff00" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h1><span>Pulso</span> <span>Food</span></h1>
+      </div>
+      <div id="panel-nombre">La Pizza de Juanca</div>
     </div>
     <button id="activar" class="campana-control" type="button" aria-label="Activar alarma sonora" aria-pressed="false" data-estado="apagada" hidden>
       <span id="icono-alarma" class="campana-icono" aria-hidden="true">🔕</span>
@@ -617,7 +630,7 @@
       (/^https:\/\//i.test(datos.logoURL) || /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(datos.logoURL))
       ? datos.logoURL : '';
     if (!configArchivo.files.length) configLogoVista.src = logoURLActual || 'chef.png';
-    document.getElementById('panel-nombre').textContent = '🍕 ' + camposConfiguracion.nombre.value;
+    document.getElementById('panel-nombre').textContent = camposConfiguracion.nombre.value;
   }
   mostrarConfiguracion(null);
   document.getElementById('config-form').addEventListener('submit', async evento => {
