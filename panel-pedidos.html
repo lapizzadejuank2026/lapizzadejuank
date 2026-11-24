@@ -110,7 +110,7 @@
     .cabecera-panel .recepcion-canales button{background:#153b5d;border-color:#4b87a7}
     /* Identidad Pulso Food: solo cambia la marca visual, sin alterar controles. */
     .pulso-food-identidad{display:flex;align-items:center;gap:9px;min-width:0}
-    .pulso-food-icono{width:100px;max-width:36%;height:34px;flex-shrink:0}
+    .pulso-food-icono{width:150px;max-width:55%;height:58px;object-fit:contain;object-position:left center;flex-shrink:0}
     .cabecera-panel .pulso-food-identidad h1{margin:0;font-size:clamp(19px,4.4vw,26px);white-space:nowrap;line-height:1.1}
     .pulso-food-identidad h1 span:first-child{color:#fff}
     .pulso-food-identidad h1 span:last-child{color:#b0ff23}
@@ -171,11 +171,7 @@
   <div class="cabecera-panel-inner">
     <div class="cabecera-marca">
       <div class="pulso-food-identidad" aria-label="Pulso Food">
-        <svg class="pulso-food-icono" viewBox="0 0 180 38" role="img" aria-label="Pulso eléctrico y tenedor" xmlns="http://www.w3.org/2000/svg">
-          <path d="M3 23 H36 L46 5 L61 35 L76 12 L88 28 L99 23 H139" fill="none" stroke="#00e9ff" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
-          <path d="M139 23 H155 Q161 23 161 17 V8 M161 23 H168 Q174 23 174 17 V8 M168 23 V33" fill="none" stroke="#a6ff00" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <h1><span>Pulso</span> <span>Food</span></h1>
+        <img class="pulso-food-icono" src="logo-pulso-food.png" alt="Pulso Food — Tu herramienta, tu control">
       </div>
       <div id="panel-nombre">La Pizza de Juanca</div>
     </div>
