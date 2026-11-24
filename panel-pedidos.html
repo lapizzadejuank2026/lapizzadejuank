@@ -290,7 +290,7 @@
     </section>
     <section id="vista-productos" role="tabpanel" aria-labelledby="tab-productos" hidden>
       <iframe id="marco-productos" title="Editor de productos y modificadores" loading="lazy"></iframe>
-      <p class="hint" style="text-align:center"><a id="editor-pantalla-completa" href="admin-productos.html?v=categorias-modificadores-20261124" target="_blank" rel="noopener">Abrir editor en pantalla completa</a></p>
+      <p class="hint" style="text-align:center"><a id="editor-pantalla-completa" href="admin-productos.html?v=asociaciones-centralizadas-20261124" target="_blank" rel="noopener">Abrir editor en pantalla completa</a></p>
     </section>
     <section id="vista-equipo" role="tabpanel" aria-labelledby="tab-equipo" hidden>
       <div class="caja">
@@ -523,7 +523,7 @@
     seccionEditor=seccion==='modificadores'?'modificadores':'productos';
     document.getElementById('subtab-productos').setAttribute('aria-pressed',String(seccionEditor==='productos'));
     document.getElementById('subtab-modificadores').setAttribute('aria-pressed',String(seccionEditor==='modificadores'));
-    document.getElementById('editor-pantalla-completa').href='admin-productos.html?v=categorias-modificadores-20261124&seccion='+seccionEditor;
+    document.getElementById('editor-pantalla-completa').href='admin-productos.html?v=asociaciones-centralizadas-20261124&seccion='+seccionEditor;
     aplicarSeccionEditor();
     if(desplazar)window.scrollTo({top:0,behavior:'auto'});
   }
@@ -587,7 +587,7 @@
     }
     if (nombre === 'productos' && !marcoCargado) {
       marcoCargado = true;
-      marcoProductos.src = 'admin-productos.html?integrado=1&v=categorias-modificadores-20261124&seccion='+seccionEditor;
+      marcoProductos.src = 'admin-productos.html?integrado=1&v=asociaciones-centralizadas-20261124&seccion='+seccionEditor;
     }
     if (nombre === 'equipo' && auth.currentUser && !equipoCargado) escucharEquipo();
   }
