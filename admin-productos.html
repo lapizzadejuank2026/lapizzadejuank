@@ -81,6 +81,11 @@
     .mod-asociacion-item{display:flex;align-items:center;gap:9px;font-weight:normal;margin:0;padding:7px 3px;border-bottom:1px solid #ffffff14}
     .mod-asociacion-item input{width:19px;height:19px;flex:0 0 19px;margin:0;accent-color:#f6bd42}
     .mod-asociacion-item span{min-width:0;overflow-wrap:anywhere}
+    .mod-limites-producto{padding:4px 6px 8px 28px;color:#c9dce9;font-size:12px}
+    .mod-limites-producto summary{cursor:pointer}
+    .mod-limites-producto .fila{grid-template-columns:1fr 1fr;gap:8px}
+    .mod-limites-producto label{font-size:12px;margin-top:5px}
+    .mod-limites-producto input{margin:4px 0;padding:7px}
     .mod-lista-estado{color:#ffd575;font-size:13px;white-space:pre-wrap}
     .mod-condicion{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0;color:#c9dce9;font-size:13px}
     .mod-condicion label{display:flex;align-items:center;gap:5px;margin:0;font-weight:normal}
@@ -168,7 +173,7 @@
             <summary>Asociar / desasociar <span id="cantidadAsociacionesMod">(0)</span></summary>
             <input id="buscarAsociacionMod" type="search" placeholder="Buscar producto" aria-label="Buscar producto para asociar" autocomplete="off">
             <div id="listaAsociacionesMod"></div>
-            <p class="ayuda">Marca los productos que usarán este grupo. Los cambios se aplican al guardar. Los límites particulares de los productos ya asociados se conservan.</p>
+            <p class="ayuda">Marca los productos que usarán este grupo. Los cambios se aplican al guardar. Los límites existentes se conservan. Abre «Límites de este producto» si necesitas cambiarlos individualmente.</p>
           </details>
           <div class="mod-condicion" role="group" aria-label="Condición del grupo">
             <label><input type="radio" name="condicionMod" id="modOpcional" checked> Opcional</label>
@@ -227,11 +232,6 @@
               <input id="orden" type="number" min="0" max="9999" step="1" value="10" required>
             </label>
           </div>
-          <fieldset class="grupo-asignacion">
-            <legend>🧩 Modificadores para este producto</legend>
-            <p class="ayuda"><strong>IMPORTANTE:</strong> marca el cuadrito de cada grupo que quieras activar. Escribir mínimo y máximo sin marcar la casilla NO lo asigna al producto. Después pulsa Guardar cambios.</p>
-            <div id="asignacionModificadores">Cargando grupos...</div>
-          </fieldset>
           <label>Foto desde el celular <small>(JPG, PNG o WEBP, máximo 5 MB)</small>
             <input id="archivoFoto" type="file" accept="image/jpeg,image/png,image/webp">
           </label>
@@ -407,64 +407,11 @@
         productos=snapshot.docs.filter(x=>x.id!=='__configuracion_negocio' && x.data().tipo!=='configuracion-negocio').map(x=>({id:x.id,...x.data()}));
         pintar();
         pintarModificadores();
-        pintarAsignacionesProducto();
       },error=>{
         $('lista').textContent='No hay acceso a la colección productos. Antes de guardar hay que configurar las reglas de Firestore para el administrador.';
         console.error(error);
       });
     });
-
-    function pintarAsignacionesProducto(asignaciones=null){
-      const holder=$('asignacionModificadores');
-      const elegido=Array.isArray(asignaciones)?asignaciones:
-        holder.querySelector('.vinculo-mod')?Array.from(holder.querySelectorAll('.vinculo-mod'))
-          .filter(f=>f.querySelector('input[type="checkbox"]').checked)
-          .map(f=>({id:f.dataset.grupoId,min:Number(f.querySelector('[data-campo="min"]').value),
-            max:Number(f.querySelector('[data-campo="max"]').value)})):
-        (productos.find(p=>p.id===$('idProducto').value)?.gruposModificadores||[]);
-      holder.replaceChildren();
-      const grupos=productos.filter(p=>p.tipo==='grupo-modificadores')
-        .sort((a,b)=>String(a.nombre||'').localeCompare(String(b.nombre||''),'es'));
-      if(!grupos.length){
-        holder.textContent='Aún no hay grupos. Abre la pestaña Modificadores y crea uno.';
-        return;
-      }
-      for(const g of grupos){
-        const seleccionado=elegido.find(x=>x.id===g.id);
-        const marco=document.createElement('div');
-        marco.className='vinculo-mod';marco.dataset.grupoId=g.id;
-        const titulo=document.createElement('label');titulo.className='check';
-        const casilla=document.createElement('input');casilla.type='checkbox';casilla.checked=!!seleccionado;
-        const nombre=document.createElement('span');
-        nombre.textContent=(g.nombre||'Grupo sin nombre')+(g.activo===false?' (oculto a clientes)':'');
-        titulo.append(casilla,nombre);
-        const fila=document.createElement('div');fila.className='fila';
-        const minLabel=document.createElement('label');minLabel.textContent='Mínimo de opciones';
-        const min=document.createElement('input');min.type='number';min.min='0';min.max='50';min.step='1';
-        min.dataset.campo='min';min.value=seleccionado?.min??g.minSeleccion??0;
-        minLabel.append(min);
-        const maxLabel=document.createElement('label');maxLabel.textContent='Máximo de opciones';
-        const max=document.createElement('input');max.type='number';max.min='1';max.max='50';max.step='1';
-        max.dataset.campo='max';max.value=seleccionado?.max??g.maxSeleccion??1;
-        maxLabel.append(max);fila.append(minLabel,maxLabel);
-        const actualizar=()=>{min.disabled=max.disabled=!casilla.checked;};
-        casilla.addEventListener('change',actualizar);actualizar();
-        marco.append(titulo,fila);holder.append(marco);
-      }
-    }
-    function leerAsignacionesProducto(){
-      return Array.from($('asignacionModificadores').querySelectorAll('.vinculo-mod'))
-        .filter(f=>f.querySelector('input[type="checkbox"]').checked)
-        .map(f=>{
-          const g=productos.find(p=>p.id===f.dataset.grupoId && p.tipo==='grupo-modificadores');
-          if(!g)throw new Error('El grupo de modificadores ya no existe.');
-          const min=Number(f.querySelector('[data-campo="min"]').value);
-          const max=Number(f.querySelector('[data-campo="max"]').value);
-          if(!Number.isInteger(min)||!Number.isInteger(max)||min<0||max<1||min>max||max>(g.opciones||[]).length)
-            throw new Error('Revisa los límites de '+g.nombre+'. El máximo no puede superar sus opciones.');
-          return {id:g.id,min,max};
-        });
-    }
 
     function limpiar(){
       $('formProducto').reset();
@@ -474,7 +421,6 @@
       $('activo').checked=true;
       $('orden').value=10;
       $('ordenCategoria').value=10;
-      pintarAsignacionesProducto([]);
     }
     $('cancelar').addEventListener('click',()=>{limpiar();mensaje('Edición cancelada.');});
 
@@ -489,7 +435,6 @@
       $('fotoURL').value=p.fotoURL||'';
       $('archivoFoto').value='';
       $('activo').checked=p.activo!==false;
-      pintarAsignacionesProducto(p.gruposModificadores||[]);
       $('tituloForm').textContent='Editar: '+p.nombre;
       $('guardar').textContent='💾 Guardar cambios de '+(p.nombre||'producto');
       mensaje('Editando producto. Pulsa Guardar para aplicar cambios.');
@@ -543,6 +488,7 @@
     // con las reglas de acceso del administrador. No se crean colecciones nuevas.
     let grupoAbierto=null, cambiosMod=false, guardandoMod=false;
     const asociacionesCambiadas=new Map();
+    const limitesCambiados=new Map();
     const avisoModificador=texto=>$('mensajeModificador').textContent=texto;
     const avisoListaMod=texto=>$('estadoListaMod').textContent=texto;
     const esProductoAsociable=p=>!['pizza-tamano','pizza-sabor','grupo-modificadores'].includes(p.tipo);
@@ -568,13 +514,33 @@
         const label=document.createElement('label');label.className='mod-asociacion-item';
         const check=document.createElement('input');check.type='checkbox';check.checked=seleccionAsociacion(p);
         const nombre=document.createElement('span');nombre.textContent=(p.nombre||'Sin nombre')+(p.activo===false?' (oculto)':'');
+        const limites=document.createElement('details');limites.className='mod-limites-producto';limites.hidden=!check.checked;
+        const resumen=document.createElement('summary');resumen.textContent='Límites de este producto (opcional)';
+        const fila=document.createElement('div');fila.className='fila';
+        const previo=(p.gruposModificadores||[]).find(v=>v.id===$('idModificador').value);
+        const editado=limitesCambiados.get(p.id)||{};
+        const campos={};
+        for(const campo of ['min','max']){
+          const l=document.createElement('label');l.textContent=campo==='min'?'Mínimo':'Máximo';
+          const input=document.createElement('input');input.type='text';input.inputMode='numeric';input.maxLength=2;
+          input.placeholder=String(previo?.[campo]??$(''+(campo==='min'?'minModificador':'maxModificador')).value);
+          input.value=editado[campo]??'';campos[campo]=input;l.append(input);fila.append(l);
+          input.addEventListener('input',()=>{
+            const datos={min:campos.min.value.trim(),max:campos.max.value.trim()};
+            if(!datos.min&&!datos.max)limitesCambiados.delete(p.id);else limitesCambiados.set(p.id,datos);
+            cambiosMod=true;
+          });
+        }
+        limites.append(resumen,fila);limites.open=limitesCambiados.has(p.id);
         check.addEventListener('change',()=>{
           if(check.checked===tieneGrupo(p,$('idModificador').value))asociacionesCambiadas.delete(p.id);
           else asociacionesCambiadas.set(p.id,check.checked);
+          limites.hidden=!check.checked;
+          if(!check.checked){limitesCambiados.delete(p.id);campos.min.value='';campos.max.value='';limites.open=false;}
           cambiosMod=true;
           $('cantidadAsociacionesMod').textContent='('+disponibles.filter(seleccionAsociacion).length+')';
         });
-        label.append(check,nombre);lista.append(label);visibles++;
+        label.append(check,nombre);lista.append(label,limites);visibles++;
       }
       if(!visibles)lista.textContent=q?'No hay coincidencias.':'Todavía no hay productos para asociar.';
     }
@@ -595,7 +561,7 @@
     $('formModificador').addEventListener('change',e=>{if(e.target.id!=='buscarAsociacionMod')cambiosMod=true;});
     function permitirCambioGrupo(){return !guardandoMod&&(!cambiosMod||confirm('Tienes cambios sin guardar. ¿Deseas descartarlos?'));}
     function cerrarGrupo(){
-      grupoAbierto=null;cambiosMod=false;asociacionesCambiadas.clear();
+      grupoAbierto=null;cambiosMod=false;asociacionesCambiadas.clear();limitesCambiados.clear();
       $('reservaFormMod').append($('formModificador'));
       pintarModificadores();
     }
@@ -645,7 +611,7 @@
       $('filasOpcionesModificador').replaceChildren();
       crearFilaOpcionModificador();
       $('guardarModificador').textContent='💾 Guardar categoría';
-      asociacionesCambiadas.clear();$('buscarAsociacionMod').value='';$('panelAsociacionesMod').open=false;
+      asociacionesCambiadas.clear();limitesCambiados.clear();$('buscarAsociacionMod').value='';$('panelAsociacionesMod').open=false;
       sincronizarCondicionMod();cambiosMod=false;avisoModificador('');
     }
     $('agregarOpcionModificador').addEventListener('click',()=>{
@@ -756,44 +722,40 @@
           activo:$('activoModificador').checked,actualizadoEn:serverTimestamp()};
         const id=$('idModificador').value;
         const refGrupo=id?doc(db,'productos',id):doc(collection(db,'productos'));
-        const cambios=new Map(asociacionesCambiadas);
+        const cambios=new Map(asociacionesCambiadas), limites=new Map(limitesCambiados);
         const ids=new Set(productos.filter(p=>esProductoAsociable(p)&&tieneGrupo(p,id)).map(p=>p.id));
-        for(const pid of cambios.keys())ids.add(pid);
-        if(cambios.size>499)throw new Error('Guarda las asociaciones en grupos de máximo 499 productos.');
-        const resultado=await runTransaction(db,async tx=>{
+        const afectados=new Set([...cambios.keys(),...limites.keys()]);
+        for(const pid of afectados)ids.add(pid);
+        if(afectados.size>499)throw new Error('Guarda las asociaciones en grupos de máximo 499 productos.');
+        await runTransaction(db,async tx=>{
           if(id){const actual=await tx.get(refGrupo);if(!actual.exists())throw new Error('La categoría ya no existe.');}
           const refs=[...ids].map(pid=>doc(db,'productos',pid));
           const snaps=await Promise.all(refs.map(ref=>tx.get(ref)));
           const cambiosProducto=[];
           for(const snap of snaps){
-            if(!snap.exists()){if(cambios.has(snap.id))throw new Error('Un producto ya no existe. Actualiza y vuelve a intentar.');continue;}
+            if(!snap.exists()){if(afectados.has(snap.id))throw new Error('Un producto ya no existe. Actualiza y vuelve a intentar.');continue;}
             const p=snap.data();
             if(!esProductoAsociable(p)||p.tipo==='configuracion-negocio')throw new Error('El producto cambió de tipo. Actualiza el catálogo.');
             const vinculos=Array.isArray(p.gruposModificadores)?p.gruposModificadores:[];
             const existente=vinculos.find(x=>x.id===refGrupo.id);
             const quiere=cambios.has(snap.id)?cambios.get(snap.id):!!existente;
-            if(quiere&&existente&&(Number(existente.max)>opciones.length||Number(existente.min)>Number(existente.max)))
-              throw new Error('Revisa los límites de '+(p.nombre||'un producto')+' en Productos antes de reducir las opciones.');
-            if(cambios.has(snap.id)&&quiere!==!!existente){
-              const nuevos=quiere?[...vinculos,{id:refGrupo.id,min:minSeleccion,max:maxSeleccion}]:vinculos.filter(x=>x.id!==refGrupo.id);
+            const personalizado=limites.get(snap.id);
+            const min=personalizado?.min?Number(personalizado.min):Number(existente?.min??minSeleccion);
+            const max=personalizado?.max?Number(personalizado.max):Number(existente?.max??maxSeleccion);
+            if(quiere&&((personalizado?.min&&!/^\d+$/.test(personalizado.min))||(personalizado?.max&&!/^\d+$/.test(personalizado.max))||!Number.isInteger(min)||!Number.isInteger(max)||min<0||max<1||min>max||max>opciones.length))
+              throw new Error('Revisa los límites de '+(p.nombre||'un producto')+' en Asociar / desasociar. El máximo no puede superar las opciones.');
+            if(quiere&&(!existente||personalizado)){
+              const vinculo={...(existente||{}),id:refGrupo.id,min,max};
+              const nuevos=existente?vinculos.map(v=>v.id===refGrupo.id?vinculo:v):[...vinculos,vinculo];
               cambiosProducto.push({ref:snap.ref,id:snap.id,vinculos:nuevos});
+            }else if(!quiere&&existente&&cambios.has(snap.id)){
+              cambiosProducto.push({ref:snap.ref,id:snap.id,vinculos:vinculos.filter(v=>v.id!==refGrupo.id)});
             }
           }
           if(id)tx.update(refGrupo,datos);
           else tx.set(refGrupo,{...datos,creadoEn:serverTimestamp()});
           for(const p of cambiosProducto)tx.update(p.ref,{gruposModificadores:p.vinculos,actualizadoEn:serverTimestamp()});
-          return cambiosProducto.map(p=>({id:p.id,vinculos:p.vinculos}));
         });
-        // Evita que un formulario de producto ya abierto vuelva a guardar la asociación anterior.
-        const productoEditando=resultado.find(p=>p.id===$('idProducto').value);
-        if(productoEditando){
-          const fila=[...$('asignacionModificadores').querySelectorAll('.vinculo-mod')].find(f=>f.dataset.grupoId===refGrupo.id);
-          const vinculo=productoEditando.vinculos.find(v=>v.id===refGrupo.id);
-          if(fila){const check=fila.querySelector('input[type="checkbox"]');check.checked=!!vinculo;
-            if(vinculo){fila.querySelector('[data-campo="min"]').value=vinculo.min;fila.querySelector('[data-campo="max"]').value=vinculo.max;}
-            check.dispatchEvent(new Event('change'));
-          }
-        }
         cambiosMod=false;cerrarGrupo();avisoListaMod('✅ Categoría y asociaciones guardadas.');
       }catch(error){avisoModificador('❌ '+(error.code==='permission-denied'?'Faltan permisos de Firestore.':error.message||'No se pudo guardar.'));}
       finally{guardandoMod=false;boton.disabled=false;}
@@ -823,13 +785,12 @@
         }
         const datos={
           nombre,descripcion:$('descripcion').value.trim(),precio,categoria,
-          gruposModificadores:leerAsignacionesProducto(),
           orden:Number($('orden').value),ordenCategoria:Number($('ordenCategoria').value),
           activo:$('activo').checked,fotoURL,actualizadoEn:serverTimestamp()
         };
         const id=$('idProducto').value;
         if(id){await updateDoc(doc(db,'productos',id),datos);}
-        else{await addDoc(collection(db,'productos'),{...datos,creadoEn:serverTimestamp()});}
+        else{await addDoc(collection(db,'productos'),{...datos,gruposModificadores:[],creadoEn:serverTimestamp()});}
         limpiar();
         mensaje('✅ Producto guardado correctamente en Firebase.');
       }catch(error){
