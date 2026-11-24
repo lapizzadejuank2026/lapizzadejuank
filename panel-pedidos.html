@@ -52,6 +52,7 @@
     .monitor-metricas { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:14px 0; }
     .monitor-metrica { background:#141414; border:1px solid #484133; border-radius:10px; padding:12px 8px; text-align:center; }
     .monitor-metrica strong { display:block; color:#ffd26f; font-size:25px; }
+    .monitor-metrica[hidden] { display:none!important; }
     .monitor-metrica span { display:block; font-size:12px; color:#eee; margin-top:4px; }
     .jornada-filtros { display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px; }
     .jornada-filtros button { flex:1;min-width:125px;background:#333;color:#fff;border:1px solid #666; }
@@ -615,7 +616,10 @@
   }
   function seleccionarCanal(canal){
     if(!canales.includes(canal))return;
-    canalPedidos=canal;
+    if(canalPedidos!==canal){
+      canalPedidos=canal;
+      monitorFiltro='activos';
+    }
     if(pedidosCargados)pintar(pedidosCache);
   }
   for(const canal of canales){
@@ -1540,7 +1544,7 @@
     const actuales = new Map();
     const cambios = [];
     for (const {id,d} of documentos) {
-      if (String(d.estado || '').toLowerCase() === 'prueba') continue;
+      if (String(d.estado || '').toLowerCase() === 'prueba' || canalDePedido(d)!=='domicilio') continue;
       const actual = d.domiciliarioUid ? estadoDe(d) : 'sin_asignar';
       actuales.set(id,actual);
       if (monitorInicializado && estadosVistos.has(id) && estadosVistos.get(id)!==actual) {
@@ -1558,6 +1562,26 @@
   }
   function dibujarMonitor(documentos) {
     monitorLista.replaceChildren();
+    const esDomicilio=canalPedidos==='domicilio';
+    const esMesa=canalPedidos==='mesa';
+    document.getElementById('monitor-titulo').textContent=esDomicilio?'🛵 Monitor de domicilios':esMesa?'🍽️ Monitor de mesas':'🛍️ Monitor de pedidos para llevar';
+    document.querySelector('.monitor-intro').textContent=esDomicilio
+      ?'Sigue en tiempo real las entregas asignadas. Pulsa un pedido para ir a sus detalles; la alarma de pedidos nuevos funciona por separado.'
+      :esMesa?'Consulta las comandas de mesas por confirmar y las recibidas por el restaurante. El cobro se gestiona en Mesas y barra.'
+      :'Consulta los pedidos para recoger en el local y confirma su recepción. Pulsa un pedido para ver sus detalles.';
+    document.querySelector('.monitor-metricas').setAttribute('aria-label',esDomicilio?'Resumen de entregas':'Resumen del canal seleccionado');
+    const metricas=[['monitor-pendientes',esDomicilio?'Por aceptar':'Por confirmar',true],['monitor-proceso',esDomicilio?'Aceptados / recogidos':'Recibidos / procesados',true],['monitor-ruta','En camino',esDomicilio],['monitor-entregados','Entregados',esDomicilio]];
+    for(const [id,etiqueta,visible] of metricas){
+      const numero=document.getElementById(id);
+      numero.textContent='0';
+      numero.parentElement.querySelector('span').textContent=etiqueta;
+      numero.parentElement.hidden=!visible;
+    }
+    document.getElementById('monitor-tab-activos').textContent=esDomicilio?'En curso':'Por confirmar';
+    document.getElementById('monitor-tab-finalizados').textContent=esDomicilio?'Finalizados':'Recibidos / procesados';
+    monitorAviso.hidden=!esDomicilio||!monitorAviso.textContent;
+    document.getElementById('monitor-tab-activos').setAttribute('aria-pressed',String(monitorFiltro==='activos'));
+    document.getElementById('monitor-tab-finalizados').setAttribute('aria-pressed',String(monitorFiltro==='finalizados'));
     if (!pedidosCargados) {
       const mensaje = document.createElement('p');
       mensaje.className = 'monitor-vacio';
@@ -1565,8 +1589,40 @@
       monitorLista.append(mensaje);
       return;
     }
-    const asignados = documentos.filter(x=>
-      x.d.domiciliarioUid && String(x.d.estado || '').toLowerCase() !== 'prueba');
+    const delCanal=documentos.filter(x=>canalDePedido(x.d)===canalPedidos && String(x.d.estado||'').toLowerCase()!=='prueba' && (filtroPedidos==='historial'||pedidoDeHoy(x)||pendienteAnterior(x)));
+    if(!esDomicilio){
+      const esNuevo=x=>String(x.d.estado||'nuevo').trim().toLowerCase()==='nuevo';
+      document.getElementById('monitor-pendientes').textContent=delCanal.filter(esNuevo).length;
+      document.getElementById('monitor-proceso').textContent=delCanal.filter(x=>!esNuevo(x)).length;
+      const seleccion=delCanal.filter(x=>esNuevo(x)===(monitorFiltro==='activos')).sort((a,b)=>ordenMovimiento(b.d)-ordenMovimiento(a.d));
+      if(!seleccion.length){
+        const vacio=document.createElement('p');
+        vacio.className='monitor-vacio';
+        vacio.textContent=monitorFiltro==='activos'?'No hay pedidos por confirmar en este canal.':'No hay pedidos recibidos o procesados en este canal.';
+        monitorLista.append(vacio);
+      }
+      for(const pedido of seleccion.slice(0,20)){
+        const boton=document.createElement('button');
+        boton.type='button';boton.className='monitor-tarjeta';boton.title='Ver detalles del pedido';
+        const cabecera=document.createElement('span');cabecera.className='monitor-cabecera';
+        const nombre=document.createElement('span');nombre.className='monitor-nombre';
+        nombre.textContent=(esMesa?(pedido.d.mesaNombre||'Mesa')+' · ':'')+'Pedido '+pedido.id.slice(0,8).toUpperCase();
+        const etiqueta=document.createElement('span');etiqueta.className='estado-etiqueta '+(esNuevo(pedido)?'pendiente':'aceptado');
+        const estadoActual=String(pedido.d.estado||'nuevo').trim().toLowerCase();
+        etiqueta.textContent=esNuevo(pedido)?'📋 Por confirmar':estadoActual==='recibido'?'✅ Recibido':estadoActual;
+        cabecera.append(nombre,etiqueta);
+        const detalle=document.createElement('span');detalle.className='monitor-detalle';
+        const cliente=pedido.d.cliente?.nombre||pedido.d.clienteNombre||pedido.d.nombre||'';
+        const fecha=fechaDe(pedido.d.creadoEn);
+        detalle.textContent=[esMesa&&pedido.d.numeroComanda?'Comanda '+pedido.d.numeroComanda:cliente,fecha?.toLocaleString('es-CO')].filter(Boolean).join(' · ');
+        boton.append(cabecera,detalle);
+        boton.addEventListener('click',()=>document.getElementById('pedido-'+pedido.id)?.scrollIntoView({behavior:'smooth',block:'start'}));
+        monitorLista.append(boton);
+      }
+      if(seleccion.length>20){const aviso=document.createElement('p');aviso.className='hint';aviso.textContent='Se muestran los 20 pedidos más recientes; el resto está en la lista de pedidos.';monitorLista.append(aviso);}
+      return;
+    }
+    const asignados = delCanal.filter(x=>x.d.domiciliarioUid);
     const actualizados = asignados.map(x=>({...x,estadoEntrega:estadoDe(x.d)}));
     const total = tipo => actualizados.filter(x=>tipo(x.estadoEntrega)).length;
     document.getElementById('monitor-pendientes').textContent =
@@ -1692,9 +1748,9 @@
       boton.setAttribute('aria-pressed',String(canalPedidos===canal));
       boton.setAttribute('aria-label',etiquetasCanal[canal]+', '+nuevosPorCanal[canal]+' pedido(s) nuevos');
     }
-    const hoy=pedidos.filter(pedidoDeHoy);
-    const pendientesViejos=pedidos.filter(p=>!pedidoDeHoy(p)&&pendienteAnterior(p));
     const pedidosDelCanal=pedidos.filter(p=>canalDePedido(p.d)===canalPedidos);
+    const hoy=pedidosDelCanal.filter(pedidoDeHoy);
+    const pendientesViejos=pedidosDelCanal.filter(p=>!pedidoDeHoy(p)&&pendienteAnterior(p));
     const visibles=filtroPedidos==='historial'
       ? pedidosDelCanal
       : pedidosDelCanal.filter(p=>pedidoDeHoy(p)||pendienteAnterior(p));
@@ -1703,13 +1759,13 @@
       etiquetasCanal[canalPedidos]+': '+visibles.length+' pedido(s) en la lista · '+nuevosPorCanal[canalPedidos]+
       ' nuevo(s) por confirmar en total.'+(canalPedidos==='domicilio'?' Los pedidos antiguos sin modalidad también se muestran aquí.':'');
     document.getElementById('contador').textContent =
-      '📅 Pedidos de hoy (todos los canales): '+hoy.length+' · 🔔 Sin confirmar (todos): '+cuantosNuevos;
+      '📅 Pedidos de hoy ('+etiquetasCanal[canalPedidos]+'): '+hoy.length+' · 🔔 Sin confirmar: '+nuevosPorCanal[canalPedidos];
     document.getElementById('filtro-hoy').setAttribute('aria-pressed',String(filtroPedidos==='hoy'));
     document.getElementById('filtro-historial').setAttribute('aria-pressed',String(filtroPedidos==='historial'));
     document.getElementById('aviso-jornada').textContent=filtroPedidos==='hoy'
       ? 'Mostrando '+hoy.length+' pedido(s) de hoy'+(pendientesViejos.length?' y '+pendientesViejos.length+' pendiente(s) de días anteriores.':'.')+
         ' A las 12 de la noche comienza un nuevo conteo. No se borra nada de Firebase.'
-      : 'Mostrando el historial de '+pedidos.length+' pedido(s). El contador de hoy sigue independiente.';
+      : 'Mostrando el historial de '+pedidosDelCanal.length+' pedido(s) de '+etiquetasCanal[canalPedidos].toLowerCase()+'. El contador de hoy sigue independiente.';
 
     estado.textContent = hayNuevos
       ? '🔔 Hay '+cuantosNuevos+' pedido(s) nuevos por confirmar entre todos los canales.'
