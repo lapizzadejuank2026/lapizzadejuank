@@ -144,6 +144,11 @@
     .cabecera-panel .campana-control .campana-texto{font-size:11px;font-weight:bold;text-align:center}
     .cabecera-panel .campana-control:focus-visible{outline:3px solid white;outline-offset:3px}
     @media(max-width:520px){.cabecera-panel-inner{gap:8px}.cabecera-panel .campana-control{flex-basis:88px;min-height:63px}}
+    .subnav-productos{max-width:850px;margin:0 auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:8px 0 0}
+    .subnav-productos button{width:100%;min-height:44px;margin:0;padding:10px 5px;background:#153b5d;color:#fff;border:1px solid #4b87a7;border-radius:9px;font-size:14px;line-height:1.2;font-weight:700;cursor:pointer}
+    .subnav-productos button[aria-pressed="true"]{background:#f6bd42;color:#21170c;border-color:#f6bd42}
+    .subnav-productos button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+    .subnav-productos[hidden]{display:none!important}
     /* Recepción: tres canales independientes con contadores de comandas nuevas. */
     .recepcion-canales{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;position:relative;padding:7px 0 0;background:transparent}
     .recepcion-canales button{margin:0;min-width:0;min-height:54px;padding:7px 4px;background:#a71919;color:#fff;border:1px solid #ec9a9a;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;line-height:1.1}
@@ -200,6 +205,10 @@
         <button id="canal-mesa" type="button" aria-pressed="false"><span class="canal-titulo">🍽️ Mesas</span><span id="cantidad-mesa" class="canal-cantidad" hidden>0</span></button>
         <button id="canal-llevar" type="button" aria-pressed="false"><span class="canal-titulo">🛍️ Para llevar</span><span id="cantidad-llevar" class="canal-cantidad" hidden>0</span></button>
         <button id="canal-domicilio" type="button" aria-pressed="true"><span class="canal-titulo">🛵 Domicilios</span><span id="cantidad-domicilio" class="canal-cantidad" hidden>0</span></button>
+      </nav>
+      <nav id="subnav-productos" class="subnav-productos" aria-label="Administración de productos y modificadores" hidden>
+        <button id="subtab-productos" type="button" aria-pressed="true">📦 Productos</button>
+        <button id="subtab-modificadores" type="button" aria-pressed="false">🧩 Modificadores</button>
       </nav>
 </header>
 <main>
@@ -280,13 +289,8 @@
     <div id="lista"></div>
     </section>
     <section id="vista-productos" role="tabpanel" aria-labelledby="tab-productos" hidden>
-      <div class="caja">
-        <h2 class="seccion-titulo">📦 Administrar productos</h2>
-        <p class="hint">Agrega productos, cambia precios, organiza categorías y administra fotografías. La recepción y su alarma siguen activas mientras trabajas aquí.</p>
-        <p><a class="portal-link" href="admin-productos.html?v=vista-previa-20261124#panelModificadores" target="_blank" rel="noopener">🧩 Abrir modificadores de productos</a></p>
-        <p class="hint">Si no ves la sección dentro del panel, usa el enlace de arriba para abrir el editor directamente.</p>
-      </div>
-      <iframe id="marco-productos" title="Editor de productos" loading="lazy"></iframe>
+      <iframe id="marco-productos" title="Editor de productos y modificadores" loading="lazy"></iframe>
+      <p class="hint" style="text-align:center"><a id="editor-pantalla-completa" href="admin-productos.html?v=secciones-20261124" target="_blank" rel="noopener">Abrir editor en pantalla completa</a></p>
     </section>
     <section id="vista-equipo" role="tabpanel" aria-labelledby="tab-equipo" hidden>
       <div class="caja">
@@ -510,6 +514,21 @@
   let pedidosCache = [];
   let pedidosCargados = false;
   const marcoProductos = document.getElementById('marco-productos');
+  const subnavProductos=document.getElementById('subnav-productos');
+  let seccionEditor='productos';
+  function aplicarSeccionEditor(){
+    try{marcoProductos.contentWindow?.cambiarSeccionEditor?.(seccionEditor);}catch(_){}
+  }
+  function cambiarSeccionProductos(seccion,desplazar=false){
+    seccionEditor=seccion==='modificadores'?'modificadores':'productos';
+    document.getElementById('subtab-productos').setAttribute('aria-pressed',String(seccionEditor==='productos'));
+    document.getElementById('subtab-modificadores').setAttribute('aria-pressed',String(seccionEditor==='modificadores'));
+    document.getElementById('editor-pantalla-completa').href='admin-productos.html?v=secciones-20261124&seccion='+seccionEditor;
+    aplicarSeccionEditor();
+    if(desplazar)window.scrollTo({top:0,behavior:'auto'});
+  }
+  document.getElementById('subtab-productos').addEventListener('click',()=>cambiarSeccionProductos('productos',true));
+  document.getElementById('subtab-modificadores').addEventListener('click',()=>cambiarSeccionProductos('modificadores',true));
   let canalPedidos='domicilio';
   const canales=['mesa','llevar','domicilio'];
   const etiquetasCanal={mesa:'Mesas',llevar:'Para llevar',domicilio:'Domicilios'};
@@ -549,6 +568,7 @@
     vistaProductos.hidden = nombre !== 'productos';
     const mostrarVistaPrevia = nombre === 'productos' && !!auth.currentUser;
     document.getElementById('vista-previa-productos').hidden = !mostrarVistaPrevia;
+    subnavProductos.hidden = !mostrarVistaPrevia;
     document.querySelector('.cabecera-panel-inner').classList.toggle('con-vista-previa',mostrarVistaPrevia);
     vistaEquipo.hidden = nombre !== 'equipo';
     vistaConfiguracion.hidden = nombre !== 'configuracion';
@@ -567,7 +587,7 @@
     }
     if (nombre === 'productos' && !marcoCargado) {
       marcoCargado = true;
-      marcoProductos.src = 'admin-productos.html?integrado=1&v=vista-previa-20261124';
+      marcoProductos.src = 'admin-productos.html?integrado=1&v=secciones-20261124&seccion='+seccionEditor;
     }
     if (nombre === 'equipo' && auth.currentUser && !equipoCargado) escucharEquipo();
   }
@@ -1146,9 +1166,12 @@
       observadorMarco?.disconnect();
       const interno = marcoProductos.contentDocument;
       if (!interno) return;
+      aplicarSeccionEditor();
       const ajustar = () => {
-        const alto = Math.max(interno.body?.scrollHeight || 0, interno.documentElement?.scrollHeight || 0, 700);
-        marcoProductos.style.height = (alto + 20) + 'px';
+        // Medir el contenido real, no el alto previo del viewport del iframe.
+        const alto = Math.max(Math.ceil(interno.body?.getBoundingClientRect().height||0), interno.body?.scrollHeight||0, 180);
+        const altura=(alto+20)+'px';
+        if(marcoProductos.style.height!==altura)marcoProductos.style.height=altura;
       };
       ajustar();
       observadorMarco = new ResizeObserver(ajustar);
