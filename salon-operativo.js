@@ -40,7 +40,10 @@ const pizzasBase=[
 const iniciales=Array.from({length:6},(_,i)=>({id:'mesa-'+(i+1),nombre:'Mesa '+(i+1),tipo:'mesa'}))
  .concat([{id:'barra',nombre:'Barra',tipo:'barra'}]);
 let user=null;
-let mesas=[],cuentas=new Map(),menuProductos=[],pizzas=[],sabores=[];
+let mesas=[],salas=[],salaActual='principal',cuentas=new Map(),menuProductos=[],pizzas=[],sabores=[];
+const salaDe=m=>m.salaId||'principal';
+const listaSalas=()=>[{id:'principal',nombre:'Sala principal'},...salas];
+const nombreSala=id=>listaSalas().find(s=>s.id===id)?.nombre||'Sala no disponible';
 let seleccion='',categoria='Pizzas',borrador=[],pizzaElegida=null,ocupado=false;
 let mesaSolicitada=new URLSearchParams(window.location.search).get('mesa')||'';
 let control=null,mesaEscuchada=false,cuentasEscuchadas=false,catalogoEscuchado=false;
@@ -55,7 +58,7 @@ function avisoMesa(txt,alerta=false){
 }
 function limpiaTodo(){
  for(const parar of deteners)parar();
- deteners=[];mesas=[];cuentas.clear();menuProductos=[];pizzas=[];sabores=[];
+ deteners=[];mesas=[];salas=[];salaActual='principal';cuentas.clear();menuProductos=[];pizzas=[];sabores=[];
  seleccion='';borrador=[];control=null;mesaEscuchada=cuentasEscuchadas=catalogoEscuchado=false;
  intentoComanda=null;intentoCobro=null;ocupado=false;
 }
@@ -74,7 +77,7 @@ function abrirMesa(id){
  if(!m||!m.activa)return;
  if(seleccion!==id && borrador.length&&!confirm('¿Descartar los productos aún no enviados de la mesa anterior?'))return;
  if(seleccion!==id)borrador=[];
- seleccion=id;intentoComanda=null;intentoCobro=null;
+ seleccion=id;salaActual=salaDe(m);intentoComanda=null;intentoCobro=null;
  pintarTodo();elegirPantalla('detalle');
 }
 function volver(){
@@ -85,27 +88,42 @@ $('volverMesas').onclick=volver;
 $('volverMesasAbajo').onclick=volver;
 function pintarMesas(){
  const holder=$('mesas');holder.replaceChildren();
- const visibles=mesas.filter(m=>m.activa).sort((a,b)=>(a.orden??999)-(b.orden??999)||a.nombre.localeCompare(b.nombre,'es'));
+ const tabs=$('salasSalon');tabs.replaceChildren();
+ if(!listaSalas().some(s=>s.id===salaActual))salaActual='principal';
+ for(const sala of listaSalas()){
+  const b=element('button',sala.nombre,'secundario');b.type='button';
+  b.setAttribute('aria-pressed',String(sala.id===salaActual));b.disabled=ocupado;
+  b.onclick=()=>{salaActual=sala.id;pintarMesas();};tabs.append(b);
+ }
+ const visibles=mesas.filter(m=>m.activa&&salaDe(m)===salaActual).sort((a,b)=>(a.orden??999)-(b.orden??999)||a.nombre.localeCompare(b.nombre,'es'));
  if(!mesas.length){
   $('iniciarMesas').hidden=false;
   holder.append(element('p','Todavía no hay mesas creadas en Firebase. Primero crea la distribución inicial.'));
  }else{
   $('iniciarMesas').hidden=true;
-  if(!visibles.length)holder.append(element('p','Todas las mesas están ocultas. Reactiva una desde el administrador.'));
+  if(!visibles.length)holder.append(element('p','No hay mesas ni barras activas en esta sala. Puedes añadirlas aquí.'));
  }
  for(const m of visibles){
-   const b=element('button',m.nombre,'mesa '+(m.cuentaId?'ocupada':'libre'));
+   const b=element('button',(m.tipo==='barra'?'🍹 ':'🍽️ ')+m.nombre,'mesa '+(m.cuentaId?'ocupada':'libre'));
    const cuenta=m.cuentaId?cuentas.get(m.cuentaId):null;
    b.append(element('small',m.cuentaId?'🟠 Ocupada'+(cuenta?' · '+pesos(cuenta.total):''):'🟢 Libre'));
    b.onclick=()=>abrirMesa(m.id);b.disabled=ocupado;holder.append(b);
  }
  const ocultas=$('reactivarMesa');ocultas.replaceChildren(new Option('Selecciona mesa oculta',''));
- for(const m of mesas.filter(m=>!m.activa))ocultas.append(new Option(m.nombre,m.id));
+ for(const m of mesas.filter(m=>!m.activa))ocultas.append(new Option(nombreSala(salaDe(m))+' · '+m.nombre,m.id));
  $('activarMesa').disabled=!mesas.some(m=>!m.activa)||ocupado;
- const actual=mesaActual();
- $('editarMesa').disabled=!actual||ocupado;
+ const administrar=$('mesaAdministrar'),prev=administrar.value;
+ administrar.replaceChildren(new Option('Selecciona mesa o barra para editar',''));
+ for(const m of visibles)administrar.append(new Option(m.nombre+(m.cuentaId?' · Ocupada':''),m.id));
+ if(visibles.some(m=>m.id===prev))administrar.value=prev;
+ else if(visibles.some(m=>m.id===seleccion))administrar.value=seleccion;
+ const actual=mesas.find(m=>m.id===administrar.value);
+ $('editarMesa').disabled=!actual||!!actual.cuentaId||ocupado;
  $('ocultarMesa').disabled=!actual||!!actual.cuentaId||ocupado;
- $('agregarMesa').disabled=!mesas.length||ocupado;
+ $('agregarMesa').disabled=!mesaEscuchada||ocupado;
+ $('agregarBarra').disabled=!mesaEscuchada||ocupado;
+ $('agregarSala').disabled=!mesaEscuchada||ocupado;
+ $('editarSala').disabled=salaActual==='principal'||ocupado||!mesaEscuchada;
 }
 function pintarCuenta(){
  const m=mesaActual(),c=cuentaActual();
@@ -239,7 +257,9 @@ function parseCatalogo(docs){
 function escuchar(){
  const r1=onSnapshot(collection(db,'mesas'),{includeMetadataChanges:true},snap=>{
   mesaEscuchada=true;
-  mesas=snap.docs.map(x=>({id:x.id,...x.data()}));
+  const distribucion=snap.docs.map(x=>({...x.data(),id:x.id}));
+  salas=distribucion.filter(m=>m.tipo==='sala').sort((a,b)=>(a.orden??999)-(b.orden??999));
+  mesas=distribucion.filter(m=>m.tipo!=='sala');
   if(seleccion && !mesas.some(m=>m.id===seleccion)){seleccion='';elegirPantalla('mesas');}
   mensaje('✅ Mesas sincronizadas con Firebase.');
   pintarTodo();
@@ -309,48 +329,85 @@ $('iniciarMesas').onclick=async()=>{
  }catch(err){mensaje('No se pudieron crear las mesas: '+(err.code||err.message),true);}
  finally{bloquear(false);}
 };
-$('agregarMesa').onclick=async()=>{
- if(ocupado)return;
- const nombre=prompt('Nombre de la nueva mesa (ej.: Mesa 7):');
- if(nombre===null)return;
- const n=nombre.trim().slice(0,50);
- if(!n){mensaje('Escribe un nombre de mesa.',true);return;}
- if(mesas.some(m=>normalizar(m.nombre)===normalizar(n))){mensaje('Ya hay una mesa con ese nombre.',true);return;}
+$('mesaAdministrar').onchange=()=>{const m=mesas.find(x=>x.id===$('mesaAdministrar').value);$('editarMesa').disabled=!m||!!m.cuentaId||ocupado;$('ocultarMesa').disabled=!m||!!m.cuentaId||ocupado;};
+function elegirSala(id){
+ const opciones=listaSalas(),texto=opciones.map((s,i)=>(i+1)+'. '+s.nombre).join('\n');
+ const resp=prompt('Selecciona el número de la sala:\n'+texto,String(Math.max(0,opciones.findIndex(s=>s.id===id))+1));
+ if(resp===null)return null;
+ const elegida=opciones[Number(resp.trim())-1];
+ if(!elegida)mensaje('Selecciona un número de sala válido.',true);
+ return elegida?.id||null;
+}
+$('agregarSala').onclick=async()=>{
+ if(ocupado||!mesaEscuchada)return;
+ const entrada=prompt('Nombre de la nueva sala (ej.: Terraza):');
+ if(entrada===null)return;const nombre=entrada.trim().slice(0,50);
+ if(!nombre||listaSalas().some(x=>normalizar(x.nombre)===normalizar(nombre))){mensaje('Nombre de sala vacío o repetido.',true);return;}
+ const id='sala-'+doc(collection(db,'mesas')).id;
+ bloquear(true);
+ try{
+  const batch=writeBatch(db);
+  // Registro de distribución no operable como mesa; no admite cuentas.
+  batch.set(mesaRef(id),{nombre,tipo:'sala',orden:salas.length+1,activa:false,cuentaId:null,creadaEn:serverTimestamp()});
+  await batch.commit();salaActual=id;mensaje('✅ Sala creada. Agrega mesas o barras.');
+ }catch(err){mensaje('No se pudo crear la sala: '+(err.code||err.message),true);}
+ finally{bloquear(false);}
+};
+$('editarSala').onclick=async()=>{
+ const sala=salas.find(x=>x.id===salaActual);if(!sala||ocupado)return;
+ const entrada=prompt('Nuevo nombre de la sala:',sala.nombre);if(entrada===null)return;
+ const nombre=entrada.trim().slice(0,50);
+ if(!nombre||listaSalas().some(x=>x.id!==sala.id&&normalizar(x.nombre)===normalizar(nombre))){mensaje('Nombre de sala vacío o repetido.',true);return;}
+ bloquear(true);
+ try{await runTransaction(db,async tx=>{const ref=mesaRef(sala.id),snap=await tx.get(ref);if(!snap.exists()||snap.data().tipo!=='sala')throw Error('La sala ya no existe.');tx.update(ref,{nombre});});mensaje('✅ Sala actualizada.');}
+ catch(err){mensaje('No se pudo editar la sala: '+(err.code||err.message),true);}
+ finally{bloquear(false);}
+};
+async function agregarPuesto(tipo){
+ if(ocupado||!mesaEscuchada)return;
+ const nombre=prompt(tipo==='barra'?'Nombre de la nueva barra (ej.: Barra 2):':'Nombre de la nueva mesa (ej.: Mesa 7):');
+ if(nombre===null)return;const n=nombre.trim().slice(0,50);
+ if(!n||mesas.some(m=>normalizar(m.nombre)===normalizar(n))){mensaje('Nombre vacío o repetido en el restaurante.',true);return;}
+ const salaId=salaActual;
  const id=doc(collection(db,'mesas')).id;
  bloquear(true);
  try{
   const batch=writeBatch(db);
-  batch.set(mesaRef(id),{nombre:n,tipo:'mesa',orden:mesas.length+1,activa:true,cuentaId:null,creadaEn:serverTimestamp()});
-  await batch.commit();mensaje('✅ Mesa creada en Firebase.');
- }catch(err){mensaje('No se pudo crear la mesa: '+(err.code||err.message),true);}
+  const datos={nombre:n,tipo,orden:mesas.length+1,activa:true,cuentaId:null,creadaEn:serverTimestamp()};
+  if(salaId!=='principal')datos.salaId=salaId;
+  batch.set(mesaRef(id),datos);
+  await batch.commit();mensaje('✅ '+(tipo==='barra'?'Barra':'Mesa')+' creada en '+nombreSala(salaId)+'.');
+ }catch(err){mensaje('No se pudo crear: '+(err.code||err.message),true);}
  finally{bloquear(false);}
-};
+}
+$('agregarMesa').onclick=()=>agregarPuesto('mesa');
+$('agregarBarra').onclick=()=>agregarPuesto('barra');
 $('editarMesa').onclick=async()=>{
- const m=mesaActual();if(!m||ocupado)return;
+ const m=mesas.find(x=>x.id===$('mesaAdministrar').value);if(!m||ocupado||m.cuentaId)return;
  const nuevo=prompt('Cambiar el nombre de '+m.nombre,m.nombre);
  if(nuevo===null)return;const nombre=nuevo.trim().slice(0,50);
- if(!nombre||mesas.some(x=>x.id!==m.id&&normalizar(x.nombre)===normalizar(nombre))){
-  mensaje('Nombre vacío o repetido.',true);return;
- }
+ if(!nombre||mesas.some(x=>x.id!==m.id&&normalizar(x.nombre)===normalizar(nombre))){mensaje('Nombre vacío o repetido en el restaurante.',true);return;}
+ const salaId=elegirSala(salaDe(m));if(!salaId)return;
  bloquear(true);
  try{
   await runTransaction(db,async tx=>{
    const ref=mesaRef(m.id),snap=await tx.get(ref);
-   if(!snap.exists())throw Error('La mesa ya no existe.');
-   if(snap.data().cuentaId)throw Error('No puedes renombrar una mesa ocupada.');
-   tx.update(ref,{nombre});
-  });mensaje('✅ Nombre actualizado.');
+   if(!snap.exists()||snap.data().tipo==='sala')throw Error('La mesa ya no existe.');
+   if(snap.data().cuentaId)throw Error('No puedes editar una mesa ocupada.');
+   const cambios={nombre};if(salaId!==salaDe(snap.data()))cambios.salaId=salaId;
+   tx.update(ref,cambios);
+  });salaActual=salaId;mensaje('✅ Distribución actualizada.');
  }catch(err){mensaje('No se pudo editar: '+(err.code||err.message),true);}
  finally{bloquear(false);}
 };
 $('ocultarMesa').onclick=async()=>{
- const m=mesaActual();if(!m||ocupado)return;
+ const m=mesas.find(x=>x.id===$('mesaAdministrar').value);if(!m||ocupado)return;
  if(!confirm('¿Ocultar '+m.nombre+'?'))return;
  bloquear(true);
  try{
   await runTransaction(db,async tx=>{
     const ref=mesaRef(m.id),snap=await tx.get(ref);
-    if(!snap.exists()||snap.data().cuentaId)throw Error('No puedes ocultar una mesa ocupada.');
+    if(!snap.exists()||snap.data().tipo==='sala'||snap.data().cuentaId)throw Error('No puedes ocultar una mesa ocupada.');
     tx.update(ref,{activa:false});
   });mensaje('✅ Mesa oculta. Puedes reactivarla después.');
  }catch(err){mensaje('No se pudo ocultar: '+(err.code||err.message),true);}
@@ -362,7 +419,7 @@ $('activarMesa').onclick=async()=>{
  try{
   await runTransaction(db,async tx=>{
    const ref=mesaRef(id),snap=await tx.get(ref);
-   if(!snap.exists())throw Error('Mesa no encontrada.');
+   if(!snap.exists()||snap.data().tipo==='sala')throw Error('Mesa no encontrada.');
    tx.update(ref,{activa:true});
   });mensaje('✅ Mesa reactivada.');
  }catch(err){mensaje('No se pudo reactivar: '+(err.code||err.message),true);}
