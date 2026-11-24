@@ -54,6 +54,10 @@
     .monitor-metrica strong { display:block; color:#ffd26f; font-size:25px; }
     .monitor-metrica[hidden] { display:none!important; }
     .mapa-mesas{margin:16px 0 20px;padding:14px;border:1px solid #4b5964;border-radius:12px;background:#141b22}
+    .mapa-mesas{scroll-margin-top:calc(var(--cabecera-alto,155px) + 12px)}
+    .mapa-grilla[hidden],.mapa-resumen[hidden]{display:none!important}
+    .mapa-detalle .mapa-volver{margin:0 0 12px;text-align:left;min-height:44px}
+    .mapa-detalle .mapa-volver:last-child{margin:12px 0 0}
     .mapa-mesas h3{margin:0 0 8px;font-size:19px}
     .mapa-resumen{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
     .mapa-resumen .mapa-saldo{grid-column:1/-1}
@@ -511,7 +515,7 @@
 </script>
 <script src="impresion-ticket.js"></script>
 <script type="module">
-  import { crearMapaRecepcion } from "./mapa-mesas-recepcion.js?v=20261124";
+  import { crearMapaRecepcion } from "./mapa-mesas-recepcion.js?v=detalle-20261124";
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, setPersistence, inMemoryPersistence, deleteUser } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
   import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, updateDoc, setDoc, serverTimestamp, writeBatch, runTransaction } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
