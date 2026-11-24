@@ -42,6 +42,7 @@ const iniciales=Array.from({length:6},(_,i)=>({id:'mesa-'+(i+1),nombre:'Mesa '+(
 let user=null;
 let mesas=[],cuentas=new Map(),menuProductos=[],pizzas=[],sabores=[];
 let seleccion='',categoria='Pizzas',borrador=[],pizzaElegida=null,ocupado=false;
+let mesaSolicitada=new URLSearchParams(window.location.search).get('mesa')||'';
 let control=null,mesaEscuchada=false,cuentasEscuchadas=false,catalogoEscuchado=false;
 let deteners=[];
 let intentoComanda=null, intentoCobro=null;
@@ -236,12 +237,19 @@ function parseCatalogo(docs){
  catalogoEscuchado=true;pintarCatalogo();
 }
 function escuchar(){
- const r1=onSnapshot(collection(db,'mesas'),snap=>{
+ const r1=onSnapshot(collection(db,'mesas'),{includeMetadataChanges:true},snap=>{
   mesaEscuchada=true;
   mesas=snap.docs.map(x=>({id:x.id,...x.data()}));
   if(seleccion && !mesas.some(m=>m.id===seleccion)){seleccion='';elegirPantalla('mesas');}
   mensaje('✅ Mesas sincronizadas con Firebase.');
   pintarTodo();
+  if(mesaSolicitada && !snap.metadata.fromCache){
+   const id=mesaSolicitada;mesaSolicitada='';
+   const url=new URL(window.location.href);url.searchParams.delete('mesa');
+   try{window.history.replaceState(null,'',url);}catch(_){}
+   if(mesas.some(m=>m.id===id&&m.activa))abrirMesa(id);
+   else mensaje('La mesa solicitada ya no está disponible. Selecciona otra mesa.',true);
+  }
  },err=>mensaje('🔒 Sin acceso a mesas en Firebase: '+(err.code||'error')+'. Falta habilitar sus reglas.',true));
  const r2=onSnapshot(query(collection(db,'cuentasMesa'),where('estado','==','abierta')),snap=>{
   cuentas=new Map(snap.docs.map(x=>[x.id,{id:x.id,...x.data()}]));
