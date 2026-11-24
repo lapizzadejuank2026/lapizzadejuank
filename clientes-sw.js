@@ -9,7 +9,7 @@ self.addEventListener('fetch',e=>{
   if(req.method!=='GET'||url.origin!==base.origin)return;
   if(req.mode!=='navigate'||!publicas.has(url.pathname))return;
   e.respondWith(fetch(req,{cache:'no-store'}).catch(()=>new Response(
-    '<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>La Pizza de Juanca</title><body style="background:#111;color:white;font:18px Arial;padding:24px"><h1>La Pizza de Juanca</h1><p>Necesitas Internet para consultar el menú y realizar tu pedido.</p><button onclick="location.reload()" style="padding:14px">Reintentar</button></body></html>',
+    '<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>La Pizza de Juan K</title><body style="background:#111;color:white;font:18px Arial;padding:24px"><h1>La Pizza de Juan K</h1><p>Necesitas Internet para consultar el menú y realizar tu pedido.</p><button onclick="location.reload()" style="padding:14px">Reintentar</button></body></html>',
     {status:503,headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}}
   )));
 });

@@ -1,8 +1,8 @@
 {
   "id": "./index-1.html",
-  "name": "La Pizza de Juanca",
-  "short_name": "Pizza Juanca",
-  "description": "Menú y pedidos de La Pizza de Juanca",
+  "name": "La Pizza de Juan K",
+  "short_name": "Pizza Juan K",
+  "description": "Menú y pedidos de La Pizza de Juan K",
   "lang": "es-CO",
   "start_url": "./index-1.html",
   "scope": "./",
