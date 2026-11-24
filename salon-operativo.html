@@ -44,7 +44,7 @@ label input[type=checkbox]{width:auto;margin:0 8px 0 0}
 .producto strong{display:block;min-height:36px}
 .producto span{display:block;color:#ffdf8a;margin:10px 0}
 .producto button{width:100%}
-.cabeceraMesa{position:sticky;top:0;background:#1c1c1c;z-index:3;border-radius:12px;border:1px solid #5e4a29;padding:11px;display:flex;align-items:center;gap:10px}
+.cabeceraMesa{position:sticky;top:calc(var(--cabecera-alto,82px) + 6px);background:#1c1c1c;z-index:3;border-radius:12px;border:1px solid #5e4a29;padding:11px;display:flex;align-items:center;gap:10px}
 .cabeceraMesa strong{font-size:18px;color:#ffdb90;flex:1;text-align:center}
 .dialogo{max-width:min(95vw,500px);width:100%;background:#252525;border:1px solid #d2b56d;border-radius:13px;padding:20px;color:white}
 .dialogo::backdrop{background:#000c}
@@ -60,9 +60,9 @@ label input[type=checkbox]{width:auto;margin:0 8px 0 0}
  .mesa{min-height:90px;font-size:14px}
  .opcionesSabores{grid-template-columns:1fr}
 }
-</style><link rel="stylesheet" href="nav-admin-fija.css">
+</style><link rel="stylesheet" href="nav-admin-fija.css"><script defer src="cabecera-fija-admin.js"></script>
 </head>
-<body><header><h1>🍽️ Mesas y barra · La Pizza de Juanca</h1><p>Comandas, cuentas y cobros conectados a caja</p></header>
+<body><header class="cabecera-fija-app"><h1>🍕 La Pizza de Juanca</h1><p>🍽️ Mesas y barra · Comandas y cuentas</p></header>
 <main>
 <p class="nota"><strong>Fase de pruebas con Firebase.</strong> Aquí las comandas y los pagos sí se enviarán a Firestore cuando estén autorizadas las reglas. Todavía no está validado para ventas reales. Prueba con valores ficticios, revisa los permisos y no mezcles los movimientos de prueba con las ventas del negocio.</p>
 <p class="fila"><a href="panel-pedidos.html">← Recepción</a><a href="caja-operativa.html">💰 Ver caja</a><a href="salon-mesas.html">🧪 Mesas de demostración</a></p>
