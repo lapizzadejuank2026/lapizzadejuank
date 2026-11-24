@@ -99,6 +99,23 @@
     .config-logo-preview { width:92px; height:92px; object-fit:contain; border-radius:14px; background:#fff; padding:8px; display:block; margin:10px 0; border:1px solid #777; }
     .config-logo-note { color:#c9c9c9; font-size:13px; line-height:1.4; margin:2px 0 7px; }
     #config-mensaje { color:#ffe09c; white-space:pre-wrap; }
+    /* Campana de alarma persistente en cabecera: nunca confundir preferencia con sonido real. */
+    .cabecera-panel-inner{max-width:850px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .cabecera-marca{min-width:0;flex:1;text-align:left}
+    .cabecera-marca h1{overflow-wrap:anywhere}
+    .cabecera-marca div{font-size:13px;margin-top:4px;color:#ffe4c9}
+    .cabecera-panel .campana-control{
+      width:auto;flex:0 0 96px;min-width:82px;min-height:69px;padding:8px 7px;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+      margin:0;border:2px solid #f4c979;border-radius:13px;
+      background:#322c26;color:#fff;line-height:1.1;box-shadow:0 3px 10px #0003;
+    }
+    .cabecera-panel .campana-control[data-estado="activa"]{background:#205534;border-color:#9aebad;color:white}
+    .cabecera-panel .campana-control[data-estado="pendiente"]{background:#684a14;border-color:#ffe09b;color:#fff2d5}
+    .cabecera-panel .campana-control .campana-icono{font-size:26px;line-height:1}
+    .cabecera-panel .campana-control .campana-texto{font-size:11px;font-weight:bold;text-align:center}
+    .cabecera-panel .campana-control:focus-visible{outline:3px solid white;outline-offset:3px}
+    @media(max-width:520px){.cabecera-panel-inner{gap:8px}.cabecera-panel .campana-control{flex-basis:88px;min-height:63px}}
     /* Recepción: tres canales independientes con contadores de comandas nuevas. */
     .recepcion-canales{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;position:sticky;top:0;z-index:6;padding:10px 0;background:#121212}
     .recepcion-canales button{margin:0;min-width:0;min-height:75px;padding:10px 5px;background:#2c2c2c;color:#f0f0f0;border:1px solid #656565;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:13px}
@@ -127,7 +144,18 @@
 <link rel="stylesheet" href="nav-admin-fija.css">
 </head>
 <body>
-<header><h1 id="panel-nombre">🍕 La Pizza de Juan K</h1><div>Centro de control del restaurante</div></header>
+<header class="cabecera-panel">
+  <div class="cabecera-panel-inner">
+    <div class="cabecera-marca">
+      <h1 id="panel-nombre">🍕 La Pizza de Juan K</h1>
+      <div>Centro de control del restaurante</div>
+    </div>
+    <button id="activar" class="campana-control" type="button" aria-label="Activar alarma sonora" aria-pressed="false" data-estado="apagada" hidden>
+      <span id="icono-alarma" class="campana-icono" aria-hidden="true">🔕</span>
+      <span id="texto-alarma" class="campana-texto">Activar alarma</span>
+    </button>
+  </div>
+</header>
 <main>
   <section id="acceso" class="caja">
     <h2>Acceso del negocio</h2>
@@ -176,7 +204,6 @@
       </nav>
       <p id="canal-estado" class="recepcion-nota" aria-live="polite">Mostrando pedidos a domicilio.</p>
       <p id="usuario"></p>
-      <button id="activar">🔔 Activar alarma sonora</button>
       <button id="salir" class="secundario">Cerrar sesión</button>
       <p id="estado" class="alerta" role="status">Conectando con Firestore...</p>
       <p id="contador" aria-live="polite"></p>
@@ -351,6 +378,34 @@
   let alarmaActiva = false;
   let hayNuevos = false;
   let audio;
+  // Recuerda la preferencia, NO el permiso de reproducir: Chrome puede
+  // suspender Web Audio cada vez que se recarga la página.
+  const ALARMA_PREFERENCIA='juanca-recepcion-alarma-sonora-v1';
+  let alarmaPreferida=false;
+  try { alarmaPreferida=localStorage.getItem(ALARMA_PREFERENCIA)==='si'; } catch (_) {}
+  let reactivandoAlarma=false;
+  const campana=document.getElementById('activar');
+  const iconoCampana=document.getElementById('icono-alarma');
+  const textoCampana=document.getElementById('texto-alarma');
+  function guardarPreferenciaAlarma(valor){
+    alarmaPreferida=valor;
+    try { localStorage.setItem(ALARMA_PREFERENCIA,valor?'si':'no'); } catch (_) {}
+  }
+  function pintarCampana(){
+    campana.hidden=!auth.currentUser;
+    const activa=!!auth.currentUser && alarmaPreferida && alarmaActiva && audio?.state==='running';
+    const pendiente=!!auth.currentUser && alarmaPreferida && !activa;
+    const estado=activa?'activa':pendiente?'pendiente':'apagada';
+    campana.dataset.estado=estado;
+    campana.setAttribute('aria-pressed',String(activa));
+    iconoCampana.textContent=activa?'🔔':pendiente?'🔔':'🔕';
+    textoCampana.textContent=activa?'Sonido activo':pendiente?'Reactivar sonido':'Activar alarma';
+    campana.setAttribute('aria-label',activa?'Alarma sonora activa. Tocar para desactivar.':
+      pendiente?'La alarma requiere una interacción para recuperar el sonido. Tocar para reactivar.':
+      'Alarma sonora desactivada. Tocar para activar.');
+    campana.title=pendiente?'Después de actualizar, toca para permitir el sonido del navegador.':
+      activa?'Alarma de pedidos nuevos activada':'Activar sonido de pedidos nuevos';
+  }
   let marcoCargado = false;
   let observadorMarco;
 
@@ -1050,17 +1105,52 @@
 
   document.getElementById('salir').addEventListener('click', () => signOut(auth));
 
-  document.getElementById('activar').addEventListener('click', async () => {
-    try {
-      audio ??= new (window.AudioContext || window.webkitAudioContext)();
+  async function encenderAlarma(){
+    if(!auth.currentUser || reactivandoAlarma)return;
+    reactivandoAlarma=true;
+    try{
+      const ContextoAudio=window.AudioContext||window.webkitAudioContext;
+      if(!ContextoAudio)throw Error('Este navegador no admite alarma de audio.');
+      audio ??= new ContextoAudio();
+      audio.onstatechange=()=>{
+        if(audio.state!=='running')alarmaActiva=false;
+        pintarCampana();
+      };
       await audio.resume();
-      alarmaActiva = true;
-      document.getElementById('activar').textContent = '🔔 Alarma activada';
-      if (hayNuevos) sonar();
-    } catch (error) {
-      estado.textContent = 'No se pudo activar el sonido.';
+      if(!auth.currentUser || !alarmaPreferida)return;
+      if(audio.state!=='running')throw Error('El navegador aún no permite reproducir sonido.');
+      const estabaActiva=alarmaActiva;
+      alarmaActiva=true;
+      pintarCampana();
+      if(hayNuevos && !estabaActiva)sonar();
+    }catch(error){
+      alarmaActiva=false;
+      pintarCampana();
+      console.warn('La alarma necesita un toque para activarse:',error);
+    }finally{
+      reactivandoAlarma=false;
     }
+  }
+  campana.addEventListener('click',()=>{
+    if(alarmaActiva && audio?.state==='running'){
+      guardarPreferenciaAlarma(false);
+      alarmaActiva=false;
+      pintarCampana();
+      return;
+    }
+    guardarPreferenciaAlarma(true);
+    pintarCampana();
+    void encenderAlarma();
   });
+  // Recuperar la preferencia con el primer gesto del administrador tras actualizar.
+  // No prometer audio automático: los navegadores móviles lo bloquean sin interacción.
+  function reactivarTrasGesto(evento){
+    if(!auth.currentUser || !alarmaPreferida || alarmaActiva || reactivandoAlarma ||
+       campana.contains(evento.target))return;
+    void encenderAlarma();
+  }
+  window.addEventListener('pointerdown',reactivarTrasGesto,{passive:true});
+  window.addEventListener('keydown',reactivarTrasGesto);
 
   function sonar() {
     if (!alarmaActiva || !audio || audio.state !== 'running') return;
@@ -1608,8 +1698,7 @@
       document.getElementById('nuevos-tab').hidden = true;
       alarmaActiva = false;
       hayNuevos = false;
-      document.getElementById('activar').textContent =
-        '🔔 Activar alarma sonora';
+      pintarCampana();
       return;
     }
 
@@ -1617,6 +1706,7 @@
       'Sesión: ' + user.email;
     // Inicio y Pedidos abren vistas diferentes, respetando el enlace que se pulsó.
     cambiarVista(urlVista[window.location.hash] || 'pedidos');
+    pintarCampana();
 
     estado.textContent = 'Conectando con Firestore...';
     equipoEstado.textContent = 'Consultando personal disponible...';
