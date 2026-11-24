@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Centro de control | Pulso Food</title>
+  <script src="config-publica.js?v=20261124"></script>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font-family: Arial, sans-serif; background: #121212; color: #fff; }
@@ -92,6 +93,23 @@
     .tabs button { min-width:0; }
     @media(max-width:520px) { .tabs { grid-template-columns:repeat(2,minmax(0,1fr)); } .tabs button { font-size:13px!important; padding:11px 5px!important; } }
     .config-form { display:grid; gap:12px; }
+    .config-form select{width:100%;padding:10px;border-radius:9px;background:white;color:#151515;font:inherit}
+    #subnav-configuracion{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+    #subnav-configuracion button{font-size:13px;padding:10px 3px}
+    .horario-dia{padding:12px;margin:9px 0;background:#191d22;border:1px solid #465564;border-radius:10px}
+    .horario-dia-cabeza{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:bold}
+    .horario-dia-cabeza label,.horario-heredar{display:flex!important;align-items:center;gap:8px;font-size:14px}
+    .horario-dia-cabeza input,.horario-heredar input{width:20px!important;height:20px;margin:0!important;accent-color:#f6bd42}
+    .horario-tramo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 32px;gap:6px;align-items:end;margin-top:8px}
+    .horario-tramo label{font-size:12px;font-weight:normal}
+    .horario-tramo input{padding:8px 3px!important;font-size:14px!important}
+    .horario-tramo button{padding:9px 3px;margin:0;background:#404c57;color:white}
+    .horario-agregar{background:#153b5d;color:#fff;border:1px solid #4b87a7;font-size:13px;padding:9px}
+    .config-colores{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .config-colores input[type=color]{height:48px;padding:4px}
+    .config-apariencia-check{display:flex!important;gap:9px;align-items:center}
+    .config-apariencia-check input{width:20px!important;height:20px;margin:0!important;accent-color:#f6bd42}
+    #config-horario-mensaje,#config-apariencia-mensaje{color:#ffe09c;white-space:pre-wrap}
     .config-form label { display:block; color:#f4f4f4; font-weight:bold; }
     .config-form input,.config-form textarea { display:block; margin-top:7px; width:100%; border:1px solid #636363; background:#fff; color:#151515; padding:12px; border-radius:9px; font:inherit; }
     .config-form textarea { min-height:95px; resize:vertical; }
@@ -205,6 +223,11 @@
         <button id="canal-mesa" type="button" aria-pressed="false"><span class="canal-titulo">🍽️ Mesas</span><span id="cantidad-mesa" class="canal-cantidad" hidden>0</span></button>
         <button id="canal-llevar" type="button" aria-pressed="false"><span class="canal-titulo">🛍️ Para llevar</span><span id="cantidad-llevar" class="canal-cantidad" hidden>0</span></button>
         <button id="canal-domicilio" type="button" aria-pressed="true"><span class="canal-titulo">🛵 Domicilios</span><span id="cantidad-domicilio" class="canal-cantidad" hidden>0</span></button>
+      </nav>
+      <nav id="subnav-configuracion" class="subnav-productos" aria-label="Opciones de configuración" hidden>
+        <button type="button" id="config-tab-negocio" aria-pressed="true">⚙️ Negocio</button>
+        <button type="button" id="config-tab-horarios" aria-pressed="false">🕒 Horarios</button>
+        <button type="button" id="config-tab-apariencia" aria-pressed="false">🎨 Apariencia</button>
       </nav>
       <nav id="subnav-productos" class="subnav-productos" aria-label="Administración de productos y modificadores" hidden>
         <button id="subtab-productos" type="button" aria-pressed="true">📦 Productos</button>
@@ -347,7 +370,7 @@
       </div>
     </section>
     <section id="vista-configuracion" role="tabpanel" aria-labelledby="tab-configuracion" hidden>
-      <div class="caja">
+      <div class="caja" id="config-vista-negocio">
         <h2>⚙️ Configuración del negocio</h2>
         <p class="hint">Personaliza los textos que verán tus clientes en la bienvenida y en el menú digital, sin modificar productos ni pedidos. Cambiar el nombre aquí no cambia tu razón social legal.</p>
         <form id="config-form" class="config-form">
@@ -367,15 +390,49 @@
           <label>Mensaje de bienvenida del menú
             <textarea id="config-bienvenida" maxlength="280" required placeholder="Bienvenidos a nuestra pizzería..."></textarea>
           </label>
-          <label>Logo del negocio (foto que aparece en la cabecera)
-            <img id="config-logo-vista" class="config-logo-preview" src="chef.png" alt="Vista previa del logo actual">
-            <input id="config-logo" type="file" accept="image/jpeg,image/png,image/webp">
-          </label>
-          <p class="config-logo-note">Elige una imagen JPG, PNG o WEBP de máximo 5 MB. Se optimizará para el logo y se guardará junto con la configuración del negocio, sin usar Firebase Storage. Si no eliges otra, se conserva la actual.</p>
           <button type="submit" id="config-guardar">💾 Guardar cambios</button>
           <p id="config-mensaje" role="status" aria-live="polite">Cargando información del negocio...</p>
         </form>
-        <p class="hint">Los cambios se publican para los clientes conectados cuando Firebase confirma que se guardaron. El nombre grande repetido ya no aparecerá en el menú.</p>
+      </div>
+      <div class="caja" id="config-vista-horarios" hidden>
+        <h2>🕒 Horario de atención</h2>
+        <p class="hint">Zona horaria: America/Bogota. Activa cada día y agrega uno o varios turnos. Si cierras después de medianoche, indica la hora del día siguiente.</p>
+        <form id="config-form-horarios" class="config-form">
+          <label>Horario a configurar
+            <select id="config-tipo-horario">
+              <option value="general">General / atención en el local</option>
+              <option value="domicilio">Domicilios</option>
+              <option value="recoger">Recoger en el local</option>
+            </select>
+          </label>
+          <label id="config-heredar-fila" class="horario-heredar" hidden><input type="checkbox" id="config-heredar"> Usar el horario general</label>
+          <div id="config-lista-horarios"></div>
+          <p class="hint">El horario se mostrará a los clientes. Por ahora no bloquea el envío de pedidos fuera de horario.</p>
+          <button id="config-guardar-horarios" type="submit">💾 Guardar horario</button>
+          <p id="config-horario-mensaje" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+      <div class="caja" id="config-vista-apariencia" hidden>
+        <h2>🎨 Apariencia del negocio</h2>
+        <p class="hint">Personaliza la bienvenida y el menú de clientes. La identidad del centro de control Pulso Food se conserva.</p>
+        <form id="config-form-apariencia" class="config-form">
+          <label>Logo del negocio
+            <img id="config-logo-vista" class="config-logo-preview" src="chef.png" alt="Vista previa del logo actual">
+            <input id="config-logo" type="file" accept="image/jpeg,image/png,image/webp">
+          </label>
+          <p class="config-logo-note">JPG, PNG o WEBP de máximo 5 MB. Si no eliges otra imagen, se conserva el logo actual.</p>
+          <label class="config-apariencia-check"><input type="checkbox" id="config-colores-activos"> Usar colores personalizados</label>
+          <div class="config-colores" id="config-colores" hidden>
+            <label>Color principal<input type="color" id="config-color-principal" value="#b81932"></label>
+            <label>Color de acento<input type="color" id="config-color-acento" value="#e3b84a"></label>
+          </div>
+          <label>Imagen de portada (enlace HTTPS opcional)
+            <input type="url" id="config-portada" placeholder="https://...">
+          </label>
+          <p class="hint">Deja el enlace vacío para conservar la bienvenida sin portada adicional.</p>
+          <button id="config-guardar-apariencia" type="submit">💾 Guardar apariencia</button>
+          <p id="config-apariencia-mensaje" role="status" aria-live="polite"></p>
+        </form>
       </div>
     </section>
   </section>
@@ -569,6 +626,7 @@
     const mostrarVistaPrevia = nombre === 'productos' && !!auth.currentUser;
     document.getElementById('vista-previa-productos').hidden = !mostrarVistaPrevia;
     subnavProductos.hidden = !mostrarVistaPrevia;
+    document.getElementById("subnav-configuracion").hidden = nombre!=="configuracion" || !auth.currentUser;
     document.querySelector('.cabecera-panel-inner').classList.toggle('con-vista-previa',mostrarVistaPrevia);
     vistaEquipo.hidden = nombre !== 'equipo';
     vistaConfiguracion.hidden = nombre !== 'configuracion';
@@ -641,8 +699,74 @@
   const configGuardar = document.getElementById('config-guardar');
   const configArchivo = document.getElementById('config-logo');
   const configLogoVista = document.getElementById('config-logo-vista');
-  let logoURLActual = '';
-  let vistaTemporalLogo = null;
+  const horarioMensaje=document.getElementById('config-horario-mensaje');
+  const aparienciaMensaje=document.getElementById('config-apariencia-mensaje');
+  const guardarHorario=document.getElementById('config-guardar-horarios');
+  const guardarApariencia=document.getElementById('config-guardar-apariencia');
+  const tipoHorario=document.getElementById('config-tipo-horario');
+  const heredarHorario=document.getElementById('config-heredar');
+  const coloresActivos=document.getElementById('config-colores-activos');
+  const colorPrincipal=document.getElementById('config-color-principal');
+  const colorAcento=document.getElementById('config-color-acento');
+  const portada=document.getElementById('config-portada');
+  const cambiosConfig={negocio:false,horarios:false,apariencia:false};
+  let configCargada=false, logoURLActual='',vistaTemporalLogo=null;
+  let horariosActuales=window.PulsoConfig.normalizarHorarios(null);
+  const botonesConfig=[configGuardar,guardarHorario,guardarApariencia];
+  botonesConfig.forEach(b=>b.disabled=true);
+  function cambiarSubconfig(seccion,desplazar=false){
+    for(const clave of ['negocio','horarios','apariencia']){
+      document.getElementById('config-vista-'+clave).hidden=clave!==seccion;
+      document.getElementById('config-tab-'+clave).setAttribute('aria-pressed',String(clave===seccion));
+    }
+    if(desplazar)window.scrollTo({top:0,behavior:'auto'});
+  }
+  for(const clave of ['negocio','horarios','apariencia']){
+    document.getElementById('config-tab-'+clave).addEventListener('click',()=>cambiarSubconfig(clave,true));
+  }
+  document.getElementById('config-form').addEventListener('input',()=>cambiosConfig.negocio=true);
+  document.getElementById('config-form-apariencia').addEventListener('input',()=>cambiosConfig.apariencia=true);
+  function mostrarColores(){document.getElementById('config-colores').hidden=!coloresActivos.checked;}
+  coloresActivos.addEventListener('change',mostrarColores);
+  function pintarHorarios(){
+    const clave=tipoHorario.value,especial=clave!=='general';
+    document.getElementById('config-heredar-fila').hidden=!especial;
+    heredarHorario.checked=especial&&!horariosActuales[clave];
+    const semana=horariosActuales[clave]||horariosActuales.general;
+    const lista=document.getElementById('config-lista-horarios');lista.replaceChildren();
+    const heredado=especial&&heredarHorario.checked;
+    for(let i=0;i<7;i++){
+      const dia=semana[i],caja=document.createElement('div');caja.className='horario-dia';
+      const cabeza=document.createElement('div');cabeza.className='horario-dia-cabeza';
+      const nombre=document.createElement('span');nombre.textContent=window.PulsoConfig.dias[i];
+      const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=dia.abierto;check.disabled=heredado;
+      const estado=document.createElement('span');estado.textContent=dia.abierto?'Abierto':'Cerrado';
+      label.append(check,estado);cabeza.append(nombre,label);caja.append(cabeza);
+      check.addEventListener('change',()=>{dia.abierto=check.checked;if(dia.abierto&&!dia.tramos.length)dia.tramos.push({inicio:'15:00',fin:'23:00'});cambiosConfig.horarios=true;pintarHorarios();});
+      if(dia.abierto){
+        dia.tramos.forEach((tramo,j)=>{
+          const fila=document.createElement('div');fila.className='horario-tramo';
+          for(const campo of ['inicio','fin']){
+            const l=document.createElement('label');l.textContent=campo==='inicio'?'Apertura':'Cierre';
+            const input=document.createElement('input');input.type='time';input.value=tramo[campo];input.disabled=heredado;
+            input.addEventListener('input',()=>{tramo[campo]=input.value;cambiosConfig.horarios=true;});
+            l.append(input);fila.append(l);
+          }
+          const quitar=document.createElement('button');quitar.type='button';quitar.textContent='×';quitar.setAttribute('aria-label','Quitar tramo de '+nombre.textContent);quitar.disabled=heredado||dia.tramos.length===1;
+          quitar.addEventListener('click',()=>{dia.tramos.splice(j,1);cambiosConfig.horarios=true;pintarHorarios();});fila.append(quitar);caja.append(fila);
+        });
+        const agregar=document.createElement('button');agregar.type='button';agregar.className='horario-agregar';agregar.textContent='＋ Agregar horas';agregar.disabled=heredado||dia.tramos.length>=6;
+        agregar.addEventListener('click',()=>{dia.tramos.push({inicio:'',fin:''});cambiosConfig.horarios=true;pintarHorarios();});caja.append(agregar);
+      }
+      lista.append(caja);
+    }
+  }
+  tipoHorario.addEventListener('change',pintarHorarios);
+  heredarHorario.addEventListener('change',()=>{
+    const clave=tipoHorario.value;if(clave==='general')return;
+    horariosActuales[clave]=heredarHorario.checked?null:JSON.parse(JSON.stringify(horariosActuales.general));
+    cambiosConfig.horarios=true;pintarHorarios();
+  });
   function limpiarVistaTemporalLogo() {
     if (vistaTemporalLogo) URL.revokeObjectURL(vistaTemporalLogo);
     vistaTemporalLogo = null;
@@ -657,15 +781,15 @@
     if (!['image/jpeg','image/png','image/webp'].includes(imagen.type) || imagen.size > 5*1024*1024) {
       configArchivo.value = '';
       configLogoVista.src = logoURLActual || 'chef.png';
-      configMensaje.textContent = 'Selecciona un JPG, PNG o WEBP de máximo 5 MB.';
+      aparienciaMensaje.textContent = 'Selecciona un JPG, PNG o WEBP de máximo 5 MB.';
       return;
     }
     vistaTemporalLogo = URL.createObjectURL(imagen);
     configLogoVista.src = vistaTemporalLogo;
-    configMensaje.textContent = 'Nuevo logo seleccionado. Pulsa Guardar cambios para publicarlo.';
+    aparienciaMensaje.textContent = 'Nuevo logo seleccionado. Pulsa Guardar cambios para publicarlo.';
   });
   async function prepararLogoNegocio(archivo) {
-    configMensaje.textContent = 'Optimizando el logo en el celular...';
+    aparienciaMensaje.textContent = 'Optimizando el logo en el celular...';
     const imagen = await new Promise((resolve, reject) => {
       const url = URL.createObjectURL(archivo);
       const img = new Image();
@@ -694,61 +818,75 @@
     throw new Error('El logo no se pudo reducir lo suficiente. Prueba con una foto más sencilla.');
   }
   function mostrarConfiguracion(datos) {
-    for (const [campo, input] of Object.entries(camposConfiguracion)) {
-      const valor = datos && typeof datos[campo]==='string' && datos[campo].trim()
-        ? datos[campo].trim()
-        : configuracionPredeterminada[campo];
-      input.value = valor;
+    if(!cambiosConfig.negocio&&!configGuardar.disabled || !configCargada){
+      for(const [campo,input] of Object.entries(camposConfiguracion)){
+        input.value=typeof datos?.[campo]==='string'&&datos[campo].trim()?datos[campo].trim():configuracionPredeterminada[campo];
+      }
+      configWhatsapp.value=typeof datos?.whatsapp==='string'&&datos.whatsapp?'+'+datos.whatsapp.replace(/\D/g,''):'';
     }
-    configWhatsapp.value = typeof datos?.whatsapp === 'string' && datos.whatsapp ? '+'+datos.whatsapp.replace(/\D/g,'') : '';
-    logoURLActual = datos && typeof datos.logoURL === 'string' &&
-      (/^https:\/\//i.test(datos.logoURL) || /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(datos.logoURL))
-      ? datos.logoURL : '';
-    if (!configArchivo.files.length) configLogoVista.src = logoURLActual || 'chef.png';
-    document.getElementById('panel-nombre').textContent = (camposConfiguracion.nombre.value || 'La Pizza de Juanca');
+    if((!cambiosConfig.apariencia&&!configArchivo.files.length&&!guardarApariencia.disabled)||!configCargada){
+      logoURLActual=typeof datos?.logoURL==='string'&&(/^https:\/\//i.test(datos.logoURL)||/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(datos.logoURL))?datos.logoURL:'';
+      configLogoVista.src=logoURLActual||'chef.png';
+      const a=datos?.apariencia||{};
+      coloresActivos.checked=window.PulsoConfig.colorValido(a.principal)&&window.PulsoConfig.colorValido(a.acento);
+      colorPrincipal.value=window.PulsoConfig.colorValido(a.principal)?a.principal:'#b81932';
+      colorAcento.value=window.PulsoConfig.colorValido(a.acento)?a.acento:'#e3b84a';
+      portada.value=window.PulsoConfig.portadaValida(a.portadaURL)?a.portadaURL:'';
+      mostrarColores();
+    }
+    if((!cambiosConfig.horarios&&!guardarHorario.disabled)||!configCargada){
+      horariosActuales=window.PulsoConfig.normalizarHorarios(datos?.horarios);
+      pintarHorarios();
+    }
+    document.getElementById('panel-nombre').textContent=typeof datos?.nombre==='string'&&datos.nombre.trim()?datos.nombre.trim():configuracionPredeterminada.nombre;
   }
   mostrarConfiguracion(null);
-  document.getElementById('config-form').addEventListener('submit', async evento => {
-    evento.preventDefault();
-    if (!auth.currentUser) {configMensaje.textContent='Debes iniciar sesión como administrador.';return;}
-    const datos = {};
-    for (const [campo,input] of Object.entries(camposConfiguracion)) {
-      const valor=input.value.trim().replace(/\s+/g,' ');
-      if (!valor) {configMensaje.textContent='Completa todos los campos.';input.focus();return;}
-      datos[campo]=valor;
-    }
-    const whatsapp = normalizarWhatsapp(configWhatsapp.value);
-    if (whatsapp === null) {configMensaje.textContent='Escribe un número de WhatsApp válido con código de país.';configWhatsapp.focus();return;}
-    datos.whatsapp = whatsapp;
-    const imagen = configArchivo.files?.[0];
-    if (imagen && (!['image/jpeg','image/png','image/webp'].includes(imagen.type) || imagen.size > 5*1024*1024)) {
-      configMensaje.textContent='Selecciona una imagen JPG, PNG o WEBP de máximo 5 MB.';
-      return;
-    }
-    configGuardar.disabled=true;
-    configMensaje.textContent='Guardando los cambios...';
-    try {
-      const logoURL = imagen ? await prepararLogoNegocio(imagen) : logoURLActual;
-      configMensaje.textContent='Guardando información y logo en Firebase...';
-      await setDoc(refConfiguracion, {
-        tipo: 'configuracion-negocio',
-        ...datos,
-        logoURL,
-        actualizadoEn: serverTimestamp()
-      }, {merge:true});
-      logoURLActual = logoURL;
-      configArchivo.value = '';
-      limpiarVistaTemporalLogo();
-      configLogoVista.src = logoURL || 'chef.png';
-      document.getElementById('panel-nombre').textContent = datos.nombre;
-      configMensaje.textContent='✅ Cambios guardados. El menú y la bienvenida mostrarán la información actualizada.';
-    } catch (error) {
-      const codigo = String(error?.code||'');
-      configMensaje.textContent=(codigo==='permission-denied'||codigo==='firestore/permission-denied')
-        ? 'Firestore no permitió guardar la configuración. Debemos revisar los permisos del administrador en la colección productos.'
-        : 'No se pudieron guardar los cambios: '+(error?.message||'Comprueba la conexión e inténtalo de nuevo.')+(codigo?' Código: '+codigo:'');
-      console.error('Error al guardar configuración del negocio:',error);
-    } finally {configGuardar.disabled=false;}
+  function errorConfig(error){
+    return error?.code==='permission-denied'?'Firestore no permitió guardar. Revisa los permisos de administración.':error?.message||'No se pudo guardar. Comprueba la conexión.';
+  }
+  function autorizadoConfig(){if(!auth.currentUser||!configCargada)throw Error('Espera a que se cargue la configuración e inicia sesión como administrador.');}
+  document.getElementById('config-form').addEventListener('submit',async evento=>{
+    evento.preventDefault();if(configGuardar.disabled)return;
+    try{
+      autorizadoConfig();const datos={};
+      for(const [campo,input] of Object.entries(camposConfiguracion)){
+        const valor=input.value.trim().replace(/\s+/g,' ');
+        if(!valor)throw Error('Completa todos los campos del negocio.');datos[campo]=valor;
+      }
+      const whatsapp=normalizarWhatsapp(configWhatsapp.value);
+      if(whatsapp===null)throw Error('Escribe un número de WhatsApp válido con código de país.');
+      configGuardar.disabled=true;configMensaje.textContent='Guardando...';
+      await setDoc(refConfiguracion,{tipo:'configuracion-negocio',...datos,whatsapp,actualizadoEn:serverTimestamp()},{merge:true});
+      cambiosConfig.negocio=false;document.getElementById('panel-nombre').textContent=datos.nombre;
+      configMensaje.textContent='✅ Cambios guardados.';
+    }catch(error){configMensaje.textContent=errorConfig(error);}
+    finally{configGuardar.disabled=!configCargada;}
+  });
+  document.getElementById('config-form-horarios').addEventListener('submit',async evento=>{
+    evento.preventDefault();if(guardarHorario.disabled)return;
+    try{
+      autorizadoConfig();const datos=JSON.parse(JSON.stringify(horariosActuales));
+      for(const semana of Object.values(datos))if(semana)window.PulsoConfig.validarSemana(semana);
+      guardarHorario.disabled=true;horarioMensaje.textContent='Guardando horarios...';
+      await setDoc(refConfiguracion,{tipo:'configuracion-negocio',horarios:datos,actualizadoEn:serverTimestamp()},{merge:true});
+      cambiosConfig.horarios=false;horarioMensaje.textContent='✅ Horarios guardados.';
+    }catch(error){horarioMensaje.textContent=errorConfig(error);}
+    finally{guardarHorario.disabled=!configCargada;}
+  });
+  document.getElementById('config-form-apariencia').addEventListener('submit',async evento=>{
+    evento.preventDefault();if(guardarApariencia.disabled)return;
+    try{
+      autorizadoConfig();const imagen=configArchivo.files?.[0],url=portada.value.trim();
+      if(imagen&&(!['image/jpeg','image/png','image/webp'].includes(imagen.type)||imagen.size>5*1024*1024))throw Error('Selecciona una imagen JPG, PNG o WEBP de máximo 5 MB.');
+      if(url&&!window.PulsoConfig.portadaValida(url))throw Error('La portada debe ser un enlace HTTPS válido.');
+      guardarApariencia.disabled=true;aparienciaMensaje.textContent='Guardando apariencia...';
+      const logoURL=imagen?await prepararLogoNegocio(imagen):logoURLActual;
+      const apariencia={principal:coloresActivos.checked?colorPrincipal.value:'',acento:coloresActivos.checked?colorAcento.value:'',portadaURL:url};
+      await setDoc(refConfiguracion,{tipo:'configuracion-negocio',logoURL,apariencia,actualizadoEn:serverTimestamp()},{merge:true});
+      logoURLActual=logoURL;configArchivo.value='';limpiarVistaTemporalLogo();configLogoVista.src=logoURL||'chef.png';
+      cambiosConfig.apariencia=false;aparienciaMensaje.textContent='✅ Apariencia guardada.';
+    }catch(error){aparienciaMensaje.textContent=errorConfig(error);}
+    finally{guardarApariencia.disabled=!configCargada;}
   });
 
   // La autenticación es compartida con el panel. El control de permisos real debe estar en Firestore.
@@ -1814,6 +1952,9 @@
     detenerEquipo();
     limpiarDisponibilidadRiders();
     detenerConfiguracion();
+    configCargada=false;botonesConfig.forEach(b=>b.disabled=true);
+    for(const k of Object.keys(cambiosConfig))cambiosConfig[k]=false;
+    configArchivo.value="";limpiarVistaTemporalLogo();
     equipoCargado = false;
     personalDisponible = false;
     personal = [];
@@ -1849,19 +1990,12 @@
     equipoEstado.textContent = 'Consultando personal disponible...';
     escucharEquipo();
     detenerConfiguracion = onSnapshot(refConfiguracion, snapshot => {
-      // El listener puede dispararse en mitad de un guardado: no debe tapar el resultado.
-      if (configGuardar.disabled || configArchivo.files.length) return;
+      const primera=!configCargada;
       mostrarConfiguracion(snapshot.exists()?snapshot.data():null);
-      const mensajeActual = configMensaje.textContent;
-      if (!mensajeActual.startsWith('✅ Cambios guardados') &&
-          !mensajeActual.startsWith('No se pudieron guardar') &&
-          !mensajeActual.startsWith('Firestore no permitió')) {
-        configMensaje.textContent=snapshot.exists()
-          ? 'Información actual cargada. Puedes editarla y guardar.'
-          : 'Todavía no hay configuración personalizada. Se mostrarán los textos actuales hasta que guardes.';
-      }
+      if(primera){configCargada=true;botonesConfig.forEach(b=>b.disabled=false);configMensaje.textContent='Información actual cargada.';}
     }, error => {
-      configMensaje.textContent='No fue posible leer la configuración. Revisa los permisos de Firebase.';
+      configCargada=false;botonesConfig.forEach(b=>b.disabled=true);
+      configMensaje.textContent=horarioMensaje.textContent=aparienciaMensaje.textContent='No fue posible leer la configuración. Revisa los permisos de Firebase.';
       console.error('Error al cargar configuración:',error);
     });
 
