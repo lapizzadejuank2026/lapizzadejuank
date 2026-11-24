@@ -99,6 +99,12 @@
     .config-logo-preview { width:92px; height:92px; object-fit:contain; border-radius:14px; background:#fff; padding:8px; display:block; margin:10px 0; border:1px solid #777; }
     .config-logo-note { color:#c9c9c9; font-size:13px; line-height:1.4; margin:2px 0 7px; }
     #config-mensaje { color:#ffe09c; white-space:pre-wrap; }
+    /* Todo el encabezado, incluidos los tres canales, está anclado al viewport. */
+    body{padding-top:var(--cabecera-alto,155px)}
+    body > header.cabecera-fija-app{position:fixed;inset:0 0 auto 0;width:100%;z-index:80;padding:10px 12px 9px}
+    .cabecera-panel .cabecera-marca h1{font-size:clamp(17px,4.2vw,24px);line-height:1.15}
+    .cabecera-panel .cabecera-marca div{font-size:12px}
+    @media(max-width:520px){body > header.cabecera-fija-app{padding:9px 10px 7px}.recepcion-canales button{min-height:61px}}
     /* Campana de alarma persistente en cabecera: nunca confundir preferencia con sonido real. */
     .cabecera-panel-inner{max-width:850px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
     .cabecera-marca{min-width:0;flex:1;text-align:left}
@@ -117,7 +123,7 @@
     .cabecera-panel .campana-control:focus-visible{outline:3px solid white;outline-offset:3px}
     @media(max-width:520px){.cabecera-panel-inner{gap:8px}.cabecera-panel .campana-control{flex-basis:88px;min-height:63px}}
     /* Recepción: tres canales independientes con contadores de comandas nuevas. */
-    .recepcion-canales{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;position:sticky;top:var(--cabecera-alto,82px);z-index:55;padding:10px 0;background:#121212;box-shadow:0 6px 12px #0006}
+    .recepcion-canales{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;position:relative;padding:8px 0 0;background:transparent}
     .recepcion-canales button{margin:0;min-width:0;min-height:75px;padding:10px 5px;background:#2c2c2c;color:#f0f0f0;border:1px solid #656565;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:13px}
     .recepcion-canales button[aria-pressed="true"]{background:#f6bd42;color:#21170c;border-color:#f6bd42}
     .recepcion-canales .canal-titulo{display:block;white-space:normal;line-height:1.2}
@@ -146,8 +152,8 @@
     button:focus-visible { outline:3px solid #fff; outline-offset:2px; }
     @media(max-width:520px) { header{padding:18px 12px} h1{font-size:23px} main{padding:10px 10px 24px} .caja,.pedido{padding:15px} .tabs{gap:6px} .tabs button{font-size:14px;padding:14px 5px} }
   </style>
-<link rel="stylesheet" href="nav-admin-fija.css">
-<script defer src="cabecera-fija-admin.js"></script>
+<link rel="stylesheet" href="nav-admin-fija.css?v=cabecera-fija-20261123c">
+<script defer src="cabecera-fija-admin.js?v=cabecera-fija-20261123c"></script>
 </head>
 <body>
 <header class="cabecera-panel cabecera-fija-app">
@@ -161,6 +167,11 @@
       <span id="texto-alarma" class="campana-texto">Activar alarma</span>
     </button>
   </div>
+      <nav class="recepcion-canales" hidden aria-label="Pedidos separados por canal">
+        <button id="canal-mesa" type="button" aria-pressed="false"><span class="canal-titulo">🍽️ Mesas</span><span id="cantidad-mesa" class="canal-cantidad" hidden>0</span></button>
+        <button id="canal-llevar" type="button" aria-pressed="false"><span class="canal-titulo">🛍️ Para llevar</span><span id="cantidad-llevar" class="canal-cantidad" hidden>0</span></button>
+        <button id="canal-domicilio" type="button" aria-pressed="true"><span class="canal-titulo">🛵 Domicilios</span><span id="cantidad-domicilio" class="canal-cantidad" hidden>0</span></button>
+      </nav>
 </header>
 <main>
   <section id="acceso" class="caja">
@@ -208,11 +219,6 @@
       <a href="caja-operativa.html">💰 Caja en Firebase · pruebas</a>
     </nav>
     <section id="vista-pedidos" role="region" aria-labelledby="titulo-recepcion">
-      <nav class="recepcion-canales" aria-label="Pedidos separados por canal">
-        <button id="canal-mesa" type="button" aria-pressed="false"><span class="canal-titulo">🍽️ Mesas</span><span id="cantidad-mesa" class="canal-cantidad" hidden>0</span></button>
-        <button id="canal-llevar" type="button" aria-pressed="false"><span class="canal-titulo">🛍️ Para llevar</span><span id="cantidad-llevar" class="canal-cantidad" hidden>0</span></button>
-        <button id="canal-domicilio" type="button" aria-pressed="true"><span class="canal-titulo">🛵 Domicilios</span><span id="cantidad-domicilio" class="canal-cantidad" hidden>0</span></button>
-      </nav>
     <div class="caja">
       <h2 id="titulo-recepcion" class="seccion-titulo">🔔 Pedidos · Recepción</h2>
       <p class="hint">Cada canal muestra solo sus pedidos. Los números rojos indican comandas nuevas por confirmar y la alarma seguirá avisando por cualquiera de los tres.</p>
@@ -421,6 +427,7 @@
   let marcoCargado = false;
   let observadorMarco;
 
+  const canalesCabecera = document.querySelector('.recepcion-canales');
   const vistaInicio = document.getElementById('panel-inicio');
   const tabsAdministrador = document.getElementById('tabs-administrador');
   const enlacesLocalAdmin = document.getElementById('enlaces-local-admin');
@@ -476,6 +483,7 @@
   let jornadaVisible=diaColombia(new Date());
 
   function cambiarVista(nombre) {
+    canalesCabecera.hidden = nombre !== 'pedidos' || !auth.currentUser;
     vistaInicio.hidden = nombre !== 'inicio';
     // La pantalla de Pedidos queda limpia: las otras secciones se abren solo desde Inicio.
     // Se conservan los nodos de pestañas porque el monitor y el contador los utilizan.
