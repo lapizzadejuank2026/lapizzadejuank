@@ -117,7 +117,7 @@
     .cabecera-panel .campana-control:focus-visible{outline:3px solid white;outline-offset:3px}
     @media(max-width:520px){.cabecera-panel-inner{gap:8px}.cabecera-panel .campana-control{flex-basis:88px;min-height:63px}}
     /* Recepción: tres canales independientes con contadores de comandas nuevas. */
-    .recepcion-canales{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;position:sticky;top:0;z-index:6;padding:10px 0;background:#121212}
+    .recepcion-canales{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;position:sticky;top:var(--cabecera-alto,82px);z-index:55;padding:10px 0;background:#121212;box-shadow:0 6px 12px #0006}
     .recepcion-canales button{margin:0;min-width:0;min-height:75px;padding:10px 5px;background:#2c2c2c;color:#f0f0f0;border:1px solid #656565;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:13px}
     .recepcion-canales button[aria-pressed="true"]{background:#f6bd42;color:#21170c;border-color:#f6bd42}
     .recepcion-canales .canal-titulo{display:block;white-space:normal;line-height:1.2}
@@ -147,9 +147,10 @@
     @media(max-width:520px) { header{padding:18px 12px} h1{font-size:23px} main{padding:10px 10px 24px} .caja,.pedido{padding:15px} .tabs{gap:6px} .tabs button{font-size:14px;padding:14px 5px} }
   </style>
 <link rel="stylesheet" href="nav-admin-fija.css">
+<script defer src="cabecera-fija-admin.js"></script>
 </head>
 <body>
-<header class="cabecera-panel">
+<header class="cabecera-panel cabecera-fija-app">
   <div class="cabecera-panel-inner">
     <div class="cabecera-marca">
       <h1 id="panel-nombre">🍕 La Pizza de Juan K</h1>
@@ -207,14 +208,14 @@
       <a href="caja-operativa.html">💰 Caja en Firebase · pruebas</a>
     </nav>
     <section id="vista-pedidos" role="region" aria-labelledby="titulo-recepcion">
-    <div class="caja">
-      <h2 id="titulo-recepcion" class="seccion-titulo">🔔 Pedidos · Recepción</h2>
-      <p class="hint">Cada canal muestra solo sus pedidos. Los números rojos indican comandas nuevas por confirmar y la alarma seguirá avisando por cualquiera de los tres.</p>
       <nav class="recepcion-canales" aria-label="Pedidos separados por canal">
         <button id="canal-mesa" type="button" aria-pressed="false"><span class="canal-titulo">🍽️ Mesas</span><span id="cantidad-mesa" class="canal-cantidad" hidden>0</span></button>
         <button id="canal-llevar" type="button" aria-pressed="false"><span class="canal-titulo">🛍️ Para llevar</span><span id="cantidad-llevar" class="canal-cantidad" hidden>0</span></button>
         <button id="canal-domicilio" type="button" aria-pressed="true"><span class="canal-titulo">🛵 Domicilios</span><span id="cantidad-domicilio" class="canal-cantidad" hidden>0</span></button>
       </nav>
+    <div class="caja">
+      <h2 id="titulo-recepcion" class="seccion-titulo">🔔 Pedidos · Recepción</h2>
+      <p class="hint">Cada canal muestra solo sus pedidos. Los números rojos indican comandas nuevas por confirmar y la alarma seguirá avisando por cualquiera de los tres.</p>
       <p id="canal-estado" class="recepcion-nota" aria-live="polite">Mostrando pedidos a domicilio.</p>
       <p id="estado" class="alerta" role="status">Conectando con Firestore...</p>
       <p id="contador" aria-live="polite"></p>
