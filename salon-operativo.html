@@ -26,6 +26,7 @@ label input[type=checkbox]{width:auto;margin:0 8px 0 0}
 .mensaje{font-size:15px;color:#fada8f;min-height:15px}
 .mensaje.error{color:#ffaaa3}
 .pequeno{font-size:13px;color:#ddd}
+.salas-salon{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.salas-salon button{width:auto;flex:1 1 110px;min-height:44px;padding:10px 8px}.salas-salon button[aria-pressed='true']{background:#f6bd42;color:#18130b;border-color:#f6bd42}
 .mesas{display:grid;grid-template-columns:repeat(auto-fit,minmax(123px,1fr));gap:10px;margin:14px 0}
 .mesa{background:#27382d;color:#fff;border:2px solid #4a8057;min-height:108px}
 .mesa.ocupada{background:#503c26;border-color:#d5a344}
@@ -97,18 +98,28 @@ body > header.pulso-cabecera .pulso-seccion{font-size:13px;color:#e5edf8;margin:
 <section id="vistaMesas">
  <div class="caja"><h2>🪑 Distribución del salón</h2>
  <p class="pequeno">Selecciona una mesa para abrir el menú. Los cambios se sincronizan entre dispositivos.</p>
+ <div id="salasSalon" class="salas-salon" aria-label="Salas del restaurante"></div>
  <div id="mesas" class="mesas"></div>
  <button id="iniciarMesas" type="button" hidden>➕ Crear seis mesas y barra en Firebase</button>
  <div class="fila" style="margin-top:13px">
   <button id="agregarMesa" type="button">➕ Añadir mesa</button>
-  <button id="editarMesa" type="button" class="secundario">✏️ Renombrar</button>
+  <button id="agregarBarra" type="button">➕ Añadir barra</button>
+ </div>
+ <div class="fila" style="margin-top:10px">
+  <button id="agregarSala" type="button">➕ Nueva sala</button>
+  <button id="editarSala" type="button" class="secundario">✏️ Renombrar sala</button>
+ </div>
+ <label for="mesaAdministrar">Editar distribución de la sala seleccionada</label>
+ <select id="mesaAdministrar"><option value="">Selecciona mesa o barra para editar</option></select>
+ <div class="fila" style="margin-top:10px">
+  <button id="editarMesa" type="button" class="secundario">✏️ Editar / mover</button>
   <button id="ocultarMesa" type="button" class="secundario">Ocultar</button>
  </div>
  <div class="fila" style="margin-top:10px">
   <select id="reactivarMesa" aria-label="Mesas ocultas"><option value="">Seleccionar mesa oculta</option></select>
   <button id="activarMesa" type="button" class="secundario">Reactivar mesa</button>
  </div>
- <p class="pequeno">Para editar u ocultar una mesa, selecciónala primero. No podrás ocultar una mesa con cuenta abierta.</p>
+ <p class="pequeno">Las mesas y barras nuevas se crean en la sala seleccionada. Para editar, mover u ocultar, usa el selector. No se permite cambiar una mesa con cuenta abierta.</p>
  </div>
 </section>
 <section id="vistaDetalle" hidden>
@@ -165,7 +176,7 @@ body > header.pulso-cabecera .pulso-seccion{font-size:13px;color:#e5edf8;margin:
 </dialog>
 </main>
 <script src="impresion-ticket.js"></script>
-<script type="module" src="salon-operativo.js?v=mapa-recepcion-20261124"></script>
+<script type="module" src="salon-operativo.js?v=salas-20261124"></script>
 <nav class="nav-admin-fija" aria-label="Navegación fija del administrador">
 <a href="panel-pedidos.html#panel-inicio" aria-label="Inicio del centro de control"><span class="nav-admin-icono" aria-hidden="true">🏠</span><span>Inicio</span></a>
 <a href="panel-pedidos.html#vista-pedidos" aria-label="Pedidos de recepción"><span class="nav-admin-icono" aria-hidden="true">🔔</span><span>Pedidos</span></a>
