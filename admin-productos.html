@@ -3,12 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Administrar productos | La Pizza de Juan K</title>
+  <title>Administración de productos | Pulso Food</title>
   <style>
     *{box-sizing:border-box}
     body{margin:0;background:#111;color:#fff;font-family:Arial,sans-serif}
-    header{background:#a71919;padding:18px;text-align:center}
-    h1{font-size:23px;margin:0 0 6px}
+    header.cabecera-productos{position:sticky;top:0;z-index:80;background:linear-gradient(110deg,#07172e,#102e50);border-bottom:1px solid #2e6487;padding:10px 16px 12px}
+    .cabecera-productos-inner{max-width:820px;margin:auto}
+    .productos-marca{display:flex;flex-direction:column;align-items:flex-start;min-width:0}
+    .productos-logo{display:block;width:150px;max-width:100%;height:58px;object-fit:contain;object-position:left center}
+    .productos-logo-respaldo{font-weight:800;font-size:25px;color:#fff}
+    .productos-logo-respaldo span{color:#b0ff23}
+    #productos-negocio{color:#ffe4c9;font-size:13px;line-height:1.35;margin-top:3px;overflow-wrap:anywhere}
+    .cabecera-productos h1{font-size:clamp(17px,4.4vw,22px);line-height:1.2;margin:9px 0 0;text-align:center;color:#fff}
+    @media(max-width:520px){header.cabecera-productos{padding:8px 12px 10px}.productos-logo{height:48px;width:135px}}
     main{max-width:850px;margin:auto;padding:15px}
     .caja,.producto{background:#242424;border-radius:13px;padding:17px;margin:14px 0}
     input,textarea,button{width:100%;font:inherit;padding:12px;border:0;border-radius:9px;margin:6px 0}
@@ -70,7 +77,16 @@
   </style>
 </head>
 <body>
-  <header><h1>🍕 La Pizza de Juan K</h1><div>Administración de productos</div></header>
+  <header class="cabecera-productos">
+    <div class="cabecera-productos-inner">
+      <div class="productos-marca">
+        <img class="productos-logo" src="Logo-Pulso-Food.png" alt="Pulso Food — Tu herramienta, tu control" onerror="this.hidden=true;this.nextElementSibling.hidden=false;">
+        <div class="productos-logo-respaldo" hidden>Pulso <span>Food</span></div>
+        <div id="productos-negocio">La Pizza de Juan K</div>
+      </div>
+      <h1>Administración de productos</h1>
+    </div>
+  </header>
   <main>
     <section class="caja" id="acceso">
       <h2>Ingreso del administrador</h2>
@@ -290,10 +306,13 @@
       dejarDeEscuchar();
       $('acceso').hidden=!!user;
       $('panel').hidden=!user;
-      if(!user){productos=[];return;}
+      if(!user){productos=[];$('productos-negocio').textContent='La Pizza de Juan K';return;}
       $('usuario').textContent='Sesión: '+user.email;
       $('lista').textContent='Cargando productos...';
       dejarDeEscuchar=onSnapshot(collection(db,'productos'),snapshot=>{
+        const configuracion=snapshot.docs.find(x=>x.id==='__configuracion_negocio')?.data();
+        const nombreNegocio=typeof configuracion?.nombre==='string' ? configuracion.nombre.trim() : '';
+        $('productos-negocio').textContent=nombreNegocio||'La Pizza de Juan K';
         productos=snapshot.docs.filter(x=>x.id!=='__configuracion_negocio' && x.data().tipo!=='configuracion-negocio').map(x=>({id:x.id,...x.data()}));
         pintar();
         pintarModificadores();
