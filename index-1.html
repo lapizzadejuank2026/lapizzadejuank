@@ -162,6 +162,11 @@
     @media(max-width:850px) { .main-layout { grid-template-columns:1fr; } .cart-panel { position:static; } .hero-pizza { width:160px; height:160px; font-size:98px; } }
     @media(max-width:560px) { .head-inner { min-height:74px; } .brand-symbol { width:41px; height:41px; } .head-actions .outline-btn { display:none; } .hero { padding:30px 0; } .hero-inner { gap:5px; } .hero-pizza { width:105px; height:105px; font-size:64px; } .hero h1 { font-size:34px; } .hero p { font-size:14px; }  .product { grid-template-columns:112px minmax(0,1fr); min-height:135px; } .product-art { min-height:135px; font-size:51px; } .product-art img { min-height:135px; } .product-body { padding:13px 11px; } .product h3 { font-size:17px; } .product .price { font-size:17px; } .product .product-add { width:40px; height:40px; flex-basis:40px; font-size:27px; } .product-add-hint { font-size:11px; } .flavor-grid { grid-template-columns:1fr; } .form-grid { grid-template-columns:1fr; } .field.full { grid-column:auto; } .dialog-footer { flex-wrap:wrap; } .dialog-footer .primary-btn { flex:1; } }
     @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } * { transition:none!important; } }
+    .contacto-whatsapp{margin-top:14px;text-align:center}
+    .contacto-whatsapp[hidden]{display:none!important}
+    .contacto-whatsapp a{display:block;background:#176b3b;color:#fff;border:1px solid #45b976;border-radius:12px;padding:12px 14px;text-decoration:none;font-weight:800;line-height:1.4}
+    .contacto-whatsapp a:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+    .contacto-whatsapp p{margin:7px 0 0}
     .instalar-clientes{margin:14px 0;text-align:center}
     .instalar-clientes-btn{max-width:100%;border:1px solid #be2031;border-radius:12px;background:#b81932;color:#fff;font:inherit;font-weight:700;padding:12px 18px;cursor:pointer}
     .instalar-clientes-ayuda{font-size:13px;line-height:1.4;margin:7px 0}
@@ -217,6 +222,10 @@
       <p class="hint">Consulta el último pedido enviado desde este navegador. Su estado se actualiza cuando el restaurante o el domiciliario lo cambian.</p>
       <div class="tracking-content" id="trackingContenido" role="status" aria-live="polite">Todavía no hay un pedido reciente guardado en este dispositivo.</div>
       <p class="hint">No necesitas registrarte. Si borras los datos del navegador o cambias de celular, es posible que pierdas acceso al seguimiento.</p>
+      <div id="contactoWhatsapp" class="contacto-whatsapp" hidden>
+        <a id="enlaceWhatsapp" target="_blank" rel="noopener noreferrer">💬 Consultar mi pedido por WhatsApp</a>
+        <p class="hint">¿Tu pedido no ha sido confirmado o tienes alguna duda? Comunícate con el restaurante. Este chat es para consultas, no para enviar otro pedido.</p>
+      </div>
     </section>
     <div class="instalar-clientes" style="grid-column:1 / -1" hidden>
       <button type="button" class="instalar-clientes-btn">📲 Instalar nuestra aplicación</button>
@@ -298,6 +307,20 @@
     let catalogoCargado = false;
     let categoriaActual = '';
     let nombreNegocioActual = 'La Pizza de Juan K';
+    let whatsappNegocio = '';
+    let referenciaWhatsapp = '';
+    function actualizarEnlaceWhatsapp() {
+      const contenedor = document.getElementById('contactoWhatsapp');
+      const enlace = document.getElementById('enlaceWhatsapp');
+      contenedor.hidden = !whatsappNegocio;
+      if (!whatsappNegocio) {enlace.removeAttribute('href');return;}
+      const mensaje = 'Hola, '+nombreNegocioActual+'. Quisiera consultar el estado de mi pedido'+(referenciaWhatsapp ? ' #'+referenciaWhatsapp : '')+'. ¿Me pueden ayudar? Gracias.';
+      enlace.href = 'https://wa.me/'+whatsappNegocio+'?text='+encodeURIComponent(mensaje);
+    }
+    window.actualizarReferenciaWhatsapp = id => {
+      referenciaWhatsapp = typeof id === 'string' && /^[A-Za-z0-9]{15,40}$/.test(id) ? id.slice(0,8).toUpperCase() : '';
+      actualizarEnlaceWhatsapp();
+    };
     const informacionNegocioPorDefecto = {
       nombre: 'La Pizza de Juan K',
       lema: 'Desde 2013 · Sabor de la casa',
@@ -308,6 +331,8 @@
       const texto = campo => typeof datos?.[campo] === 'string' && datos[campo].trim()
         ? datos[campo].trim() : informacionNegocioPorDefecto[campo];
       nombreNegocioActual = texto('nombre');
+      whatsappNegocio = typeof datos?.whatsapp === 'string' && /^[1-9][0-9]{7,14}$/.test(datos.whatsapp) ? datos.whatsapp : '';
+      actualizarEnlaceWhatsapp();
       byId('marca-nombre').textContent = nombreNegocioActual.toLocaleUpperCase('es-CO');
       byId('marca-lema').textContent = texto('lema');
       byId('marca-frase').textContent = texto('frase');
@@ -1082,6 +1107,7 @@
   const seguimientoContenedor=document.getElementById('trackingContenido');
   const dineroSeguimiento=valor=>new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(Number(valor)||0);
   function pintarSeguimiento(id,d) {
+    window.actualizarReferenciaWhatsapp?.(id);
     seguimientoContenedor.replaceChildren();
     const titulo=document.createElement('strong');
     titulo.textContent='Pedido #'+id.slice(0,8).toUpperCase();
@@ -1122,6 +1148,7 @@
     detenerSeguimiento();
     detenerSeguimiento=()=>{};
     idSeguimientoActivo=id;
+    window.actualizarReferenciaWhatsapp?.('');
     if(!id) {
       seguimientoContenedor.textContent='Todavía no hay un pedido reciente guardado en este dispositivo.';
       return;
@@ -1134,17 +1161,20 @@
     detenerSeguimiento=onSnapshot(doc(db,'pedidos',id),snapshot=>{
       if(idSeguimientoActivo!==id)return;
       if(!snapshot.exists()) {
+        window.actualizarReferenciaWhatsapp?.('');
         seguimientoContenedor.textContent='No se encontró este pedido. Consulta con el restaurante.';
         return;
       }
       const datos=snapshot.data();
       if(datos.clienteUid!==auth.currentUser?.uid) {
+        window.actualizarReferenciaWhatsapp?.('');
         seguimientoContenedor.textContent='Este pedido no está asociado con esta sesión. Por privacidad, no se muestran sus datos.';
         return;
       }
       pintarSeguimiento(id,datos);
     },error=>{
       if(idSeguimientoActivo!==id)return;
+      window.actualizarReferenciaWhatsapp?.('');
       console.warn('Seguimiento no disponible:',error);
       const codigo=String(error?.code||'');
       seguimientoContenedor.textContent=codigo==='permission-denied'||codigo==='firestore/permission-denied'
@@ -1160,6 +1190,7 @@
       detenerCatalogo();
       detenerSeguimiento();
       detenerSeguimiento=()=>{};
+      window.actualizarReferenciaWhatsapp?.('');
       let ultimoPedido='';
       try { ultimoPedido=localStorage.getItem('juanK-ultimo-pedido-v1')||''; } catch(_) {}
       if(user && /^[A-Za-z0-9]{15,40}$/.test(ultimoPedido)) iniciarSeguimiento(ultimoPedido);
