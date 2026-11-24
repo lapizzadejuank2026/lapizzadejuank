@@ -53,6 +53,30 @@
     .monitor-metrica { background:#141414; border:1px solid #484133; border-radius:10px; padding:12px 8px; text-align:center; }
     .monitor-metrica strong { display:block; color:#ffd26f; font-size:25px; }
     .monitor-metrica[hidden] { display:none!important; }
+    .mapa-mesas{margin:16px 0 20px;padding:14px;border:1px solid #4b5964;border-radius:12px;background:#141b22}
+    .mapa-mesas h3{margin:0 0 8px;font-size:19px}
+    .mapa-resumen{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+    .mapa-resumen .mapa-saldo{grid-column:1/-1}
+    .mapa-resumen strong{display:block;font-size:20px;color:#ffd26f;overflow-wrap:anywhere}
+    .mapa-resumen small{color:#d7e0e8}
+    .mapa-resumen>div{border:1px solid #435361;border-radius:9px;padding:9px;text-align:center;background:#17242d}
+    .mapa-grilla{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px;margin:10px 0}
+    .mapa-grilla button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;margin:0;padding:10px 6px;min-height:105px;line-height:1.3;border:2px solid #34835d;background:#173c2d;color:#e0ffed;border-radius:10px;overflow-wrap:anywhere}
+    .mapa-grilla button.ocupada{background:#49341c;border-color:#db9b39;color:#fff0d1}
+    .mapa-grilla button[aria-pressed="true"]{outline:3px solid #7bc7ff;outline-offset:2px}
+    .mapa-grilla button strong{font-size:17px}
+    .mapa-grilla button small{font-size:12px;font-weight:normal}
+    .mapa-detalle{margin-top:12px;padding:12px;background:#101820;border:1px solid #56758a;border-radius:10px}
+    .mapa-detalle h4{font-size:18px;margin:0 0 8px}
+    .mapa-detalle p{margin:7px 0;overflow-wrap:anywhere}
+    .mapa-detalle .mapa-total{color:#ffd26f;font-size:23px;font-weight:800}
+    .mapa-comanda{border-top:1px solid #3d4d58;padding:10px 0;line-height:1.4;overflow-wrap:anywhere}
+    .mapa-comanda div{margin:5px 0;font-size:14px}
+    .mapa-comanda small{color:#c2d0da}
+    .mapa-enlace{display:block;text-align:center;background:#f6bd42;color:#18130b!important;padding:13px 10px;border-radius:9px;margin:12px 0 6px;font-weight:800;text-decoration:none}
+    .mapa-detalle summary{cursor:pointer;padding:10px 0;color:#d9eaff;font-weight:bold}
+    .mapa-detalle button{background:#2b4357;color:#fff;padding:9px}
+    @media(max-width:440px){.mapa-grilla{grid-template-columns:repeat(2,minmax(0,1fr))}.mapa-mesas{padding:10px}}
     .monitor-metrica span { display:block; font-size:12px; color:#eee; margin-top:4px; }
     .jornada-filtros { display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px; }
     .jornada-filtros button { flex:1;min-width:125px;background:#333;color:#fff;border:1px solid #666; }
@@ -301,6 +325,17 @@
     <section class="caja monitor" aria-labelledby="monitor-titulo">
       <h2 id="monitor-titulo">🛵 Monitor de domicilios</h2>
       <p class="monitor-intro">Sigue en tiempo real las entregas asignadas. Pulsa un pedido para ir a sus detalles; la alarma de pedidos nuevos funciona por separado.</p>
+      <section id="mapa-mesas-recepcion" class="mapa-mesas" hidden aria-labelledby="mapa-titulo">
+        <h3 id="mapa-titulo">🍽️ Mapa de mesas y barra</h3>
+        <p id="mapa-estado" class="hint" role="status">Conectando con Firebase...</p>
+        <div id="mapa-resumen" class="mapa-resumen" hidden>
+          <div><strong id="mapa-libres">—</strong><small>🟢 Libres</small></div>
+          <div><strong id="mapa-ocupadas">—</strong><small>🟠 Ocupadas</small></div>
+          <div class="mapa-saldo"><strong id="mapa-total">—</strong><small>Total por cobrar · mesas y barra</small></div>
+        </div>
+        <div id="mapa-grilla" class="mapa-grilla" aria-label="Seleccionar mesa o barra"></div>
+        <div id="mapa-detalle" class="mapa-detalle" hidden></div>
+      </section>
       <div class="monitor-metricas" aria-label="Resumen de entregas">
         <div class="monitor-metrica"><strong id="monitor-pendientes">0</strong><span>Por aceptar</span></div>
         <div class="monitor-metrica"><strong id="monitor-proceso">0</strong><span>Aceptados / recogidos</span></div>
@@ -476,6 +511,7 @@
 </script>
 <script src="impresion-ticket.js"></script>
 <script type="module">
+  import { crearMapaRecepcion } from "./mapa-mesas-recepcion.js?v=20261124";
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, setPersistence, inMemoryPersistence, deleteUser } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
   import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, updateDoc, setDoc, serverTimestamp, writeBatch, runTransaction } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
@@ -492,6 +528,7 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
+  const mapaRecepcion=crearMapaRecepcion(db,document.getElementById('mapa-mesas-recepcion'));
   const altaApp = initializeApp(firebaseConfig, 'alta-domiciliarios');
   const authAlta = getAuth(altaApp);
 
@@ -1561,6 +1598,7 @@
     }
   }
   function dibujarMonitor(documentos) {
+    mapaRecepcion.actualizar(canalPedidos==='mesa',documentos,pedidosCargados);
     monitorLista.replaceChildren();
     const esDomicilio=canalPedidos==='domicilio';
     const esMesa=canalPedidos==='mesa';
@@ -2031,6 +2069,7 @@
 
   onAuthStateChanged(auth, (user) => {
     detenerEscucha();
+    mapaRecepcion.detener();
     detenerEquipo();
     limpiarDisponibilidadRiders();
     detenerConfiguracion();
@@ -2071,6 +2110,7 @@
     estado.textContent = 'Conectando con Firestore...';
     equipoEstado.textContent = 'Consultando personal disponible...';
     escucharEquipo();
+    mapaRecepcion.escuchar();
     detenerConfiguracion = onSnapshot(refConfiguracion, snapshot => {
       const primera=!configCargada;
       mostrarConfiguracion(snapshot.exists()?snapshot.data():null);
@@ -2092,6 +2132,7 @@
       },
       () => {
         pedidosCargados = false;
+        mapaRecepcion.actualizar(canalPedidos==='mesa',[],false);
         hayNuevos = false;
         estado.textContent =
           'Acceso a pedidos bloqueado. Falta configurar reglas de Firestore para tu usuario administrador.';
