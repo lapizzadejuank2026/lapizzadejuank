@@ -49,10 +49,10 @@ details.card[open]>summary{margin-bottom:12px}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid white;outline-offset:3px}
 @media(max-width:640px){.metricaGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.fila2{grid-template-columns:1fr}header{padding:17px 10px}h1{font-size:24px}}
 </style>
-<link rel="stylesheet" href="nav-admin-fija.css">
+<link rel="stylesheet" href="nav-admin-fija.css"><script defer src="cabecera-fija-admin.js"></script>
 </head>
 <body>
-<header><h1>💰 Caja · La Pizza de Juanca</h1><p>Apertura, ingresos, gastos y cierre</p></header>
+<header class="cabecera-fija-app"><h1>🍕 La Pizza de Juanca</h1><p>💰 Caja · Apertura, ingresos, gastos y cierre</p></header>
 <main>
 <div class="banner"><strong>Versión conectada a Firebase — fase de pruebas.</strong>
 Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase de pruebas: verifica los resultados antes de usar dinero real. Los cobros de mesas ya se registran al liberar la mesa; los domicilios requieren entrega y conciliación, y las ventas para llevar aún se registran manualmente. Un pedido sin cobrar no es ingreso de caja.</div>
