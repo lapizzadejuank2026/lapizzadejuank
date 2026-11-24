@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#f20707">
   <title>La Pizza de Juan K | Bienvenidos</title>
   <link rel="manifest" href="clientes.webmanifest">
-  <link rel="icon" type="image/png" sizes="192x192" href="clientes-icon-192.png">
-  <link rel="apple-touch-icon" href="clientes-icon-192.png">
+  <link rel="icon" type="image/jpeg" sizes="192x192" href="juanca-icon-192.jpg">
+  <link rel="apple-touch-icon" href="juanca-icon-192.jpg">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="La Pizza de Juanca">
-  <script defer src="clientes-instalacion.js?v=1"></script>
+  <script defer src="clientes-instalacion.js?v=2"></script>
   <style>
     :root { --rojo:#f20707; --amarillo:#ffe600; --negro:#080808; }
     * { box-sizing:border-box; }
@@ -162,7 +162,6 @@
         if (logo.nextElementSibling) logo.nextElementSibling.hidden = true;
         logo.src = nuevaURL;
       }
-      window.prepararIconoClientes?.(nuevaURL);
     };
     let detenerConfiguracion = () => {};
     onAuthStateChanged(auth, async user => {
