@@ -384,7 +384,7 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, setPersistence, inMemoryPersistence, deleteUser } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-  import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, updateDoc, setDoc, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+  import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, updateDoc, setDoc, serverTimestamp, writeBatch, runTransaction } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
   import {mostrarCobroAdmin} from './cobros-domicilios.js?v=cobro20261113b';
 
   const firebaseConfig = {
@@ -464,6 +464,30 @@
   let equipoCargado = false;
   let personal = [];
   let personalDisponible = false;
+  const estadoRiders=new Map(),subsRiders=new Map();
+  function limpiarDisponibilidadRiders(){
+    for(const parar of subsRiders.values())parar();
+    subsRiders.clear();estadoRiders.clear();
+  }
+  function escucharDisponibilidadRiders(){
+    const uidSet=new Set(personal.filter(p=>p.rol==='domiciliario'&&p.activo!==false&&p.authUid).map(p=>p.authUid));
+    for(const [uid,parar] of subsRiders)if(!uidSet.has(uid)){parar();subsRiders.delete(uid);estadoRiders.delete(uid);}
+    for(const uid of uidSet){
+      if(subsRiders.has(uid))continue;
+      estadoRiders.set(uid,'consultando');
+      subsRiders.set(uid,onSnapshot(doc(db,'disponibilidadRiders',uid),{includeMetadataChanges:true},snap=>{
+        if(!subsRiders.has(uid)||snap.metadata.fromCache)return;
+        const siguiente=snap.exists()&&snap.data().online===true?'online':'offline';
+        if(estadoRiders.get(uid)!==siguiente){estadoRiders.set(uid,siguiente);pintar(pedidosCache);}
+      },error=>{
+        if(!subsRiders.has(uid))return;
+        estadoRiders.set(uid,error?.code==='permission-denied'?'sin-reglas':'error');
+        pintar(pedidosCache);
+      }));
+    }
+  }
+  // Durante la instalación, conservar asignación manual con aviso explícito si faltan las reglas.
+  function estadoAsignable(p){return ['online','sin-reglas'].includes(estadoRiders.get(p.authUid));}
   let pedidosCache = [];
   let pedidosCargados = false;
   const marcoProductos = document.getElementById('marco-productos');
@@ -911,6 +935,7 @@
         personal = snapshot.docs.map(reg => ({ id: reg.id, ...reg.data() }));
         personal.sort((a,b) => String(a.nombre||'').localeCompare(String(b.nombre||''), 'es'));
         personalDisponible = true;
+        escucharDisponibilidadRiders();
         mostrarEquipo();
         pintar(pedidosCache);
       },
@@ -918,6 +943,7 @@
         equipoCargado = false;
         personalDisponible = false;
         personal = [];
+        limpiarDisponibilidadRiders();
         equipoLista.replaceChildren();
         pintar(pedidosCache);
         equipoEstado.textContent = mensajeErrorEquipo(error);
@@ -1592,14 +1618,17 @@
         vacio.value = '';
         vacio.textContent = 'Selecciona un domiciliario';
         selector.append(vacio);
-        const disponibles = personal.filter(p => p.rol === 'domiciliario' && p.activo !== false && !!p.authUid);
-        for (const repartidor of disponibles) {
+        const candidatos = personal.filter(p => p.rol === 'domiciliario' && p.activo !== false && !!p.authUid);
+        const disponibles = candidatos.filter(estadoAsignable);
+        for (const repartidor of candidatos) {
           const opcion = document.createElement('option');
           opcion.value = repartidor.id;
-          opcion.textContent = repartidor.nombre || 'Sin nombre';
+          const situacion=estadoRiders.get(repartidor.authUid);
+          opcion.textContent=(repartidor.nombre||'Sin nombre')+' · '+({online:'🟢 Online',offline:'Offline','sin-reglas':'Sin verificar (reglas pendientes)',consultando:'Consultando…',error:'Sin conexión'}[situacion]||'Consultando…');
+          opcion.disabled=!estadoAsignable(repartidor);
           selector.append(opcion);
         }
-        const asignado = disponibles.find(p => p.id === d.domiciliarioId);
+        const asignado = candidatos.find(p => p.id === d.domiciliarioId);
         if (d.domiciliarioId && !asignado) {
           const opcion = document.createElement('option');
           opcion.value = String(d.domiciliarioId);
@@ -1637,18 +1666,34 @@
           botonAsignar.disabled = true;
           estadoAsignacion.textContent = 'Guardando...';
           try {
-            await updateDoc(doc(db,'pedidos',id), {
-              domiciliarioId:repartidor.id,
-              domiciliarioUid:repartidor.authUid,
-              domiciliarioNombre:repartidor.nombre,
-              estadoEntrega:'pendiente',
-              domiciliarioAsignadoEn:serverTimestamp()
+            const refPedido=doc(db,'pedidos',id);
+            const refPersona=doc(db,'personal',repartidor.id);
+            const refEstado=doc(db,'disponibilidadRiders',repartidor.authUid);
+            const sinReglas=estadoRiders.get(repartidor.authUid)==='sin-reglas';
+            if(sinReglas&&!confirm('La disponibilidad Rider todavía no está habilitada en Firebase. ¿Asignar manualmente sin verificar Online?')){botonAsignar.disabled=false;estadoAsignacion.textContent='Asignación cancelada.';return;}
+            await runTransaction(db,async tx=>{
+              const pedidoActual=await tx.get(refPedido);
+              const personaActual=await tx.get(refPersona);
+              const actual=pedidoActual.data(),persona=personaActual.data();
+              if(!actual||!['pendiente','asignado'].includes(String(actual.estadoEntrega||'pendiente').toLowerCase())||actual.cobroReportado)throw Error('La entrega ya está en curso o cobrada.');
+              if(!persona||persona.rol!=='domiciliario'||persona.activo===false||persona.authUid!==repartidor.authUid)throw Error('El domiciliario ya no está autorizado.');
+              if(!sinReglas){
+                const disponibilidad=await tx.get(refEstado);
+                if(!disponibilidad.exists()||disponibilidad.data().online!==true)throw Error('El domiciliario está Offline. Selecciona otro.');
+              }
+              tx.update(refPedido,{
+                domiciliarioId:repartidor.id,
+                domiciliarioUid:repartidor.authUid,
+                domiciliarioNombre:persona.nombre||repartidor.nombre,
+                estadoEntrega:'pendiente',
+                domiciliarioAsignadoEn:serverTimestamp()
+              });
             });
             estadoAsignacion.textContent = '✅ Asignado a ' + repartidor.nombre;
           }catch(error){
             estadoAsignacion.textContent = error?.code === 'permission-denied'
               ? 'Firebase no permite asignar el pedido. Revisa las reglas de Firestore.'
-              : 'No se pudo guardar la asignación. Revisa la conexión.';
+              : (error?.code?'No se pudo guardar la asignación. Revisa la conexión.':error.message);
             botonAsignar.disabled = false;
           }
         });
@@ -1673,7 +1718,7 @@
           ayuda.className = 'ayuda';
           ayuda.textContent = !personalDisponible
             ? 'Falta autorizar la colección personal en Firebase.'
-            : 'Primero registra un domiciliario activo con cuenta Firebase vinculada en Equipo y roles.';
+            : candidatos.length?'No hay domiciliarios Online disponibles.':'Primero registra un domiciliario activo con cuenta Firebase vinculada en Equipo y roles.';
           asignacion.append(ayuda);
         }
         tarjeta.append(asignacion);
@@ -1709,6 +1754,7 @@
   onAuthStateChanged(auth, (user) => {
     detenerEscucha();
     detenerEquipo();
+    limpiarDisponibilidadRiders();
     detenerConfiguracion();
     equipoCargado = false;
     personalDisponible = false;

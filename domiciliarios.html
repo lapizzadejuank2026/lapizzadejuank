@@ -62,6 +62,20 @@
     [hidden]{display:none!important}
     a{color:#ffe09b}
     button:focus-visible,input:focus-visible{outline:3px solid white;outline-offset:2px}
+    .pulso-rider-btn{display:flex;align-items:center;gap:5px;color:#e5edf8;background:transparent;padding:3px 4px;font-size:17px;border:1px solid transparent;border-radius:8px;min-height:32px}
+    .pulso-rider-btn[aria-pressed="true"]{border-color:#f5bd43;color:#ffdb86}
+    .pulso-rider-btn svg{width:20px;height:20px;flex:none}
+    .pulso-cabecera .pestanas{max-width:850px;margin:7px auto 0;grid-template-columns:1fr 1fr minmax(75px,.85fr);gap:5px}
+    .pulso-cabecera .pestanas button{padding:7px 3px;min-height:44px;background:#163b5d;border-color:#49769a;font-size:12px}
+    .pulso-cabecera .pestanas button[aria-selected="true"]{background:#f5bd43;color:#171717;border-color:#f5bd43}
+    .pulso-cabecera .pestanas .disponibilidad{display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:wrap}
+    .disponibilidad .pista{position:relative;display:inline-block;width:30px;height:17px;border-radius:12px;background:#656d76;flex:none}
+    .disponibilidad .pista:after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:white;transition:transform .15s}
+    .disponibilidad[aria-checked="true"] .pista{background:#208b4d}
+    .disponibilidad[aria-checked="true"] .pista:after{transform:translateX(13px)}
+    .disponibilidad:disabled{opacity:.65;cursor:not-allowed}
+    #estado-disponibilidad{font-size:12px;color:#ffdb86;margin:6px 0}
+    @media(max-width:340px){.pulso-cabecera .pestanas button{font-size:11px}.pulso-rider-btn{font-size:15px}}
   </style>
 </head>
 <body>
@@ -72,13 +86,19 @@
       <p id="panel-nombre">La Pizza de Juanca</p>
     </div>
     <div class="pulso-derecha">
-      <h1 class="pulso-rider">Rider</h1>
+      <h1 id="rider-titulo" class="pulso-rider">Rider</h1>
+      <button id="tab-cuenta" class="pulso-rider-btn" type="button" aria-label="Rider: mi cuenta" aria-controls="vista-cuenta" aria-pressed="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg>Rider</button>
       <section id="recaudo-cabecera" class="efectivo-diario" aria-live="polite" aria-atomic="true" aria-describedby="detalle-efectivo" hidden>
         <p class="titulo-efectivo">Efectivo hoy</p>
         <p class="valor-efectivo" id="efectivo-hoy">Calculando…</p>
       </section>
     </div>
   </div>
+  <nav id="nav-rider" class="pestanas" aria-label="Secciones y disponibilidad Rider" hidden>
+    <button type="button" id="tab-pedidos" aria-selected="true">📦 Mis pedidos</button>
+    <button type="button" id="tab-historial" aria-selected="false">🕘 Historial</button>
+    <button type="button" id="switch-online" class="disponibilidad" role="switch" aria-label="Disponible para nuevas entregas" aria-checked="false" disabled><span class="pista" aria-hidden="true"></span><span id="texto-online">Offline</span></button>
+  </nav>
 </header>
 <main>
   <section class="caja" id="acceso">
@@ -100,11 +120,7 @@
   <section id="portal" hidden>
     <p class="aviso" id="aviso-entregas" role="status">🔒 Cuenta individual verificada. Solo se consultarán los pedidos asignados a este domiciliario.</p>
     <p class="ayuda" style="padding:0 4px">💰 Al marcar «Voy en camino», registra cómo pagó el cliente (efectivo, transferencia o mixto) antes de cerrar la entrega. El restaurante confirma las transferencias.</p>
-    <nav class="pestanas" aria-label="Secciones de la aplicación">
-      <button type="button" id="tab-pedidos" aria-selected="true">📦 Mis pedidos</button>
-      <button type="button" id="tab-historial" aria-selected="false">🕘 Historial</button>
-      <button type="button" id="tab-cuenta" aria-selected="false">👤 Mi cuenta</button>
-    </nav>
+    <p id="estado-disponibilidad" role="status" hidden></p>
     <section class="caja" id="vista-pedidos">
       <h2>📦 Mis entregas asignadas</h2>
       <p class="ayuda">Los pedidos aparecen en tiempo real mientras la aplicación esté abierta. No se mostrarán entregas de otros domiciliarios.</p>
@@ -122,14 +138,12 @@
       <h2>Mi cuenta</h2>
       <p id="cuenta-correo"></p>
       <p id="cuenta-nombre" class="ayuda"></p><p class="ayuda">Tu cuenta es individual. El administrador gestiona tus asignaciones y tus permisos.</p>
-    </section>
-    <footer class="caja jornada-pie">
-      <div class="cabecera">
+      <div class="cabecera jornada-pie">
         <div><h2>Mi jornada</h2><p id="correo-sesion" class="ayuda"></p></div>
         <button class="secundario" id="salir" type="button">Salir</button>
       </div>
-      <p class="detalle-efectivo" id="detalle-efectivo">Efectivo reportado hoy y aún sin recibir por administración.</p>
-    </footer>
+      <p class="ayuda" id="detalle-efectivo">Efectivo reportado hoy y aún sin recibir por administración.</p>
+    </section>
   </section>
   <p class="ayuda" style="text-align:center"><a href="index.html">← Volver a La Pizza de Juanca</a></p>
 </main>
@@ -145,7 +159,7 @@
 <script type="module">
   import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
   import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut,sendPasswordResetEmail} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-  import {getFirestore,doc,onSnapshot,collection,query,where,updateDoc,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+  import {getFirestore,doc,onSnapshot,collection,query,where,updateDoc,serverTimestamp,runTransaction} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
   import {mostrarCobroDomiciliario} from './cobros-domicilios.js?v=cobro20261113b';
 
   // Nombre independiente: la sesión del domiciliario no reemplaza la del administrador
@@ -379,12 +393,81 @@
 
   function seleccionarVista(nombre){
     if(nombre==='historial')revisarCambioDeDia();
+    if(!$('portal').hidden)window.scrollTo(0,0);
     for(const n of vistas){
       $('vista-'+n).hidden=n!==nombre;
-      $('tab-'+n).setAttribute('aria-selected',String(n===nombre));
+      $('tab-'+n).setAttribute(n==='cuenta'?'aria-pressed':'aria-selected',String(n===nombre));
     }
   }
   for(const nombre of vistas)$('tab-'+nombre).addEventListener('click',()=>seleccionarVista(nombre));
+
+  // Disponibilidad voluntaria, independiente de la sesión y de los pedidos activos.
+  let pararDisponibilidad=()=>{},uidDisponibilidad=null,onlineRider=false,estadoDisponible=false,guardandoDisponibilidad=false;
+  let cambioSesionDisponibilidad=0;
+  function mostrarDisponibilidad(mensaje=''){
+    const boton=$('switch-online');
+    boton.disabled=!estadoDisponible||guardandoDisponibilidad;
+    boton.setAttribute('aria-checked',String(onlineRider));
+    $('texto-online').textContent=onlineRider?'Online':'Offline';
+    $('estado-disponibilidad').textContent=mensaje;
+    $('estado-disponibilidad').hidden=!mensaje;
+  }
+  function mostrarCabeceraSesion(visible){
+    $('nav-rider').hidden=!visible;
+    $('tab-cuenta').hidden=!visible;
+    $('rider-titulo').hidden=visible;
+    $('recaudo-cabecera').hidden=!visible;
+  }
+  function cerrarDisponibilidad(){
+    cambioSesionDisponibilidad++;
+    pararDisponibilidad();pararDisponibilidad=()=>{};
+    uidDisponibilidad=null;onlineRider=false;estadoDisponible=false;guardandoDisponibilidad=false;
+    mostrarDisponibilidad();
+    mostrarCabeceraSesion(false);
+  }
+  function escucharDisponibilidad(user){
+    if(uidDisponibilidad===user.uid)return;
+    uidDisponibilidad=user.uid;
+    estadoDisponible=false;onlineRider=false;
+    mostrarDisponibilidad('Consultando disponibilidad…');
+    pararDisponibilidad=onSnapshot(doc(db,'disponibilidadRiders',user.uid),{includeMetadataChanges:true},snap=>{
+      if(uidDisponibilidad!==user.uid)return;
+      if(snap.metadata.fromCache||snap.metadata.hasPendingWrites)return;
+      estadoDisponible=true;
+      onlineRider=snap.exists()&&snap.data().online===true;
+      mostrarDisponibilidad(onlineRider?'':'Offline: no recibirás nuevas asignaciones.');
+    },error=>{
+      if(uidDisponibilidad!==user.uid)return;
+      estadoDisponible=false;
+      mostrarDisponibilidad(error?.code==='permission-denied'?'Disponibilidad pendiente de activar en las reglas de Firebase.':'No se pudo consultar la disponibilidad. Revisa la conexión.');
+    });
+  }
+  async function guardarDisponibilidad(valor){
+    const user=auth.currentUser;
+    if(!user||uidDisponibilidad!==user.uid||!estadoDisponible)throw Error('Disponibilidad no habilitada.');
+    const ref=doc(db,'disponibilidadRiders',user.uid);
+    await runTransaction(db,async tx=>{
+      await tx.get(ref);
+      tx.set(ref,{online:valor,actualizadoEn:serverTimestamp()});
+    });
+  }
+  $('switch-online').addEventListener('click',async()=>{
+    if(!estadoDisponible||guardandoDisponibilidad)return;
+    const token=cambioSesionDisponibilidad;
+    const siguiente=!onlineRider;
+    guardandoDisponibilidad=true;mostrarDisponibilidad('Guardando disponibilidad…');
+    try{
+      await guardarDisponibilidad(siguiente);
+      if(token!==cambioSesionDisponibilidad)return;
+      onlineRider=siguiente;
+      mostrarDisponibilidad(onlineRider?'':'Offline: no recibirás nuevas asignaciones.');
+    }catch(error){
+      if(token!==cambioSesionDisponibilidad)return;
+      mostrarDisponibilidad('No se guardó el estado. Comprueba Firebase y la conexión.');
+    }finally{
+      if(token===cambioSesionDisponibilidad){guardandoDisponibilidad=false;$('switch-online').disabled=!estadoDisponible;}
+    }
+  });
 
   async function bloquearAcceso(mensaje){
     detenerPedidos();
@@ -392,7 +475,7 @@
     escuchandoPedidos=false;
     pedidosPropios=[];
     mensajeBloqueo=mensaje;
-    $('recaudo-cabecera').hidden=true;
+    cerrarDisponibilidad();
     $('portal').hidden=true;
     $('acceso').hidden=false;
     $('mensaje-acceso').textContent=mensaje;
@@ -451,9 +534,18 @@
     }
   });
 
-  $('salir').addEventListener('click',()=>{
-    mensajeBloqueo='';
-    signOut(auth);
+  $('salir').addEventListener('click',async()=>{
+    if(guardandoDisponibilidad)return;
+    const boton=$('salir');boton.disabled=true;
+    try{
+      if(estadoDisponible&&onlineRider){
+        try{await guardarDisponibilidad(false);}
+        catch(error){if(!confirm('No se pudo marcar Offline. ¿Cerrar sesión de todos modos?'))return;}
+      }
+      mensajeBloqueo='';
+      await signOut(auth);
+    }catch(error){alert('No se pudo cerrar sesión. Intenta nuevamente.');}
+    finally{boton.disabled=false;}
   });
 
   // Identidad del negocio: lectura del mismo documento usado por el centro de control.
@@ -476,7 +568,7 @@
     pedidosPropios=[];
     detenerVerificacion();
     detenerVerificacion=()=>{};
-    $('recaudo-cabecera').hidden=true;
+    cerrarDisponibilidad();
     $('portal').hidden=true;
     $('acceso').hidden=false;
     if(!user){
@@ -522,7 +614,8 @@
       $('cuenta-nombre').textContent='Nombre: '+(datos.nombre||'No registrado');
       $('acceso').hidden=true;
       $('portal').hidden=false;
-      $('recaudo-cabecera').hidden=false;
+      mostrarCabeceraSesion(true);
+      escucharDisponibilidad(user);
       if(!escuchandoPedidos){
         escuchandoPedidos=true;
         escucharPedidos(user);
