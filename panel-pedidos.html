@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Centro de control | Pulso Food</title>
-  <script src="config-publica.js?v=20261124"></script>
+  <script src="config-publica.js?v=tipografia-20261124"></script>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font-family: Arial, sans-serif; background: #121212; color: #fff; }
@@ -107,6 +107,10 @@
     .horario-agregar{background:#153b5d;color:#fff;border:1px solid #4b87a7;font-size:13px;padding:9px}
     .config-colores{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .config-colores input[type=color]{height:48px;padding:4px}
+    .config-muestra-letra{background:#141c25;border:1px solid #4b718b;border-radius:12px;padding:16px;overflow-wrap:anywhere}
+    .config-muestra-letra strong{display:block;font-size:23px;line-height:1.25}
+    .config-muestra-letra p{margin:8px 0;font-size:14px}
+    .config-muestra-letra span{display:inline-block;padding:7px 12px;border-radius:8px;background:#153b5d;color:white;font-size:14px;font-weight:bold}
     .config-apariencia-check{display:flex!important;gap:9px;align-items:center}
     .config-apariencia-check input{width:20px!important;height:20px;margin:0!important;accent-color:#f6bd42}
     #config-horario-mensaje,#config-apariencia-mensaje{color:#ffe09c;white-space:pre-wrap}
@@ -426,6 +430,15 @@
             <label>Color principal<input type="color" id="config-color-principal" value="#b81932"></label>
             <label>Color de acento<input type="color" id="config-color-acento" value="#e3b84a"></label>
           </div>
+          <label>Tipo de letra
+            <select id="config-tipografia"></select>
+          </label>
+          <div class="config-muestra-letra" id="config-muestra-letra" aria-label="Vista previa del tipo de letra">
+            <strong id="config-muestra-nombre">La Pizza de Juan K</strong>
+            <p>Bienvenidos a nuestro restaurante. Descubre tus platos favoritos.</p>
+            <span>Ver menú</span>
+          </div>
+          <p class="hint">La letra se aplica a la bienvenida y al menú de clientes, no al centro de control. Puede variar ligeramente según el dispositivo.</p>
           <label>Imagen de portada (enlace HTTPS opcional)
             <input type="url" id="config-portada" placeholder="https://...">
           </label>
@@ -709,6 +722,17 @@
   const colorPrincipal=document.getElementById('config-color-principal');
   const colorAcento=document.getElementById('config-color-acento');
   const portada=document.getElementById('config-portada');
+  const tipografia=document.getElementById('config-tipografia');
+  for(const [id,fuente] of Object.entries(window.PulsoConfig.tipografias)){
+    const opcion=document.createElement('option');opcion.value=id;opcion.textContent=fuente.nombre;tipografia.append(opcion);
+  }
+  function mostrarTipografia(){
+    const fuente=window.PulsoConfig.tipografias[tipografia.value];
+    document.getElementById('config-muestra-letra').style.fontFamily=fuente?.familia||'system-ui, Arial, sans-serif';
+    document.getElementById('config-muestra-nombre').textContent=camposConfiguracion.nombre.value.trim()||'Mi restaurante';
+  }
+  tipografia.addEventListener('change',mostrarTipografia);
+  camposConfiguracion.nombre.addEventListener('input',mostrarTipografia);
   const cambiosConfig={negocio:false,horarios:false,apariencia:false};
   let configCargada=false, logoURLActual='',vistaTemporalLogo=null;
   let horariosActuales=window.PulsoConfig.normalizarHorarios(null);
@@ -832,6 +856,7 @@
       colorPrincipal.value=window.PulsoConfig.colorValido(a.principal)?a.principal:'#b81932';
       colorAcento.value=window.PulsoConfig.colorValido(a.acento)?a.acento:'#e3b84a';
       portada.value=window.PulsoConfig.portadaValida(a.portadaURL)?a.portadaURL:'';
+      tipografia.value=window.PulsoConfig.tipografiaValida(a.tipografia)?a.tipografia:'original';
       mostrarColores();
     }
     if((!cambiosConfig.horarios&&!guardarHorario.disabled)||!configCargada){
@@ -839,6 +864,7 @@
       pintarHorarios();
     }
     document.getElementById('panel-nombre').textContent=typeof datos?.nombre==='string'&&datos.nombre.trim()?datos.nombre.trim():configuracionPredeterminada.nombre;
+    mostrarTipografia();
   }
   mostrarConfiguracion(null);
   function errorConfig(error){
@@ -881,7 +907,7 @@
       if(url&&!window.PulsoConfig.portadaValida(url))throw Error('La portada debe ser un enlace HTTPS válido.');
       guardarApariencia.disabled=true;aparienciaMensaje.textContent='Guardando apariencia...';
       const logoURL=imagen?await prepararLogoNegocio(imagen):logoURLActual;
-      const apariencia={principal:coloresActivos.checked?colorPrincipal.value:'',acento:coloresActivos.checked?colorAcento.value:'',portadaURL:url};
+      const apariencia={principal:coloresActivos.checked?colorPrincipal.value:'',acento:coloresActivos.checked?colorAcento.value:'',portadaURL:url,tipografia:window.PulsoConfig.tipografiaValida(tipografia.value)?tipografia.value:'original'};
       await setDoc(refConfiguracion,{tipo:'configuracion-negocio',logoURL,apariencia,actualizadoEn:serverTimestamp()},{merge:true});
       logoURLActual=logoURL;configArchivo.value='';limpiarVistaTemporalLogo();configLogoVista.src=logoURL||'chef.png';
       cambiosConfig.apariencia=false;aparienciaMensaje.textContent='✅ Apariencia guardada.';
