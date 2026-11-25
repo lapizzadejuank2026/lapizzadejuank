@@ -175,6 +175,11 @@
     .instalar-clientes-btn{max-width:100%;border:1px solid #be2031;border-radius:12px;background:#b81932;color:#fff;font:inherit;font-weight:700;padding:12px 18px;cursor:pointer}
     .instalar-clientes-ayuda{font-size:13px;line-height:1.4;margin:7px 0}
     .instalar-clientes[hidden],.instalar-clientes-ayuda[hidden]{display:none!important}
+    body.pedido-interno #inicio,body.pedido-interno #cobertura,body.pedido-interno #miPedido,body.pedido-interno .tracking-link,body.pedido-interno .customer-memory,body.pedido-interno .head-actions a[href="#cobertura"],body.pedido-interno .instalar-clientes{display:none!important}
+    body.pedido-interno .header{background:#102e50} body.pedido-interno .main-layout{padding-top:16px}
+    #avisoPedidoInterno[hidden],#regresarRecepcion[hidden]{display:none!important}
+    #avisoPedidoInterno{margin:12px auto;padding:10px 12px;border:1px solid #4b87a7;border-radius:10px;background:#102e50;color:white;font-weight:700}
+    body.pedido-interno .head-actions{flex-wrap:wrap;justify-content:flex-end}
   </style>
 </head>
 <body>
@@ -185,6 +190,7 @@
         <span class="brand-text"><strong id="marca-nombre">LA PIZZA DE JUAN K</strong><small id="marca-lema">Desde 2013 · Sabor de la casa</small></span>
       </a>
       <div class="head-actions">
+        <a class="outline-btn" id="regresarRecepcion" href="panel-pedidos.html#vista-pedidos" hidden>← Pedidos</a>
         <a class="outline-btn" href="#cobertura">Cobertura</a>
         <a class="primary-btn cart-pill" href="#carrito">🛒 Carrito <span id="cartCount">0</span></a>
       </div>
@@ -205,6 +211,7 @@
     </div>
   </section>
 
+  <div class="wrap" id="avisoPedidoInterno" role="status" hidden></div>
   <main class="wrap main-layout">
     <div>
       <section aria-labelledby="menuTitle" id="menu">
@@ -257,7 +264,7 @@
     <form id="orderForm" novalidate>
       <div class="dialog-body">
         <p class="hint">Completa tus datos para enviar el pedido a <span id="marca-formulario">La Pizza de Juan K</span>. No se realiza ningún cobro automático.</p>
-        <fieldset style="border:0;padding:0;margin:15px 0 10px"><legend style="font-weight:800;margin-bottom:8px">¿Cómo recibirías tu pedido?</legend><div class="delivery-options"><label><input type="radio" name="delivery" value="domicilio" checked><span class="delivery-button">🛵 Domicilio</span></label><label><input type="radio" name="delivery" value="recoger"><span class="delivery-button">🏪 Recoger en el local</span></label></div></fieldset>
+        <fieldset id="modalidadSelector" style="border:0;padding:0;margin:15px 0 10px"><legend style="font-weight:800;margin-bottom:8px">¿Cómo recibirías tu pedido?</legend><div class="delivery-options"><label><input type="radio" name="delivery" value="domicilio" checked><span class="delivery-button">🛵 Domicilio</span></label><label><input type="radio" name="delivery" value="recoger"><span class="delivery-button">🏪 Recoger en el local</span></label></div></fieldset>
         <p id="avisoCostoDomicilio" class="warning domicilio-extra" role="note">⚠️ El valor del domicilio no está incluido en el subtotal. Tu total final puede variar según el costo del envío. Si pagas en efectivo, las vueltas se calcularán con el valor final confirmado por el restaurante.</p>
         <fieldset style="border:0;padding:0;margin:15px 0 12px"><legend style="font-weight:800;margin-bottom:8px">¿Cómo prefieres pagar?</legend>
           <div class="delivery-options">
@@ -299,6 +306,9 @@
 
   <script>
 'use strict';
+    const modalidadInterna=new URLSearchParams(location.search).get('pedidoInterno');
+    const modoInterno=['domicilio','recoger'].includes(modalidadInterna);
+    const retornoRecepcion='panel-pedidos.html?canal='+(modalidadInterna==='recoger'?'llevar':'domicilio')+'#vista-pedidos';
     // No se muestran pizzas precargadas. Los productos se crean desde Administración.
     const pizzaBase = [];
     let pizzas = pizzaBase.map(p=>({...p}));
@@ -357,7 +367,7 @@
       byId('marca-pie').textContent = nombreNegocioActual;
       byId('marca-formulario').textContent = nombreNegocioActual;
       byId('marca-inicio').setAttribute('aria-label',nombreNegocioActual+', inicio');
-      document.title = nombreNegocioActual + ' | Menú digital';
+      document.title = modoInterno?'Nuevo pedido | Pulso Food':nombreNegocioActual + ' | Menú digital';
       const logo = byId('marca-logo');
       const alternativo = byId('marca-logo-alternativo');
       const url = typeof datos?.logoURL === 'string' && (/^https:\/\//i.test(datos.logoURL) || /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(datos.logoURL))
@@ -388,7 +398,7 @@
     let selectedPizza = null;
     let chosen = [];
 
-    try {
+    if(!modoInterno) try {
       const raw = JSON.parse(localStorage.getItem(storageKey) || '[]');
       if(Array.isArray(raw)) cart = raw.filter(item =>
         typeof item.id === 'string' && Number.isInteger(item.qty) && item.qty >= 1 && item.qty <= 99 &&
@@ -402,6 +412,7 @@
     } catch(error) { cart=[]; }
 
     function persist() {
+      if(modoInterno)return;
       try { localStorage.setItem(storageKey,JSON.stringify(cart)); } catch(error) {}
     }
     function el(tag,text,cls) {
@@ -735,6 +746,7 @@
       byId('subtotal').textContent=money(total);
     }
     function cargarDatosCliente() {
+      if(modoInterno)return;
       let datos;
       try { datos=JSON.parse(localStorage.getItem(customerStorageKey)||'null'); }
       catch(error) { return; }
@@ -767,6 +779,7 @@
       }
     }
     function guardarDatosCliente() {
+      if(modoInterno)return;
       if(!byId('rememberCustomer').checked) {
         try { localStorage.removeItem(customerStorageKey); } catch(error) {}
         byId('forgetCustomer').hidden=true;
@@ -1052,6 +1065,12 @@
       try {
         if(typeof window.enviarPedidoFirebase!=='function') throw new Error('Firebase no está listo');
         const referencia=await window.enviarPedidoFirebase(pedidoPendiente);
+        if(modoInterno){
+          if(!referencia?.id)throw Error('No se recibió la referencia del pedido.');
+          pedidoPendiente=null;cart=[];
+          alert('Pedido #'+referencia.id.slice(0,8).toUpperCase()+' registrado. Continúa la gestión en Pedidos.');
+          location.replace(retornoRecepcion);return;
+        }
         if (referencia?.id) recordarUltimoPedido(referencia.id);
         alert('Tu pedido fue enviado a '+nombreNegocioActual+'. Puedes consultar su estado en «Mi pedido».');
         pedidoPendiente=null;
@@ -1081,6 +1100,20 @@
         boton.disabled=false;
       }
     });
+    if(modoInterno){
+      document.body.classList.add('pedido-interno');
+      byId('regresarRecepcion').hidden=false;byId('regresarRecepcion').href=retornoRecepcion;
+      byId('regresarRecepcion').addEventListener('click',e=>{if(cart.length&&!confirm('¿Cancelar el pedido sin enviar?'))e.preventDefault();});
+      byId('avisoPedidoInterno').hidden=false;byId('avisoPedidoInterno').textContent='Nuevo pedido · '+(modalidadInterna==='domicilio'?'A domicilio':'Para llevar');
+      byId('menuTitle').textContent='Selecciona los productos';
+      byId('cartHeading').textContent='🛒 Pedido';
+      byId('previewButton').textContent='Continuar con datos del cliente';
+      byId('orderDialogTitle').textContent='Datos del cliente';
+      const f=byId('orderForm');f.querySelector('input[name="delivery"][value="'+modalidadInterna+'"]').checked=true;
+      byId('modalidadSelector').hidden=true;byId('modalidadSelector').style.display='none';
+      f.elements.namedItem('customer').placeholder='Nombre del cliente';f.elements.namedItem('phone').placeholder='Teléfono del cliente';
+      byId('sendOrderButton').textContent='Registrar pedido';
+    }
     cargarDatosCliente();
     renderCategorias();renderProducts();renderCart();deliveryFields();
   </script>
@@ -1100,7 +1133,7 @@
   };
 
   // El menú usa una sesión anónima propia; no reutiliza el login del administrador.
-  const app = initializeApp(firebaseConfig, 'menu-clientes');
+  const app = modoInterno?initializeApp(firebaseConfig):initializeApp(firebaseConfig, 'menu-clientes');
     const appCheck = initializeAppCheck(app, {
   provider: new ReCaptchaEnterpriseProvider("6LePJQ8uAAAAAI0QV2VRfwHdOl-_EuMxM6zLNmuE"),
   isTokenAutoRefreshEnabled: true
@@ -1108,7 +1141,9 @@
     const auth = getAuth(app);
   const db = getFirestore(app);
   window.enviarPedidoFirebase = async pedido => {
-    if (!auth.currentUser) await signInAnonymously(auth);
+    if(modoInterno){
+      if(!auth.currentUser||auth.currentUser.isAnonymous)throw Error('Inicia sesión administrativa desde el panel de pedidos.');
+    }else if (!auth.currentUser) await signInAnonymously(auth);
     return addDoc(collection(db,'pedidos'), {
       ...pedido,
       clienteUid:auth.currentUser.uid,
@@ -1207,9 +1242,17 @@
       detenerSeguimiento=()=>{};
       window.actualizarReferenciaWhatsapp?.('');
       let ultimoPedido='';
-      try { ultimoPedido=localStorage.getItem('juanK-ultimo-pedido-v1')||''; } catch(_) {}
-      if(user && /^[A-Za-z0-9]{15,40}$/.test(ultimoPedido)) iniciarSeguimiento(ultimoPedido);
-      else if(user) iniciarSeguimiento('');
+      if(!modoInterno)try { ultimoPedido=localStorage.getItem('juanK-ultimo-pedido-v1')||''; } catch(_) {}
+      if(modoInterno){
+         ultimoPedido='';
+         if(!user||user.isAnonymous){
+           byId('avisoPedidoInterno').textContent='Inicia sesión en Pedidos para crear un pedido interno.';
+           byId('catalogStatus').textContent='Sesión administrativa requerida. Usa el botón Pedidos para volver.';
+           return;
+         }
+       }
+       if(!modoInterno && user && /^[A-Za-z0-9]{15,40}$/.test(ultimoPedido)) iniciarSeguimiento(ultimoPedido);
+      else if(user&&!modoInterno) iniciarSeguimiento('');
       else if(ultimoPedido) seguimientoContenedor.textContent='Conectando con tu sesión para consultar el pedido...';
       catalogoInicializado = false;
       if (!user) {
