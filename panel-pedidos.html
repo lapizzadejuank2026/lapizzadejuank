@@ -202,13 +202,18 @@
     .subnav-productos button:focus-visible{outline:2px solid #fff;outline-offset:2px}
     .subnav-productos[hidden]{display:none!important}
     /* Recepción: tres canales independientes con contadores de comandas nuevas. */
-    .recepcion-canales{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;position:relative;padding:7px 0 0;background:transparent}
+    .recepcion-canales{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) 44px;gap:6px;position:relative;padding:7px 0 0;background:transparent}
     .recepcion-canales button{margin:0;min-width:0;min-height:54px;padding:7px 4px;background:#a71919;color:#fff;border:1px solid #ec9a9a;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;line-height:1.1}
     .recepcion-canales button[aria-pressed="true"]{background:#f6bd42;color:#21170c;border-color:#f6bd42}
     .recepcion-canales .canal-titulo{display:block;white-space:normal;line-height:1.2}
     .recepcion-canales .canal-cantidad{display:inline-block;min-width:23px;padding:2px 6px;background:#fff6e6;color:#9a1717;border-radius:999px;font-size:12px;font-weight:800}
     .recepcion-canales button[aria-pressed="true"] .canal-cantidad{background:#a71919;color:#fff}
     .recepcion-canales .canal-cantidad[hidden]{display:none}
+    .recepcion-canales #nuevo-pedido-toggle{font-size:26px;line-height:1;background:#f6bd42;color:#21170c;border-color:#f6bd42}
+    .nuevo-pedido-menu{position:absolute;right:0;top:100%;z-index:120;width:min(220px,95vw);background:#102e50;border:1px solid #4b87a7;border-radius:10px;padding:6px;box-shadow:0 8px 18px #0008}
+    .nuevo-pedido-menu[hidden]{display:none!important}
+    .nuevo-pedido-menu a{display:block;padding:12px 10px;border-radius:7px;color:#fff;text-decoration:none;font-weight:700;font-size:14px;text-align:left}
+    .nuevo-pedido-menu a:hover,.nuevo-pedido-menu a:focus-visible{background:#245479}
     /* Recepción compacta: conservar estados y filtros sin desplazar el monitor. */
     #lista{scroll-margin-top:calc(var(--cabecera-alto,155px) + 10px)}
     .pedido-resumen{width:100%;display:block;text-align:left;background:#20252a;color:#fff;border:1px solid #4b5964;border-left:4px solid #4b87a7;margin:8px 0;padding:12px;border-radius:10px;font-size:14px}
@@ -295,6 +300,11 @@
         <button id="canal-mesa" type="button" aria-pressed="false"><span class="canal-titulo">🍽️ Mesas</span><span id="cantidad-mesa" class="canal-cantidad" hidden>0</span></button>
         <button id="canal-llevar" type="button" aria-pressed="false"><span class="canal-titulo">🛍️ Para llevar</span><span id="cantidad-llevar" class="canal-cantidad" hidden>0</span></button>
         <button id="canal-domicilio" type="button" aria-pressed="true"><span class="canal-titulo">🛵 Domicilios</span><span id="cantidad-domicilio" class="canal-cantidad" hidden>0</span></button>
+        <button id="nuevo-pedido-toggle" type="button" aria-label="Nuevo pedido" aria-expanded="false" aria-controls="nuevo-pedido-menu">+</button>
+        <div id="nuevo-pedido-menu" class="nuevo-pedido-menu" hidden>
+          <a href="index-1.html?pedidoInterno=recoger&amp;v=pos-20261125">🛍️ Para llevar</a>
+          <a href="index-1.html?pedidoInterno=domicilio&amp;v=pos-20261125">🛵 A domicilio</a>
+        </div>
       </nav>
       <nav id="subnav-configuracion" class="subnav-productos" aria-label="Opciones de configuración" hidden>
         <button type="button" id="config-tab-negocio" aria-pressed="true">⚙️ Negocio</button>
@@ -684,7 +694,13 @@
   }
   document.getElementById('subtab-productos').addEventListener('click',()=>cambiarSeccionProductos('productos',true));
   document.getElementById('subtab-modificadores').addEventListener('click',()=>cambiarSeccionProductos('modificadores',true));
-  let canalPedidos='domicilio';
+  const canalInicial=new URLSearchParams(location.search).get('canal');
+  let canalPedidos=['llevar','domicilio','mesa'].includes(canalInicial)?canalInicial:'domicilio';
+  const nuevoToggle=document.getElementById('nuevo-pedido-toggle'),nuevoMenu=document.getElementById('nuevo-pedido-menu');
+  function cerrarNuevoPedido(){nuevoMenu.hidden=true;nuevoToggle.setAttribute('aria-expanded','false');}
+  nuevoToggle.addEventListener('click',()=>{const abrir=nuevoMenu.hidden;cerrarNuevoPedido();if(abrir&&auth.currentUser){nuevoMenu.hidden=false;nuevoToggle.setAttribute('aria-expanded','true');}});
+  document.addEventListener('click',e=>{if(!nuevoToggle.contains(e.target)&&!nuevoMenu.contains(e.target))cerrarNuevoPedido();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!nuevoMenu.hidden){cerrarNuevoPedido();nuevoToggle.focus();}});
   let pedidoAbierto='';
   function abrirPedido(id){pedidoAbierto=id;if(pedidosCargados)pintar(pedidosCache);lista.scrollIntoView({block:'start',behavior:'instant'});}
   function volverPedidos(){pedidoAbierto='';if(pedidosCargados)pintar(pedidosCache);document.querySelector('#vista-pedidos .monitor')?.scrollIntoView({block:'start',behavior:'instant'});}
@@ -721,6 +737,7 @@
 
   function cambiarVista(nombre) {
     canalesCabecera.hidden = nombre !== 'pedidos' || !auth.currentUser;
+    cerrarNuevoPedido();
     vistaInicio.hidden = nombre !== 'inicio';
     // La pantalla de Pedidos queda limpia: las otras secciones se abren solo desde Inicio.
     // Se conservan los nodos de pestañas porque el monitor y el contador los utilizan.
