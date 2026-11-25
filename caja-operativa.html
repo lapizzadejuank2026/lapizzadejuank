@@ -67,11 +67,13 @@ body > header.cabecera-fija-app.pulso-cabecera{background:linear-gradient(110deg
 .pulso-cabecera #panel-nombre{font-size:12px;color:#ffe4c9;margin:5px 0 0;line-height:1.25;overflow-wrap:anywhere}
 body > header.pulso-cabecera .pulso-seccion{font-size:13px;color:#e5edf8;margin:0;text-align:right;line-height:1.25;flex:0 1 43%;overflow-wrap:anywhere}
 @media(max-width:520px){body > header.cabecera-fija-app.pulso-cabecera{padding:9px 10px 7px}.pulso-cabecera .pulso-inner{gap:8px}}
+body > header.pulso-cabecera .pulso-turno{max-width:850px;margin:7px auto 0;padding-top:7px;border-top:1px solid #ffffff26;font-size:12px;line-height:1.4;color:#e5edf8;font-weight:600;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+body > header.pulso-cabecera .pulso-turno:empty{display:none}
 </style>
 <link rel="stylesheet" href="nav-admin-fija.css?v=barra-lateral-20261123"><script defer src="cabecera-fija-admin.js?v=cabecera-fija-20261123c"></script>
 </head>
 <body>
-<header class="cabecera-fija-app pulso-cabecera"><div class="pulso-inner"><div class="pulso-marca"><img class="pulso-logo" src="Logo-Pulso-Food.png" alt="Pulso Food — Tu herramienta, tu control"><p id="panel-nombre">La Pizza de Juanca</p></div><h1 id="pulso-seccion" class="pulso-seccion">Caja</h1></div></header>
+<header class="cabecera-fija-app pulso-cabecera"><div class="pulso-inner"><div class="pulso-marca"><img class="pulso-logo" src="Logo-Pulso-Food.png" alt="Pulso Food — Tu herramienta, tu control"><p id="panel-nombre">La Pizza de Juanca</p></div><h1 id="pulso-seccion" class="pulso-seccion">Caja</h1></div><p id="controlActivo" class="pulso-turno" hidden aria-live="polite"></p></header>
 <main>
 <div class="banner"><strong>Versión conectada a Firebase — fase de pruebas.</strong>
 Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase de pruebas: verifica los resultados antes de usar dinero real. Los cobros de mesas y para llevar se registran al cobrar; los domicilios se registran al reportar el pago y completar la entrega con una sesión administrativa conectada. La conciliación física es independiente. Un pedido sin cobrar no es ingreso de caja.</div>
@@ -88,7 +90,6 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
 <div class="card">
 <p class="pequeno" hidden aria-hidden="true">Sesión administrativa: <strong id="usuarioCaja">...</strong></p>
 <p id="conexion" class="estado" role="status">Conectando con Firebase...</p>
-<p id="controlActivo" class="resumen"></p>
 </div>
 <section class="card" id="seccionApertura">
 <h2>🔓 Abrir nueva caja</h2>
@@ -226,7 +227,13 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
   }
   window.addEventListener('hashchange',actualizar);
   window.addEventListener('load',actualizar);
-  const obs=new MutationObserver(()=>{if(location.hash==='#seccionMovimiento')actualizar();});
+  const datosTurno=document.getElementById('controlActivo');
+  function sincronizarCabecera(){
+    datosTurno.hidden=principal.hidden;
+    if(principal.hidden)datosTurno.textContent='';
+  }
+  sincronizarCabecera();
+  const obs=new MutationObserver(()=>{sincronizarCabecera();if(location.hash==='#seccionMovimiento')actualizar();});
   obs.observe(destino,{attributes:true,attributeFilter:['hidden']});
   obs.observe(principal,{attributes:true,attributeFilter:['hidden']});
 })();
