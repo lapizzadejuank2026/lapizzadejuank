@@ -116,18 +116,7 @@ body > header.pulso-cabecera .pulso-turno:empty{display:none}
 <p class="pequeno">Movimientos registrados: <strong id="resumenMovimientos">0</strong>. Este resumen refleja los cobros registrados y los gastos. El efectivo esperado incluye el dinero de ventas que aún tengan los domiciliarios; concílialo antes del arqueo físico. Las transferencias reportadas no son confirmación bancaria.</p>
 </section>
 <p id="estadoAutoCaja" role="status" hidden></p>
-<details class="card" id="seccionCobrosDomi">
-<summary>🛵 Conciliación e historial de domiciliarios</summary>
-<p class="pequeno">Los cobros válidos del turno se registran automáticamente al completar la entrega. Los reportes anteriores al turno requieren revisión: no se incorporan automáticamente. La conciliación física y bancaria no suma otra venta. Las transferencias reportadas no equivalen a abonos bancarios comprobados.</p>
-<div class="metricaGrid">
-<div class="metrica"><strong id="domiEfectivoReportado">—</strong><span>Efectivo reportado sin registrar</span></div>
-<div class="metrica"><strong id="domiTransferenciaReportada">—</strong><span>Transferencias reportadas sin registrar</span></div>
-<div class="metrica"><strong id="domiEfectivoListo">—</strong><span>Efectivo pendiente de conciliación</span></div>
-<div class="metrica"><strong id="domiTransferenciaLista">—</strong><span>Transferencias pendientes de verificación</span></div>
-</div>
-<p id="estadoCobrosDomi" class="estado" role="status">Esperando la conexión con Firebase...</p>
-<div id="listaCobrosDomi"></div>
-</details>
+
 <section class="card" id="seccionMovimiento" hidden>
 <h2>➕ Registrar entrada o salida</h2>
 <p class="pequeno">Para ventas, registra el cobro una sola vez usando el número del pedido o de la cuenta. No registres pedidos que todavía no se han pagado.</p>
@@ -192,6 +181,18 @@ body > header.pulso-cabecera .pulso-turno:empty{display:none}
 <summary>🕘 Ver últimos 15 cierres individuales</summary>
 <div id="historialTurnos"></div>
 </details>
+</details>
+<details class="card" id="seccionCobrosDomi">
+<summary>🛵 Revisar cobros de domiciliarios</summary>
+<p class="pequeno">Los cobros válidos del turno se registran automáticamente al completar la entrega. Los reportes anteriores al turno requieren revisión: no se incorporan automáticamente. La conciliación física y bancaria no suma otra venta. Las transferencias reportadas no equivalen a abonos bancarios comprobados.</p>
+<div class="metricaGrid">
+<div class="metrica"><strong id="domiEfectivoReportado">—</strong><span>Efectivo reportado sin registrar</span></div>
+<div class="metrica"><strong id="domiTransferenciaReportada">—</strong><span>Transferencias reportadas sin registrar</span></div>
+<div class="metrica"><strong id="domiEfectivoListo">—</strong><span>Efectivo pendiente de conciliación</span></div>
+<div class="metrica"><strong id="domiTransferenciaLista">—</strong><span>Transferencias pendientes de verificación</span></div>
+</div>
+<p id="estadoCobrosDomi" class="estado" role="status">Esperando la conexión con Firebase...</p>
+<div id="listaCobrosDomi"></div>
 </details>
 <section class="card" id="seccionSesion" hidden aria-hidden="true">
 <div class="sesionAcciones">
