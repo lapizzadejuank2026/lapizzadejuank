@@ -29,7 +29,6 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .metrica{background:#151515;border:1px solid #454545;padding:15px 10px;text-align:center;border-radius:10px}
 .metrica strong{display:block;color:var(--gold);font-size:19px;margin:0 0 6px;overflow-wrap:anywhere}
 .metrica span{display:block;font-size:12px;color:#d2d2d2}
-.metrica.ventas-dia{grid-column:1/-1}.metrica.ventas-dia strong{font-size:25px}.metrica.ventas-dia .nota-ventas{margin-top:5px;font-size:11px}
 .fila2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
 .registro{border-bottom:1px solid var(--line);padding:11px 0;overflow-wrap:anywhere}
 .registro:last-child{border:0}.registro p{margin:5px 0}
@@ -65,7 +64,12 @@ body > header.cabecera-fija-app.pulso-cabecera{background:linear-gradient(110deg
 .pulso-cabecera .pulso-marca{min-width:0;flex:1}
 .pulso-cabecera .pulso-logo{display:block;width:150px;max-width:100%;height:58px;object-fit:contain;object-position:left center}
 .pulso-cabecera #panel-nombre{font-size:12px;color:#ffe4c9;margin:5px 0 0;line-height:1.25;overflow-wrap:anywhere}
-body > header.pulso-cabecera .pulso-seccion{font-size:13px;color:#e5edf8;margin:0;text-align:right;line-height:1.25;flex:0 1 43%;overflow-wrap:anywhere}
+.pulso-cabecera .pulso-caja-destacada{flex:0 1 48%;min-width:0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px}
+body > header.pulso-cabecera .pulso-seccion{font-size:25px;color:#e5edf8;margin:0;text-align:center;line-height:1.1;overflow-wrap:anywhere}
+body > header.pulso-cabecera .pulso-seccion[data-movimientos="true"]{font-size:13px;line-height:1.25}
+.pulso-cabecera .pulso-ventas{display:flex;flex-direction:column;align-items:center;gap:2px;max-width:100%;font-variant-numeric:tabular-nums}
+.pulso-cabecera .pulso-ventas-etiqueta{color:#dce9f9;font-size:11px;font-weight:600;line-height:1.2}
+.pulso-cabecera .pulso-ventas strong{color:var(--gold);font-size:clamp(19px,5.5vw,28px);line-height:1.1;overflow-wrap:anywhere;max-width:100%}
 @media(max-width:520px){body > header.cabecera-fija-app.pulso-cabecera{padding:9px 10px 7px}.pulso-cabecera .pulso-inner{gap:8px}}
 body > header.pulso-cabecera .pulso-turno{max-width:850px;margin:7px auto 0;padding-top:7px;border-top:1px solid #ffffff26;font-size:12px;line-height:1.4;color:#e5edf8;font-weight:600;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
 body > header.pulso-cabecera .pulso-turno:empty{display:none}
@@ -73,7 +77,7 @@ body > header.pulso-cabecera .pulso-turno:empty{display:none}
 <link rel="stylesheet" href="nav-admin-fija.css?v=barra-lateral-20261123"><script defer src="cabecera-fija-admin.js?v=cabecera-fija-20261123c"></script>
 </head>
 <body>
-<header class="cabecera-fija-app pulso-cabecera"><div class="pulso-inner"><div class="pulso-marca"><img class="pulso-logo" src="Logo-Pulso-Food.png" alt="Pulso Food — Tu herramienta, tu control"><p id="panel-nombre">La Pizza de Juanca</p></div><h1 id="pulso-seccion" class="pulso-seccion">Caja</h1></div><p id="controlActivo" class="pulso-turno" hidden aria-live="polite"></p></header>
+<header class="cabecera-fija-app pulso-cabecera"><div class="pulso-inner"><div class="pulso-marca"><img class="pulso-logo" src="Logo-Pulso-Food.png" alt="Pulso Food — Tu herramienta, tu control"><p id="panel-nombre">La Pizza de Juanca</p></div><div class="pulso-caja-destacada"><h1 id="pulso-seccion" class="pulso-seccion" aria-label="Caja">💰</h1><div id="pulsoVentas" class="pulso-ventas" hidden title="Ingresos en efectivo + transferencias netas del turno"><span class="pulso-ventas-etiqueta">Total venta</span><strong id="resumenVentasDia" aria-live="polite">—</strong><span id="notaVentasDia" hidden>Ingresos en efectivo + transferencias netas del turno</span></div></div></div><p id="controlActivo" class="pulso-turno" hidden aria-live="polite"></p></header>
 <main>
 <div class="banner"><strong>Versión conectada a Firebase — fase de pruebas.</strong>
 Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase de pruebas: verifica los resultados antes de usar dinero real. Los cobros de mesas y para llevar se registran al cobrar; los domicilios se registran al reportar el pago y completar la entrega con una sesión administrativa conectada. La conciliación física es independiente. Un pedido sin cobrar no es ingreso de caja.</div>
@@ -108,7 +112,6 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
 <div class="metrica"><strong id="resumenEfectivoEntradas">$0</strong><span>Ingresos en efectivo</span></div>
 <div class="metrica"><strong id="resumenTransferencias">$0</strong><span>Transferencias netas registradas</span></div>
 <div class="metrica"><strong id="resumenSalidas">$0</strong><span>Total salidas / gastos</span></div>
-<div class="metrica ventas-dia"><strong id="resumenVentasDia">—</strong><span>Total ventas del turno</span><span id="notaVentasDia" class="nota-ventas">Ingresos en efectivo + transferencias netas del turno</span></div>
 </div>
 <p class="pequeno">Movimientos registrados: <strong id="resumenMovimientos">0</strong>. Este resumen refleja los cobros registrados y los gastos. El efectivo esperado incluye el dinero de ventas que aún tengan los domiciliarios; concílialo antes del arqueo físico. Las transferencias reportadas no son confirmación bancaria.</p>
 </section>
@@ -217,7 +220,11 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
   const enlaces=[...document.querySelectorAll('.nav-admin-fija a')];
   function actualizar(){
     const movimientos=location.hash==='#seccionMovimiento';
-    document.getElementById('pulso-seccion').textContent=movimientos?'Entradas y salidas':'Caja';
+    const titulo=document.getElementById('pulso-seccion');
+    titulo.textContent=movimientos?'Entradas y salidas':'💰';
+    titulo.setAttribute('aria-label',movimientos?'Entradas y salidas':'Caja');
+    titulo.dataset.movimientos=String(movimientos);
+    sincronizarCabecera();
     document.title=(movimientos?'Entradas y salidas':'Caja')+' | Pulso Food';
     enlaces.forEach(a=>a.removeAttribute('aria-current'));
     const actual=enlaces[movimientos?4:3];if(actual)actual.setAttribute('aria-current','page');
@@ -228,14 +235,18 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
   window.addEventListener('hashchange',actualizar);
   window.addEventListener('load',actualizar);
   const datosTurno=document.getElementById('controlActivo');
+  const totalCabecera=document.getElementById('pulsoVentas');
+  const resumenTurno=document.getElementById('seccionTurno');
   function sincronizarCabecera(){
     datosTurno.hidden=principal.hidden;
+    totalCabecera.hidden=principal.hidden||resumenTurno.hidden||location.hash==='#seccionMovimiento';
     if(principal.hidden)datosTurno.textContent='';
   }
   sincronizarCabecera();
   const obs=new MutationObserver(()=>{sincronizarCabecera();if(location.hash==='#seccionMovimiento')actualizar();});
   obs.observe(destino,{attributes:true,attributeFilter:['hidden']});
   obs.observe(principal,{attributes:true,attributeFilter:['hidden']});
+  obs.observe(resumenTurno,{attributes:true,attributeFilter:['hidden']});
 })();
 </script>
 
