@@ -5,7 +5,7 @@
   "description": "Menú y pedidos de La Pizza de Juan K",
   "lang": "es-CO",
   "start_url": "./index.html",
-  "scope": "./",
+  "scope": "./index",
   "display": "standalone",
   "background_color": "#111111",
   "theme_color": "#b81932",

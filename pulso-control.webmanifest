@@ -5,7 +5,7 @@
   "description": "Centro de control del restaurante: pedidos, mesas, caja, productos y equipo.",
   "lang": "es-CO",
   "start_url": "./panel-pedidos.html#panel-inicio",
-  "scope": "./",
+  "scope": "./panel-pedidos.html",
   "display": "standalone",
   "background_color": "#07172e",
   "theme_color": "#07172e",
