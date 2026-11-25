@@ -356,6 +356,7 @@
       <h2 id="titulo-recepcion" class="recepcion-sr">Pedidos · Recepción</h2>
       <div class="recepcion-resumen">
         <p id="estado" class="alerta" role="status">Conectando con Firestore...</p>
+<p id="estadoAutoCaja" role="status" hidden></p>
         <p id="contador" aria-live="polite"></p>
       </div>
       <div class="jornada-filtros" aria-label="Filtrar pedidos por jornada">
@@ -560,6 +561,7 @@
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, setPersistence, inMemoryPersistence, deleteUser } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
   import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, updateDoc, setDoc, serverTimestamp, writeBatch, runTransaction } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
   import {mostrarCobroAdmin} from './cobros-domicilios.js?v=cobro20261113b';
+  import {escucharCobros,mostrarCobroLlevar} from './caja-ventas-automaticas.js?v=20261124a';
 
   const firebaseConfig = {
     apiKey: 'AIzaSyA65sFJq3vf24a-1VbpYBHCgpEAk--exAA',
@@ -581,6 +583,7 @@
   const estado = document.getElementById('estado');
   const lista = document.getElementById('lista');
   let detenerEscucha = () => {};
+  let detenerAutoCaja = () => {};
   let alarmaActiva = false;
   let hayNuevos = false;
   let audio;
@@ -1815,7 +1818,7 @@
     const fecha=fechaDe(d.creadoEn)?.toLocaleString('es-CO',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})||'';
     b.append(fila('#'+id.slice(0,8).toUpperCase()+' · '+(canal==='mesa'?(d.mesaNombre||'Mesa'):etiquetasCanal[canal]),fecha),fila(nombre,etiqueta,'pedido-cliente'));
     const total=totalPedido(d),subtotal=importePedido(d.total);
-    const pago=d.cobroVerificado===true?'Pago conciliado':d.cobroReportado?'Pago reportado':d.pagoPreferido?'Previsto: '+d.pagoPreferido:'';
+    const pago=d.cajaMovimientoId?(d.cobroReportado&&!d.cobroVerificado?'En caja · conciliación pendiente':'Registrado en caja'):d.cobroVerificado===true?'Pago conciliado':d.cobroReportado?'Pago reportado':d.pagoPreferido?'Previsto: '+d.pagoPreferido:'';
     b.append(fila(total==null&&subtotal!=null?dineroPedido(subtotal)+(canal==='domicilio'?' + envío':''):dineroPedido(total),pago,'pedido-importe'));
     if(canal==='domicilio'&&d.domiciliarioNombre)b.append(fila('🛵 '+d.domiciliarioNombre,'Ver detalle ›'));
     else b.append(fila('','Ver detalle ›'));
@@ -2144,6 +2147,7 @@
         tarjeta.append(boton);
       }
 
+      if(canalDePedido(d)==='llevar')mostrarCobroLlevar(tarjeta,id,d,db,auth.currentUser);
       tarjeta.append(botonImprimir);
       const volverAbajo=document.createElement('button');volverAbajo.type='button';volverAbajo.className='pedido-volver';volverAbajo.textContent='← Volver a pedidos';volverAbajo.onclick=volverPedidos;tarjeta.append(volverAbajo);
       lista.append(tarjeta);
@@ -2154,6 +2158,8 @@
 
   onAuthStateChanged(auth, (user) => {
     detenerEscucha();
+    detenerAutoCaja();detenerAutoCaja=()=>{};
+    document.getElementById('estadoAutoCaja').hidden=true;
     mapaRecepcion.detener();
     detenerEquipo();
     limpiarDisponibilidadRiders();
@@ -2198,6 +2204,7 @@
     estado.textContent = 'Conectando con Firestore...';
     equipoEstado.textContent = 'Consultando personal disponible...';
     escucharEquipo();
+    detenerAutoCaja=escucharCobros(db,user,msg=>{const el=document.getElementById('estadoAutoCaja');el.textContent=msg;el.hidden=!msg;});
     mapaRecepcion.escuchar();
     detenerConfiguracion = onSnapshot(refConfiguracion, snapshot => {
       const primera=!configCargada;
