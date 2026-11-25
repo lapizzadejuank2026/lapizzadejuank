@@ -219,7 +219,7 @@ export function mostrarCobroAdmin(padre, pedidoId, d, db) {
   titulo(section,'💰 Control de cobro');
   const productos=entero(d.total), domicilio=entero(d.domicilioValor);
   parrafo(section,'Productos: '+(productos===null?'Sin total válido':pesosCobro(productos)));
-  parrafo(section,'Valor domicilio: '+(domicilio===null?'Sin confirmar':pesosCobro(domicilio)));
+  parrafo(section,'Valor domicilio: '+(domicilio===null?'Sin confirmar':domicilio===0?'Gratis ($0)':pesosCobro(domicilio)));
   if(productos!==null && domicilio!==null) {
     parrafo(section,'Total cliente: '+pesosCobro(productos+domicilio),'cobro-total');
   }
@@ -227,27 +227,30 @@ export function mostrarCobroAdmin(padre, pedidoId, d, db) {
   const reporte=Boolean(d.cobroReportado);
   if(!reporte && d.estadoEntrega!=='entregado') {
     const form=document.createElement('form');
-    const campo=inputDinero(form,'Confirmar costo del domicilio (COP)');
+    const campo=inputDinero(form,'Costo del domicilio (opcional, COP)');
     campo.placeholder='Ejemplo: 5000';
     if(domicilio!==null)campo.value=String(domicilio);
-    const aviso=parrafo(form,'Es el costo que verá el domiciliario. No cambia el precio de los productos.');
+    parrafo(form,'Si no vas a cobrar el envío, selecciona «Sin cobro de domicilio».');
     const msg=parrafo(form,'');
     msg.setAttribute('role','status');
     const guardar=boton(form,'💾 Guardar valor del domicilio');
     guardar.type='submit';
+    const gratis=boton(form,'🛵 Sin cobro de domicilio ($0)');
+    gratis.style.background='#e5e5e5';
+    gratis.addEventListener('click',()=>{campo.value='0';form.requestSubmit(guardar);});
     form.addEventListener('submit',async ev=>{
       ev.preventDefault();
       const valor=entero(campo.value);
       if(valor===null) {msg.textContent='Ingresa un valor entero entre $0 y $100.000.000.';return;}
-      guardar.disabled=true;msg.textContent='Guardando valor del domicilio...';
+      guardar.disabled=true;gratis.disabled=true;campo.disabled=true;msg.textContent='Guardando valor del domicilio...';
       try{
         await updateDoc(doc(db,'pedidos',pedidoId),{
           domicilioValor:valor,domicilioValorFijadoEn:serverTimestamp()
         });
-        msg.textContent='✅ Domicilio confirmado: '+pesosCobro(valor);
+        msg.textContent=valor===0?'✅ Domicilio sin cobro.':'✅ Domicilio confirmado: '+pesosCobro(valor);
       }catch(e){
         msg.textContent='No se guardó. Revisa tu sesión de administrador y Firestore.';
-        guardar.disabled=false;
+        guardar.disabled=false;gratis.disabled=false;campo.disabled=false;
       }
     });
     section.append(form);
