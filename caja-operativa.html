@@ -107,10 +107,11 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
 <div class="metrica"><strong id="resumenTransferencias">$0</strong><span>Transferencias netas registradas</span></div>
 <div class="metrica"><strong id="resumenSalidas">$0</strong><span>Total salidas / gastos</span></div>
 </div>
-<p class="pequeno">Movimientos registrados: <strong id="resumenMovimientos">0</strong>. Este resumen refleja solo movimientos de caja guardados, no todos los pedidos recibidos.</p>
+<p class="pequeno">Movimientos registrados: <strong id="resumenMovimientos">0</strong>. Este resumen refleja los cobros registrados y los gastos. El efectivo esperado incluye el dinero de ventas que aún tengan los domiciliarios; concílialo antes del arqueo físico. Las transferencias reportadas no son confirmación bancaria.</p>
 </section>
+<p id="estadoAutoCaja" role="status" hidden></p>
 <details class="card" id="seccionCobrosDomi">
-<summary>🛵 Cobros de domiciliarios pendientes e históricos</summary>
+<summary>🛵 Conciliación e historial de domiciliarios</summary>
 <p class="pequeno">Los cobros válidos del turno se registran automáticamente al completar la entrega. Los reportes anteriores al turno requieren revisión: no se incorporan automáticamente. La conciliación física y bancaria no suma otra venta. Las transferencias reportadas no equivalen a abonos bancarios comprobados.</p>
 <div class="metricaGrid">
 <div class="metrica"><strong id="domiEfectivoReportado">—</strong><span>Efectivo reportado sin registrar</span></div>
@@ -118,7 +119,6 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
 <div class="metrica"><strong id="domiEfectivoListo">—</strong><span>Efectivo pendiente de conciliación</span></div>
 <div class="metrica"><strong id="domiTransferenciaLista">—</strong><span>Transferencias pendientes de verificación</span></div>
 </div>
-<p id="estadoAutoCaja" role="status" hidden></p>
 <p id="estadoCobrosDomi" class="estado" role="status">Esperando la conexión con Firebase...</p>
 <div id="listaCobrosDomi"></div>
 </details>
