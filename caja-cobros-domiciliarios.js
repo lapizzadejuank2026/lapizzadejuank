@@ -1,5 +1,6 @@
 // La Pizza de Juanca — integración prudente de cobros domiciliarios en caja.
-// No contabilizar solo con el reporte del repartidor: se requiere entrega y conciliación del administrador.
+// Venta automática del turno; conciliación física independiente.
+import {escucharCobros,candidato} from './caja-ventas-automaticas.js?v=20261124a';
 // Cada movimiento se registra en una transacción Firestore con referencias anti-duplicado.
 import {getApps,getApp,initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
@@ -29,12 +30,13 @@ const numFecha=x=>x?.seconds||(x?.toDate?.().getTime()||0)/1000;
 
 let pedidos=[],control=null,controlEnServidor=false,pedidosEnServidor=false,usuario=null;
 let errorLecturaCobros='',errorLecturaControl='',errorRegistro='';
-let detenerControl=()=>{},detenerPedidos=()=>{},guardandoId='';
+let detenerControl=()=>{},detenerPedidos=()=>{},detenerAuto=()=>{},guardandoId='';
 function actualizarEstado(mensaje,error=false){
   $('estadoCobrosDomi').textContent=mensaje;
   $('estadoCobrosDomi').className=error?'estado error':'estado';
 }
 function limpiar(){
+  detenerAuto();detenerAuto=()=>{};const auto=$('estadoAutoCaja');auto.hidden=true;auto.textContent='';
   detenerPedidos();detenerControl();detenerPedidos=()=>{};detenerControl=()=>{};
   pedidos=[];control=null;controlEnServidor=false;pedidosEnServidor=false;guardandoId='';
   errorLecturaCobros='';errorLecturaControl='';errorRegistro='';
@@ -70,18 +72,19 @@ function dibujar(){
   }
   const reportados=pedidos.filter(p=>p.d.cobroReportado && p.d.domiciliarioUid);
   const sinCaja=reportados.filter(p=>!p.d.cajaMovimientoId);
-  const listos=sinCaja.filter(p=>sePuedeRegistrar(p));
+  const listos=reportados.filter(p=>p.d.cobroVerificado!==true);
   $('domiEfectivoReportado').textContent=pesos(sinCaja.reduce((s,p)=>s+(integridad(p.d)?.efectivo||0),0));
   $('domiTransferenciaReportada').textContent=pesos(sinCaja.reduce((s,p)=>s+(integridad(p.d)?.transferencia||0),0));
-  $('domiEfectivoListo').textContent=pesos(listos.reduce((s,p)=>s+integridad(p.d).efectivo,0));
-  $('domiTransferenciaLista').textContent=pesos(listos.reduce((s,p)=>s+integridad(p.d).transferencia,0));
+  $('domiEfectivoListo').textContent=pesos(listos.reduce((s,p)=>s+(integridad(p.d)?.efectivo||0),0));
+  $('domiTransferenciaLista').textContent=pesos(listos.reduce((s,p)=>s+(integridad(p.d)?.transferencia||0),0));
   const cajaAbierta=controlEnServidor && control?.estado==='abierta';
   const pendientes=reportados.filter(p=>!p.d.cajaMovimientoId);
   const anotados=reportados.filter(p=>p.d.cajaMovimientoId);
   const ordenados=[...pendientes.sort((a,b)=>numFecha(b.d.cobroReportadoEn)-numFecha(a.d.cobroReportadoEn)),
-    ...anotados.sort((a,b)=>numFecha(b.d.cajaRegistradoEn)-numFecha(a.d.cajaRegistradoEn)).slice(0,12)];
+    ...anotados.filter(p=>p.d.cobroVerificado!==true).sort((a,b)=>numFecha(b.d.cajaRegistradoEn)-numFecha(a.d.cajaRegistradoEn)),
+    ...anotados.filter(p=>p.d.cobroVerificado===true).sort((a,b)=>numFecha(b.d.cajaRegistradoEn)-numFecha(a.d.cajaRegistradoEn)).slice(0,12)];
   actualizarEstado(errorRegistro || (cajaAbierta
-    ? '✅ Cobros sincronizados. Solo los pagos conciliados pueden ingresar al turno abierto.'
+    ? '✅ Cobros sincronizados. Los del turno se registran automáticamente.'
     : 'ℹ️ Los cobros se pueden revisar, pero no registrar hasta que exista una caja abierta.'),!!errorRegistro);
   if(!ordenados.length){txt(lista,'Aún no hay cobros de domiciliarios reportados.');return;}
   for(const p of ordenados){
@@ -93,15 +96,18 @@ function dibujar(){
     txt(div,fecha(d.cobroReportadoEn),'pequeno');
     if(d.cajaMovimientoId){
       txt(div,'✅ Registrado en caja · Movimiento '+String(d.cajaMovimientoId).slice(0,12),'pequeno');
+      if(d.cobroVerificado!==true)txt(div,'Pendiente de recepción física o verificación bancaria. No vuelve a sumar.','pequeno');
     }else if(d.estadoEntrega!=='entregado'){
       txt(div,'⏳ Pago informado; espera a confirmar la entrega. No figura como ingreso de caja.','pequeno');
+    }else if(cajaAbierta&&candidato(d,control.actualizadoEn)){
+      txt(div,'⏳ Registro automático del turno pendiente. Revisa el aviso de sincronización.','pequeno');
     }else if(d.cobroVerificado!==true){
-      txt(div,'⏳ Falta conciliación por administración. Verifica banco y efectivo en el panel de pedidos.','pequeno');
+      txt(div,'⏳ Cobro anterior al turno o sin caja abierta: revisa banco y efectivo antes de registrar.','pequeno');
     }else if(!r){
       txt(div,'⚠️ No registrable: los importes del cobro no coinciden.','pequeno');
     }else{
       const boton=document.createElement('button');
-      boton.type='button';boton.textContent=guardandoId===p.id?'Registrando…':'💾 Registrar cobro en caja';
+      boton.type='button';boton.textContent=guardandoId===p.id?'Registrando…':'💾 Registrar cobro anterior en caja';
       boton.disabled=!cajaAbierta||!!guardandoId;
       const mensaje=txt(div,'','estado');div.append(boton);
       boton.addEventListener('click',()=>registrarCobro(p.id,mensaje));
@@ -163,6 +169,7 @@ async function registrarCobro(pedidoId,mensaje){
 onAuthStateChanged(auth,user=>{
   limpiar();usuario=user;
   if(!user){actualizarEstado('Inicia sesión como administrador para consultar cobros.');return;}
+  detenerAuto=escucharCobros(db,user,msg=>{const el=$('estadoAutoCaja');el.textContent=msg;el.hidden=!msg;});
   actualizarEstado('Cargando cobros de domiciliarios en Firebase...');
   detenerControl=onSnapshot(doc(db,'cajaControl','actual'),{includeMetadataChanges:true},snap=>{
     control=snap.exists()?snap.data():null;

@@ -95,7 +95,7 @@ function resumenReporte(section, d) {
   parrafo(section, 'Total reportado: '+pesosCobro(r.total || 0));
   parrafo(section, d.cobroVerificado === true
     ? '✅ Cobro conciliado por el negocio.'
-    : '⏳ Cobro reportado, NO verificado. Caja debe comprobar la transferencia y/o recibir el efectivo.',
+    : '⏳ Cobro reportado. La recepción física del dinero y la verificación bancaria son independientes del registro de la venta.',
     d.cobroVerificado === true ? 'cobro-ok' : '');
   return true;
 }
@@ -202,7 +202,7 @@ export function mostrarCobroDomiciliario(padre, pedidoId, d, db, auth) {
           cobroReportadoEn:serverTimestamp()
         });
       });
-      estadoForm.textContent='✅ Reporte enviado. Pendiente de verificación de caja.';
+      estadoForm.textContent='✅ Pago reportado. Completa la entrega para que administración registre la venta automáticamente si hay un turno abierto.';
     } catch(error) {
       estadoForm.textContent=error?.code==='permission-denied'
         ? 'Firebase todavía no permite registrar cobros. Debemos habilitar las reglas específicas de cobro.'
@@ -260,10 +260,10 @@ export function mostrarCobroAdmin(padre, pedidoId, d, db) {
   }
   resumenReporte(section,d);
   if(d.cobroVerificado!==true) {
-    const nota=parrafo(section,'Antes de conciliar: verifica el abono en Nequi/banco y recibe el efectivo entregado por el repartidor.');
+    const nota=parrafo(section,'Conciliación física: verifica el abono en Nequi/banco y recibe el efectivo del repartidor. No vuelve a sumar la venta.');
     const msg=parrafo(section,'');
     msg.setAttribute('role','status');
-    const confirmar=boton(section,'✅ Confirmar pago conciliado');
+    const confirmar=boton(section,'✅ Conciliar efectivo / transferencia');
     confirmar.disabled=d.estadoEntrega!=='entregado';
     if(confirmar.disabled) {
       msg.textContent='Primero espera a que el domiciliario marque la entrega como entregada.';
@@ -275,7 +275,7 @@ export function mostrarCobroAdmin(padre, pedidoId, d, db) {
         await updateDoc(doc(db,'pedidos',pedidoId),{
           cobroVerificado:true,cobroVerificadoEn:serverTimestamp()
         });
-        msg.textContent='✅ Pago conciliado por administración.';
+        msg.textContent='✅ Conciliación guardada. No registra otra venta.';
       }catch(err){
         msg.textContent='No se pudo confirmar el pago. Revisa permisos y conexión.';
         confirmar.disabled=false;

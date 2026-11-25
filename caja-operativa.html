@@ -73,7 +73,7 @@ body > header.pulso-cabecera .pulso-seccion{font-size:13px;color:#e5edf8;margin:
 <header class="cabecera-fija-app pulso-cabecera"><div class="pulso-inner"><div class="pulso-marca"><img class="pulso-logo" src="Logo-Pulso-Food.png" alt="Pulso Food — Tu herramienta, tu control"><p id="panel-nombre">La Pizza de Juanca</p></div><h1 id="pulso-seccion" class="pulso-seccion">Caja</h1></div></header>
 <main>
 <div class="banner"><strong>Versión conectada a Firebase — fase de pruebas.</strong>
-Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase de pruebas: verifica los resultados antes de usar dinero real. Los cobros de mesas ya se registran al liberar la mesa; los domicilios requieren entrega y conciliación, y las ventas para llevar aún se registran manualmente. Un pedido sin cobrar no es ingreso de caja.</div>
+Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase de pruebas: verifica los resultados antes de usar dinero real. Los cobros de mesas y para llevar se registran al cobrar; los domicilios se registran al reportar el pago y completar la entrega con una sesión administrativa conectada. La conciliación física es independiente. Un pedido sin cobrar no es ingreso de caja.</div>
 <section class="card" id="vistaAcceso">
 <h2>🔐 Acceso del administrador</h2>
 <p class="pequeno">Usa la cuenta administrativa de Firebase. Ningún domiciliario debe tener acceso a esta caja.</p>
@@ -107,16 +107,17 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
 <div class="metrica"><strong id="resumenTransferencias">$0</strong><span>Transferencias netas registradas</span></div>
 <div class="metrica"><strong id="resumenSalidas">$0</strong><span>Total salidas / gastos</span></div>
 </div>
-<p class="pequeno">Movimientos registrados: <strong id="resumenMovimientos">0</strong>. Este resumen refleja solo movimientos de caja guardados, no todos los pedidos recibidos.</p>
+<p class="pequeno">Movimientos registrados: <strong id="resumenMovimientos">0</strong>. Este resumen refleja los cobros registrados y los gastos. El efectivo esperado incluye el dinero de ventas que aún tengan los domiciliarios; concílialo antes del arqueo físico. Las transferencias reportadas no son confirmación bancaria.</p>
 </section>
+<p id="estadoAutoCaja" role="status" hidden></p>
 <details class="card" id="seccionCobrosDomi">
-<summary>🛵 Cobros de domiciliarios pendientes e históricos</summary>
-<p class="pequeno">Aquí aparecen los pagos que reportan los domiciliarios, separados en efectivo y transferencia. <strong>Las cifras reportadas aún NO son ingresos del turno.</strong> Cuando tú hayas recibido el efectivo y comprobado la transferencia, concilia el pedido en el panel de pedidos y luego pulsa «Registrar cobro en caja». Solo así entra en los totales de caja, una vez por pedido.</p>
+<summary>🛵 Conciliación e historial de domiciliarios</summary>
+<p class="pequeno">Los cobros válidos del turno se registran automáticamente al completar la entrega. Los reportes anteriores al turno requieren revisión: no se incorporan automáticamente. La conciliación física y bancaria no suma otra venta. Las transferencias reportadas no equivalen a abonos bancarios comprobados.</p>
 <div class="metricaGrid">
 <div class="metrica"><strong id="domiEfectivoReportado">—</strong><span>Efectivo reportado sin registrar</span></div>
 <div class="metrica"><strong id="domiTransferenciaReportada">—</strong><span>Transferencias reportadas sin registrar</span></div>
-<div class="metrica"><strong id="domiEfectivoListo">—</strong><span>Efectivo conciliado, listo para caja</span></div>
-<div class="metrica"><strong id="domiTransferenciaLista">—</strong><span>Transferencias verificadas, listas para caja</span></div>
+<div class="metrica"><strong id="domiEfectivoListo">—</strong><span>Efectivo pendiente de conciliación</span></div>
+<div class="metrica"><strong id="domiTransferenciaLista">—</strong><span>Transferencias pendientes de verificación</span></div>
 </div>
 <p id="estadoCobrosDomi" class="estado" role="status">Esperando la conexión con Firebase...</p>
 <div id="listaCobrosDomi"></div>
@@ -202,7 +203,7 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
 <a href="caja-operativa.html#seccionMovimiento" aria-label="Registro de entradas y salidas"><span class="nav-admin-icono" aria-hidden="true">🧾</span><span>Entradas /<br>salidas</span></a>
 </nav>
 <script type="module" src="caja-operativa.js?v=pulso-20261124"></script>
-<script type="module" src="caja-cobros-domiciliarios.js"></script>
+<script type="module" src="caja-cobros-domiciliarios.js?v=20261124auto"></script>
 <script type="module" src="caja-historial-dia.js"></script>
 <script>
 (function(){
