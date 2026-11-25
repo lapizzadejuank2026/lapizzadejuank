@@ -89,6 +89,13 @@
     .rider-acciones{display:flex;align-items:center;justify-content:flex-end;gap:4px;white-space:nowrap}
     .timbre-cabecera{display:inline-flex;align-items:center;justify-content:center;flex:none;width:40px;height:40px;padding:0;background:#163b5d;color:#e5edf8;border:1px solid #49769a;border-radius:10px;font-size:21px;line-height:1}
     .timbre-cabecera[aria-pressed="true"]{background:#208b4d;border-color:#54c582;color:#fff}
+    .tonos-rider{border:1px solid #555;border-radius:12px;padding:12px;margin-top:18px}
+    .tonos-rider legend{font-weight:bold;padding:0 5px}
+    .tonos-rider .tono-fila{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0}
+    .tonos-rider label{display:flex;align-items:center;gap:8px;margin:0;min-height:44px;font-size:14px;cursor:pointer}
+    .tonos-rider input[type="radio"]{width:19px;height:19px;margin:0;flex:none;accent-color:var(--oro)}
+    .tonos-rider button{background:#163b5d;color:#fff;border:1px solid #49769a;min-height:44px;padding:8px 10px;font-size:13px;white-space:nowrap}
+    .tonos-rider .ayuda{margin:6px 0;font-size:12px}
     @media(max-width:340px){.rider-acciones{gap:2px}.timbre-cabecera{width:36px;height:36px;font-size:19px}}
   </style>
 </head>
@@ -161,6 +168,13 @@
         <button class="secundario" id="salir" type="button">Salir</button>
       </div>
       <p class="ayuda" id="detalle-efectivo">Efectivo reportado hoy y aún sin recibir por administración.</p>
+      <fieldset class="tonos-rider"><legend>🔔 Tonos de aviso</legend>
+        <p class="ayuda">Elige el sonido para nuevas ofertas. Se guarda en este dispositivo.</p>
+        <div class="tono-fila"><label><input type="radio" name="tono-rider" value="clasico" checked> Clásico</label><button type="button" data-probar-tono="clasico" aria-label="Escuchar tono clásico">▶ Escuchar</button></div>
+        <div class="tono-fila"><label><input type="radio" name="tono-rider" value="doble"> Doble alerta</label><button type="button" data-probar-tono="doble" aria-label="Escuchar doble alerta">▶ Escuchar</button></div>
+        <div class="tono-fila"><label><input type="radio" name="tono-rider" value="intenso"> Alerta intensa</label><button type="button" data-probar-tono="intenso" aria-label="Escuchar alerta intensa">▶ Escuchar</button></div>
+        <p class="ayuda" id="estado-tono-rider" role="status"></p>
+      </fieldset>
     </section>
   </section>
 </main>
@@ -199,6 +213,27 @@
   let audioOfertas=null,intervaloOfertas=null,timbrePreferido=true;
   try{timbrePreferido=localStorage.getItem('pulso-rider-timbre')!=='off';}catch(_){}
   const tonosOfertas=new Set();
+  const patronesTimbre={
+    clasico:{tipo:"sine",volumen:.18,duracion:.17,notas:[[660,0],[880,.18],[1046,.36]]},
+    doble:{tipo:"triangle",volumen:.30,duracion:.22,notas:[[880,0],[1175,.24],[880,.65],[1175,.89]]},
+    intenso:{tipo:"triangle",volumen:.42,duracion:.19,notas:[[1046,0],[1397,.21],[1046,.42],[1397,.63],[1568,.84]]}
+  };
+  let tonoElegido="clasico",audioPrueba=null,turnoPrueba=0;
+  const tonosPrueba=new Set();
+  const esTonoValido=tono=>Object.prototype.hasOwnProperty.call(patronesTimbre,tono);
+  try{const guardado=localStorage.getItem("pulso-rider-tono");if(esTonoValido(guardado))tonoElegido=guardado;}catch(_){}
+  function detenerPrueba(){turnoPrueba++;for(const tono of tonosPrueba){try{tono.stop();}catch(_){}}tonosPrueba.clear();}
+  function reproducirPatron(contexto,tono,activos){
+    const patron=patronesTimbre[tono],t=contexto.currentTime;
+    for(const [frecuencia,inicio] of patron.notas){
+      const o=contexto.createOscillator(),g=contexto.createGain();
+      o.type=patron.tipo;o.frequency.value=frecuencia;
+      g.gain.setValueAtTime(.001,t+inicio);g.gain.exponentialRampToValueAtTime(patron.volumen,t+inicio+.025);g.gain.exponentialRampToValueAtTime(.001,t+inicio+patron.duracion-.01);
+      o.connect(g);g.connect(contexto.destination);activos.add(o);
+      o.onended=()=>{activos.delete(o);o.disconnect();g.disconnect();};
+      o.start(t+inicio);o.stop(t+inicio+patron.duracion);
+    }
+  }
   function pintarTimbre(){
     const activo=timbrePreferido&&audioOfertas?.state==='running';
     $('timbre-ofertas').setAttribute('aria-pressed',String(activo));
@@ -213,15 +248,8 @@
   function sonarOferta(){
     if(!hayOfertaSonora())return;
     try{
-      const t=audioOfertas.currentTime;
-      for(const [frecuencia,inicio] of [[660,0],[880,.18],[1046,.36]]){
-        const o=audioOfertas.createOscillator(),g=audioOfertas.createGain();
-        o.type='sine';o.frequency.value=frecuencia;
-        g.gain.setValueAtTime(.001,t+inicio);g.gain.exponentialRampToValueAtTime(.18,t+inicio+.025);g.gain.exponentialRampToValueAtTime(.001,t+inicio+.16);
-        o.connect(g);g.connect(audioOfertas.destination);tonosOfertas.add(o);
-        o.onended=()=>{tonosOfertas.delete(o);o.disconnect();g.disconnect();};
-        o.start(t+inicio);o.stop(t+inicio+.17);
-      }
+      detenerPrueba();
+      reproducirPatron(audioOfertas,tonoElegido,tonosOfertas);
     }catch(error){console.warn('Timbre de ofertas:',error);}
   }
   function sincronizarTimbre(){
@@ -243,7 +271,33 @@
     try{localStorage.setItem('pulso-rider-timbre',timbrePreferido?'on':'off');}catch(_){}
     pintarTimbre();
   });
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)sincronizarTimbre();});
+  for(const radio of document.querySelectorAll('input[name="tono-rider"]')){
+    radio.checked=radio.value===tonoElegido;
+    radio.addEventListener('change',()=>{
+      if(!radio.checked||!esTonoValido(radio.value))return;
+      tonoElegido=radio.value;
+      try{localStorage.setItem('pulso-rider-tono',tonoElegido);$('estado-tono-rider').textContent='Tono guardado.';}
+      catch(_){$('estado-tono-rider').textContent='Tono elegido para esta sesión; no se pudo guardar.';}
+      if(hayOfertaSonora()){detenerTimbre();sincronizarTimbre();}
+    });
+  }
+  for(const boton of document.querySelectorAll('[data-probar-tono]'))boton.addEventListener('click',async()=>{
+    const tono=boton.dataset.probarTono,estado=$('estado-tono-rider');
+    if(!esTonoValido(tono)||!auth.currentUser||$('vista-cuenta').hidden)return;
+    if(hayOfertaSonora()){estado.textContent='Hay una oferta sonando. Escucha los tonos después de atenderla.';return;}
+    detenerPrueba();const turno=turnoPrueba;
+    try{
+      const Audio=window.AudioContext||window.webkitAudioContext;
+      if(!Audio)throw Error('Audio no disponible');
+      if(!audioPrueba||audioPrueba.state==='closed')audioPrueba=new Audio();
+      if(audioPrueba.state!=='running')await audioPrueba.resume();
+      if(turno!==turnoPrueba||!auth.currentUser||$('vista-cuenta').hidden||hayOfertaSonora())return;
+      if(audioPrueba.state!=='running')throw Error('Audio no disponible');
+      reproducirPatron(audioPrueba,tono,tonosPrueba);
+      estado.textContent='Prueba de sonido. La campana conserva su estado.';
+    }catch(error){estado.textContent='No se pudo reproducir el tono. Revisa el volumen e inténtalo de nuevo.';}
+  });
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)sincronizarTimbre();else detenerPrueba();});
   function cerrarOfertas(){detenerOfertas();detenerOfertas=()=>{};uidOfertas=null;ofertasActuales=[];ofertasConfirmadas=false;detenerTimbre();$('lista-ofertas').replaceChildren();$('estado-ofertas').textContent='Ponte Online para recibir ofertas.';}
   function mostrarOfertas(){
     const lista=$('lista-ofertas'),estado=$('estado-ofertas');lista.replaceChildren();
@@ -501,6 +555,7 @@
   }
 
   function seleccionarVista(nombre){
+    if(nombre!=='cuenta')detenerPrueba();
     if(nombre==='historial')revisarCambioDeDia();
     if(!$('portal').hidden)window.scrollTo(0,0);
     for(const n of vistas){
@@ -530,6 +585,7 @@
     $('recaudo-cabecera').hidden=!visible;
   }
   function cerrarDisponibilidad(){
+    detenerPrueba();
     cambioSesionDisponibilidad++;
     pararDisponibilidad();pararDisponibilidad=()=>{};
     uidDisponibilidad=null;onlineRider=false;estadoDisponible=false;guardandoDisponibilidad=false;
