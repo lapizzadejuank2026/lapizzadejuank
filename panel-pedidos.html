@@ -4,6 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Centro de control | Pulso Food</title>
+  <meta name="theme-color" content="#07172e">
+  <link rel="manifest" href="pulso-control.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="pulso-control-icon-192.png">
+  <link rel="apple-touch-icon" href="pulso-control-icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pulso Food">
+  <script defer src="pulso-control-instalacion.js?v=1"></script>
   <script src="config-publica.js?v=tipografia-20261124"></script>
   <style>
     * { box-sizing: border-box; }
@@ -271,6 +278,10 @@
     .inicio-sesion p{margin:0;color:#d3d3d3;font-size:13px;line-height:1.45;overflow-wrap:anywhere}
     .inicio-sesion .inicio-sesion-correo{color:#ffe3a0;font-weight:700;margin-bottom:7px}
     .inicio-sesion button{flex:0 0 auto;width:auto;padding:11px 16px;margin:0}
+    .instalar-control[hidden],.instalar-control-ayuda[hidden]{display:none!important}
+    .instalar-control{margin:14px 0;text-align:center}
+    .instalar-control button{background:#153b5d;color:#fff;border:1px solid #4b87a7;width:100%;min-height:44px}
+    .instalar-control-ayuda{font-size:13px;color:#ddd;margin:6px 0}
     @media(min-width:680px){.inicio-accesos{grid-template-columns:repeat(3,minmax(0,1fr))}}
     button:focus-visible { outline:3px solid #fff; outline-offset:2px; }
     @media(max-width:520px) { header{padding:18px 12px} h1{font-size:23px} main{padding:10px 10px 24px} .caja,.pedido{padding:15px} .tabs{gap:6px} .tabs button{font-size:14px;padding:14px 5px} }
@@ -325,6 +336,7 @@
       <button type="submit">Entrar al panel</button>
     </form>
     <p id="errorAcceso" class="alerta" role="alert"></p>
+    <div class="instalar-control" hidden><button type="button">📲 Instalar Pulso Food</button><p class="instalar-control-ayuda" role="status" hidden></p></div>
   </section>
 
   <section id="panel" hidden>
@@ -342,6 +354,7 @@
         <a class="inicio-acceso" href="#vista-configuracion"><span class="icono" aria-hidden="true">⚙️</span><strong>Configuración</strong><small>Marca, logo y bienvenida del negocio</small></a>
       </div>
       <p class="inicio-pie">La recepción continúa escuchando pedidos mientras trabajas en las secciones internas. Los cobros solo se registran desde los módulos correspondientes.</p>
+      <div class="instalar-control" hidden><button type="button">📲 Instalar Pulso Food</button><p class="instalar-control-ayuda" role="status" hidden></p></div>
       <section class="inicio-sesion" aria-labelledby="titulo-sesion-inicio">
         <div>
           <h2 id="titulo-sesion-inicio">🔐 Sesión y seguridad</h2>
