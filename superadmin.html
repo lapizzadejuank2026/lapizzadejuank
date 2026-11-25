@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Pulso Food | Superadministrador</title>
+<style>
+*{box-sizing:border-box} [hidden]{display:none!important}body{margin:0;background:#eef3f8;color:#183047;font:15px system-ui,sans-serif}header{background:#122c47;color:white;padding:18px max(18px,calc((100% - 1050px)/2));display:flex;gap:14px;align-items:center}header img{width:86px;height:58px;object-fit:contain;border-radius:10px;background:#fff}h1,h2,p{margin:0}header h1{font-size:22px}header p{color:#c6ddf3;font-size:13px}main{max-width:1050px;margin:auto;padding:18px;display:grid;gap:14px}.panel,.stat{background:white;border:1px solid #dbe4ed;border-radius:14px;padding:18px;box-shadow:0 2px 8px #10294308}.login{width:100%;max-width:420px;margin:20px auto}.note{background:#e3edf9;color:#244e77;border-radius:10px;padding:12px;font-size:13px;line-height:1.5}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}.stat strong{display:block;font-size:25px;color:#15558b;margin-top:5px}.stat span{font-size:13px;color:#506579}h2{font-size:19px;margin-bottom:12px}form,label{display:grid;gap:8px}form{gap:14px}label{font-weight:600}input,button{font:inherit;padding:12px;border-radius:9px;border:1px solid #c3cfde}input{width:100%;min-width:0}button{background:#155c9d;color:white;border:0;font-weight:650;cursor:pointer}button.secondary{background:#e7eef7;color:#154679}button:disabled{opacity:.55;cursor:not-allowed}.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.toolbar .who{flex:1;min-width:120px;overflow-wrap:anywhere}.entry{padding:14px 0;border-top:1px solid #dce4ef;display:grid;gap:7px}.entry p,small{color:#52657b;overflow-wrap:anywhere}.entry strong{overflow-wrap:anywhere}.tag{display:inline-block;font-size:12px;background:#e7eef7;border-radius:20px;padding:5px 10px;width:max-content}.tag.active{background:#d8f3e6;color:#126640}.tag.expired{background:#ffe7d9;color:#9c3908}.muted{color:#52657b}#status{min-height:22px;line-height:1.5;overflow-wrap:anywhere}.error{color:#9f2424}.ok{color:#126640}.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px}footer{padding:18px;text-align:center;color:#52657b;font-size:12px}button:focus-visible,input:focus-visible{outline:3px solid #82bfff;outline-offset:2px}dialog{width:min(540px,94vw);border:1px solid #dce4ef;border-radius:14px;padding:18px;color:#183047;max-height:80vh;overflow:auto}dialog::backdrop{background:#122c4788}
+</style></head><body>
+<header><img src="Logo-Pulso-Food.png" alt="Pulso Food"><div><h1>Superadministrador</h1><p>Tu herramienta, tu control</p></div></header>
+<main>
+<div class="note"><strong>Entorno de desarrollo · Solo consulta.</strong> Conectado exclusivamente a pulso-food-desarrollo. No procesa pagos ni registra restaurantes reales.</div>
+<section id="login" class="panel login"><h2>Ingreso del propietario</h2><form id="form"><label>Correo electrónico<input id="email" type="email" autocomplete="username" required></label><label>Contraseña<input id="password" type="password" autocomplete="current-password" required></label><button id="enter" disabled>Iniciar sesión</button></form></section>
+<p id="status" role="status" aria-live="polite">Cargando conexión…</p>
+<section id="dashboard" hidden>
+<div class="panel toolbar"><div class="who"><strong>Superadministrador autorizado</strong><br><small id="account"></small></div><button id="refresh" class="secondary">Actualizar</button><button id="logout">Cerrar sesión</button></div>
+<div class="stats" style="margin:14px 0"><div class="stat"><span>Restaurantes registrados</span><strong id="total">—</strong></div><div class="stat"><span>Suscripciones activas vigentes</span><strong id="active">—</strong></div><div class="stat"><span>Mensualidad proyectada</span><strong id="income">—</strong></div></div>
+<section class="panel"><h2>Gestión de restaurantes y suscripciones</h2><div class="features"><button disabled>Crear restaurante</button><button disabled>Asignar administrador</button><button disabled>Registrar pago</button><button disabled>Renovar suscripción</button></div><p class="muted" style="margin:12px 0">Operaciones de escritura pendientes del servidor seguro.</p><div id="restaurants"></div></section>
+</section>
+<dialog id="payments"><h2>Historial de pagos</h2><div id="paymentList"></div><button id="closePayments" class="secondary" style="margin-top:12px">Cerrar</button></dialog>
+</main><footer>Pulso Food · Desarrollo multiempresa · Primera conexión</footer>
+<script type="module">
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
+import {getAuth,onIdTokenChanged,signInWithEmailAndPassword,signOut,setPersistence,browserSessionPersistence,getIdTokenResult} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
+import {getFirestore,collection,getDocsFromServer} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+const config={apiKey:'AIzaSyDK-lFDqKMY-XeYyigkvFJe9gPc9Mgk-hQ',authDomain:'pulso-food-desarrollo.firebaseapp.com',projectId:'pulso-food-desarrollo',messagingSenderId:'198164693458',appId:'1:198164693458:web:df8ec2b01d5fe38a05480b'};
+const $=id=>document.getElementById(id);
+const app=initializeApp(config,'pulso-superadmin-desarrollo'),auth=getAuth(app),db=getFirestore(app);
+const money=n=>new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(n);
+function asDate(v){const d=v&&typeof v.toDate==='function'?v.toDate():null;return d&&Number.isFinite(d.getTime())?d:null}
+function date(v){const d=asDate(v);return d?d.toLocaleDateString('es-CO',{timeZone:'America/Bogota'}):'Sin fecha registrada'}
+function msg(t,cls=''){ $('status').textContent=t;$('status').className=cls }
+function el(tag,text,cls){const a=document.createElement(tag);a.textContent=text;if(cls)a.className=cls;return a}
+function validAmount(x){return Number.isSafeInteger(x)&&x>=0}
+let serial=0,paySerial=0,denied=false,ready=false;
+function clearData(){paySerial++;$('restaurants').replaceChildren();$('paymentList').replaceChildren();if($('payments').open)$('payments').close();for(const k of ['total','active','income'])$(k).textContent='—';$('account').textContent=''}
+function locked(){ $('dashboard').hidden=true;$('login').hidden=false;clearData() }
+function explain(e){if(e?.code==='permission-denied')return 'Firebase rechazó la consulta. Verifica el rol y las reglas publicadas.';if(e?.code==='auth/network-request-failed'||e?.code==='unavailable')return 'No hay conexión con Firebase. Intenta nuevamente.';if(e?.code==='auth/too-many-requests')return 'Demasiados intentos. Inténtalo más tarde.';if(e?.code==='auth/invalid-api-key')return 'La configuración de Firebase debe revisarse.';return 'No se pudo completar la operación. Revisa tu acceso o la conexión.'}
+async function authorize(user,force=false){const token=await getIdTokenResult(user,force);return token.claims.superadmin===true}
+async function load(user,seq){const [rs,ss]=await Promise.all([getDocsFromServer(collection(db,'restaurantes')),getDocsFromServer(collection(db,'suscripciones'))]);if(seq!==serial||auth.currentUser?.uid!==user.uid)return;
+const subscriptions=new Map(ss.docs.map(d=>[d.id,d.data()]));
+const active=ss.docs.filter(d=>{const s=d.data();const end=asDate(s.vencimiento);return s.estado==='activo'&&end&&end.getTime()>Date.now()});
+$('total').textContent=String(rs.size);$('active').textContent=String(active.length);
+$('income').textContent=active.every(d=>validAmount(d.data().precioCOP))?money(active.reduce((sum,d)=>sum+d.data().precioCOP,0)):'Por verificar';
+$('restaurants').replaceChildren();
+if(rs.empty)$('restaurants').append(el('p','Todavía no hay restaurantes registrados.','muted'));
+for(const d of rs.docs){const r=d.data(),s=subscriptions.get(d.id)||{},end=asDate(s.vencimiento);
+const status=typeof s.estado==='string'?s.estado:'Sin suscripción';
+const card=el('article','','entry');card.append(el('strong',typeof r.nombre==='string'?r.nombre:d.id),el('small','ID: '+d.id),el('span',status==='activo'&&end&&end.getTime()<=Date.now()?'Vencido':status,'tag '+(status==='activo'&&end&&end.getTime()>Date.now()?'active':'')),el('p','Plan: '+(typeof s.plan==='string'?s.plan:'Sin plan')+' · '+(validAmount(s.precioCOP)?money(s.precioCOP)+'/mes':'Sin precio')),el('small','Vencimiento: '+date(s.vencimiento)));
+const b=el('button','Ver historial de pagos','secondary');b.addEventListener('click',()=>payments(d.id,user,seq));card.append(b);$('restaurants').append(card)}
+msg('Conexión con Firestore verificada.','ok')}
+async function payments(id,user,seq){const ps=++paySerial;$('paymentList').replaceChildren(el('p','Consultando…'));$('payments').showModal();try{const result=await getDocsFromServer(collection(db,'suscripciones',id,'pagos'));if(seq!==serial||ps!==paySerial||auth.currentUser?.uid!==user.uid)return;$('paymentList').replaceChildren();if(result.empty)$('paymentList').append(el('p','No hay pagos registrados.'));for(const d of result.docs){const p=d.data();const row=el('div','','entry');row.append(el('strong',validAmount(p.montoCOP)?money(p.montoCOP):'Monto sin verificar'),el('small',date(p.fecha)),el('p','Referencia: '+(typeof p.referencia==='string'?p.referencia:d.id)));$('paymentList').append(row)}}catch(e){if(seq===serial&&ps===paySerial)$('paymentList').replaceChildren(el('p',explain(e),'error'))}}
+async function session(user){const seq=++serial;locked();$('enter').disabled=true;if(!user){$('enter').disabled=!ready;msg(denied?'Esta cuenta no tiene permisos de superadministrador.':'Ingresa con tu cuenta autorizada.',denied?'error':'');denied=false;return}msg('Verificando permiso de superadministrador…');
+try{const allowed=await authorize(user);if(seq!==serial)return;if(!allowed){denied=true;await signOut(auth);return}
+$('login').hidden=true;$('dashboard').hidden=false;$('account').textContent=user.email||'Cuenta autorizada';msg('Consultando restaurantes y suscripciones…');await load(user,seq)
+}catch(e){if(seq===serial){locked();msg(explain(e),'error');$('enter').disabled=false}}}
+$('form').addEventListener('submit',async e=>{e.preventDefault();$('enter').disabled=true;msg('Iniciando sesión…');try{await signInWithEmailAndPassword(auth,$('email').value.trim(),$('password').value)}catch(e){msg(explain(e),'error');$('enter').disabled=false}finally{$('password').value=''}});
+$('logout').addEventListener('click',async()=>{++serial;locked();try{await signOut(auth)}catch(e){msg(explain(e),'error')}});
+$('refresh').addEventListener('click',async()=>{const user=auth.currentUser;if(!user)return;try{await getIdTokenResult(user,true)}catch(e){++serial;locked();msg(explain(e),'error');$('enter').disabled=false}});
+$('closePayments').addEventListener('click',()=>{$('payments').close();paySerial++;$('paymentList').replaceChildren()});
+try{await setPersistence(auth,browserSessionPersistence);ready=true;onIdTokenChanged(auth,session,e=>{++serial;locked();msg(explain(e),'error');$('enter').disabled=false})}catch(e){msg(explain(e),'error')}
+</script></body></html>
