@@ -54,7 +54,46 @@ function validarOnline(){
   if(!usuario)throw Error('Inicia sesión como administrador.');
   if(!servidor)throw Error('Esperando confirmación del servidor. Revisa Internet o los permisos de Firebase.');
 }
+
+// Total bruto de ventas registradas hoy (hora de Colombia), independiente del turno.
+let detenerVentasDia=()=>{}, temporizadorVentasDia=null, fechaVentasDia='';
+const categoriasVenta=new Set(['venta_mesa','venta_llevar','venta_domicilio']);
+function rangoVentasDia(ahora=new Date()){
+  const dia=new Date(ahora.getTime()-5*3600000).toISOString().slice(0,10);
+  const inicio=new Date(dia+'T00:00:00-05:00');
+  return {dia,inicio,fin:new Date(inicio.getTime()+86400000)};
+}
+function totalVentasDia(movs){
+  return movs.reduce((sum,m)=>sum+(m.tipo==='ingreso'&&categoriasVenta.has(m.categoria)?enteroRegistro(m.total):0),0);
+}
+function limpiarVentasDia(){
+  detenerVentasDia();detenerVentasDia=()=>{};
+  if(temporizadorVentasDia!==null)clearInterval(temporizadorVentasDia);
+  temporizadorVentasDia=null;fechaVentasDia='';
+  const el=$('resumenVentasDia');if(el)el.textContent='—';
+}
+function escucharVentasDia(){
+  const el=$('resumenVentasDia'),nota=$('notaVentasDia');
+  if(!el||!nota||!usuario)return;
+  const {dia,inicio,fin}=rangoVentasDia();
+  if(fechaVentasDia===dia)return;
+  detenerVentasDia();fechaVentasDia=dia;
+  el.textContent='—';nota.textContent='Consultando ventas del día…';
+  detenerVentasDia=onSnapshot(query(collection(db,'movimientosCaja'),where('creadoEn','>=',inicio),where('creadoEn','<',fin)),{includeMetadataChanges:true},snap=>{
+    if(fechaVentasDia!==dia)return;
+    if(snap.metadata.fromCache||snap.metadata.hasPendingWrites){
+      el.textContent='—';nota.textContent='Esperando confirmación de Firebase…';return;
+    }
+    el.textContent=pesos(totalVentasDia(snap.docs.map(d=>d.data())));
+    nota.textContent='Efectivo + transferencias · todos los turnos de hoy';
+  },error=>{
+    if(fechaVentasDia!==dia)return;
+    el.textContent='—';nota.textContent='No se pudieron consultar ventas ('+(error.code||'error')+').';
+  });
+}
+
 function limpiarSubs(){
+  limpiarVentasDia();
   detenerControl();detenerTurnos();detenerMovimientos();
   detenerControl=()=>{};detenerTurnos=()=>{};detenerMovimientos=()=>{};
   servidor=false;control=null;turno=null;turnos=[];movimientos=[];turnoEscuchado='';
@@ -176,6 +215,7 @@ onAuthStateChanged(auth,user=>{
   if(!user){aviso('Inicia sesión para consultar los turnos.');return;}
   $('usuarioCaja').textContent=user.email||'Administrador';
   aviso('Conectando con Firebase...');escucharTodo();
+  escucharVentasDia();temporizadorVentasDia=setInterval(escucharVentasDia,15000);
 });
 const refTurno=id=>doc(db,'cajaTurnos',id);
 $('formApertura').addEventListener('submit',async e=>{
