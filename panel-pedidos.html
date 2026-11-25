@@ -2048,6 +2048,19 @@
         selector.append(vacio);
         const candidatos = personal.filter(p => p.rol === 'domiciliario' && p.activo !== false && !!p.authUid);
         const disponibles = candidatos.filter(estadoAsignable);
+        const ofertaAbierta=d.ofertaActiva===true;
+        const online=candidatos.filter(p=>estadoRiders.get(p.authUid)==='online');
+        const estadoReparto=String(d.estadoEntrega||'pendiente').toLowerCase();
+        const puedeReasignar=['pendiente','asignado'].includes(estadoReparto) && !d.cobroReportado;
+        const ofertable=!d.domiciliarioUid&&!d.domiciliarioId&&!d.cobroReportado&&puedeReasignar&&
+          ['nuevo','recibido'].includes(String(d.estado||'nuevo').toLowerCase());
+        let valorTodos='__pulso_todos_online__';
+        while(candidatos.some(p=>p.id===valorTodos)||d.domiciliarioId===valorTodos)valorTodos+='_';
+        const opcionTodos=document.createElement('option');
+        opcionTodos.value=valorTodos;
+        opcionTodos.textContent=ofertaAbierta?'📣 Enviar a todos · Oferta activa':'📣 Enviar a todos ('+online.length+' Online)';
+        opcionTodos.disabled=!ofertaAbierta&&(!personalDisponible||!online.length||!ofertable);
+        selector.append(opcionTodos);
         for (const repartidor of candidatos) {
           const opcion = document.createElement('option');
           opcion.value = repartidor.id;
@@ -2064,24 +2077,30 @@
           opcion.disabled = true;
           selector.append(opcion);
         }
-        selector.value = d.domiciliarioId || '';
+        selector.value = ofertaAbierta ? valorTodos : (d.domiciliarioId || '');
         const estadoAsignacion = document.createElement('p');
         estadoAsignacion.className = 'estado-asignacion';
         estadoAsignacion.setAttribute('role','status');
         estadoAsignacion.textContent = d.domiciliarioId
           ? 'Asignado a: ' + (d.domiciliarioNombre || 'domiciliario registrado')
-          : 'Pendiente de asignación';
+          : ofertaAbierta?'📣 Oferta abierta · esperando aceptación':'Pendiente de asignación';
         const botonAsignar = document.createElement('button');
         botonAsignar.type = 'button';
-        botonAsignar.textContent = '💾 Guardar asignación';
-        // Evitar reiniciar una entrega aceptada o un cobro ya reportado.
-        const estadoReparto=String(d.estadoEntrega||'pendiente').toLowerCase();
-        const puedeReasignar=['pendiente','asignado'].includes(estadoReparto) && !d.cobroReportado;
-        botonAsignar.disabled = !personalDisponible || !disponibles.length || !puedeReasignar;
+        let guardandoAsignacion=false;
+        function actualizarBotonAsignar(){
+          const todos=selector.value===valorTodos;
+          botonAsignar.textContent=todos?(ofertaAbierta?'Cancelar oferta a todos':'📣 Enviar a todos'):'💾 Guardar asignación';
+          botonAsignar.disabled=guardandoAsignacion||(todos?opcionTodos.disabled:(!personalDisponible||!puedeReasignar||!disponibles.some(p=>p.id===selector.value)));
+          selector.disabled=guardandoAsignacion;
+        }
+        selector.addEventListener('change',actualizarBotonAsignar);
+        actualizarBotonAsignar();
         if(!puedeReasignar) {
           estadoAsignacion.textContent += ' · Reasignación bloqueada: entrega en curso o finalizada.';
         }
         botonAsignar.addEventListener('click', async()=>{
+          if(guardandoAsignacion)return;
+          if(selector.value===valorTodos){await gestionarOferta();return;}
           const repartidor = disponibles.find(p => p.id === selector.value);
           if (!puedeReasignar) {
             estadoAsignacion.textContent = 'No se puede reasignar una entrega en curso o cobrada.';
@@ -2091,14 +2110,14 @@
             estadoAsignacion.textContent = 'Selecciona un domiciliario activo.';
             return;
           }
-          botonAsignar.disabled = true;
+          guardandoAsignacion=true;actualizarBotonAsignar();
           estadoAsignacion.textContent = 'Guardando...';
           try {
             const refPedido=doc(db,'pedidos',id);
             const refPersona=doc(db,'personal',repartidor.id);
             const refEstado=doc(db,'disponibilidadRiders',repartidor.authUid);
             const sinReglas=estadoRiders.get(repartidor.authUid)==='sin-reglas';
-            if(sinReglas&&!confirm('La disponibilidad Rider todavía no está habilitada en Firebase. ¿Asignar manualmente sin verificar Online?')){botonAsignar.disabled=false;estadoAsignacion.textContent='Asignación cancelada.';return;}
+            if(sinReglas&&!confirm('La disponibilidad Rider todavía no está habilitada en Firebase. ¿Asignar manualmente sin verificar Online?')){estadoAsignacion.textContent='Asignación cancelada.';return;}
             await runTransaction(db,async tx=>{
               const pedidoActual=await tx.get(refPedido);
               const personaActual=await tx.get(refPersona);
@@ -2129,8 +2148,7 @@
             estadoAsignacion.textContent = error?.code === 'permission-denied'
               ? 'Firebase no permite asignar el pedido. Revisa las reglas de Firestore.'
               : (error?.code?'No se pudo guardar la asignación. Revisa la conexión.':error.message);
-            botonAsignar.disabled = false;
-          }
+          }finally{guardandoAsignacion=false;actualizarBotonAsignar();}
         });
         asignacion.append(etiqueta,selector,estadoAsignacion,botonAsignar);
         if (d.domiciliarioId) {
@@ -2138,21 +2156,10 @@
         }
         mostrarCobroAdmin(asignacion,id,d,db);
         // Oferta sin datos personales. El primer Rider que confirme gana en una transacción.
-        const botonTodos=document.createElement('button');
-        botonTodos.type='button';botonTodos.className='secundario';
-        const ofertaAbierta=d.ofertaActiva===true;
-        const online=candidatos.filter(p=>estadoRiders.get(p.authUid)==='online');
-        const ofertable=!d.domiciliarioUid&&!d.domiciliarioId&&!d.cobroReportado&&puedeReasignar&&
-          ['nuevo','recibido'].includes(String(d.estado||'nuevo').toLowerCase());
-        botonTodos.disabled=!ofertaAbierta&&(!personalDisponible||!online.length||!ofertable);
-        botonTodos.textContent=ofertaAbierta?'Cancelar oferta a todos':'📣 Enviar a todos';
-        const avisoTodos=document.createElement('p');avisoTodos.className='ayuda';avisoTodos.setAttribute('role','status');
-        avisoTodos.textContent=ofertaAbierta?'Oferta abierta · esperando que un Rider acepte.':
-          online.length+' domiciliario(s) Online. El primero que acepte recibe la entrega.';
-        botonTodos.addEventListener('click',async()=>{
-          if(!auth.currentUser)return;
-          botonTodos.disabled=true;
-          avisoTodos.textContent=ofertaAbierta?'Cancelando oferta…':'Enviando oferta…';
+        async function gestionarOferta(){
+          if(!auth.currentUser||guardandoAsignacion||opcionTodos.disabled)return;
+          guardandoAsignacion=true;actualizarBotonAsignar();
+          estadoAsignacion.textContent=ofertaAbierta?'Cancelando oferta…':'Enviando oferta…';
           try{
             const refPedido=doc(db,'pedidos',id),refOferta=doc(db,'ofertasDomicilio',id);
             await runTransaction(db,async tx=>{
@@ -2178,13 +2185,11 @@
                 creadaEn:serverTimestamp()});
               tx.update(refPedido,{ofertaActiva:true});
             });
-            avisoTodos.textContent=ofertaAbierta?'Oferta cancelada.':'✅ Oferta enviada.';
+            estadoAsignacion.textContent=ofertaAbierta?'Oferta cancelada.':'✅ Oferta enviada.';
           }catch(error){
-            avisoTodos.textContent=error?.code==='permission-denied'?'Falta habilitar las reglas de ofertas en Firebase.':error.message||'No se pudo guardar la oferta.';
-            botonTodos.disabled=false;
-          }
-        });
-        asignacion.append(botonTodos,avisoTodos);
+            estadoAsignacion.textContent=error?.code==='permission-denied'?'Firebase no permite gestionar la oferta. Revisa las reglas y el acceso de los Riders.':error.message||'No se pudo guardar la oferta.';
+          }finally{guardandoAsignacion=false;actualizarBotonAsignar();}
+        }
         if (!personalDisponible || !disponibles.length) {
           const ayuda = document.createElement('p');
           ayuda.className = 'ayuda';
