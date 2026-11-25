@@ -138,7 +138,8 @@
       <p id="estado-entregas" class="estado" role="status">Conectando...</p>
       <div id="lista-entregas"><div class="vacio">Aún no tienes entregas asignadas.</div></div>
       <h2 style="margin-top:22px">📣 Ofertas para todos</h2>
-      <p class="ayuda">La función para ofrecer un pedido a todos y adjudicarlo al primero que acepte se habilitará posteriormente.</p>
+      <p id="estado-ofertas" class="ayuda" role="status">Ponte Online para recibir ofertas.</p>
+      <div id="lista-ofertas"></div>
     </section>
     <section class="caja" id="vista-historial" hidden>
       <h2>🕘 Mi historial de hoy</h2>
@@ -189,6 +190,50 @@
   const vistas=['pedidos','historial','cuenta'];
   let detenerVerificacion=()=>{};
   let detenerPedidos=()=>{};
+  let detenerOfertas=()=>{},uidOfertas=null,ofertasActuales=[],aceptandoOferta=false,ofertasConfirmadas=false;
+  function cerrarOfertas(){detenerOfertas();detenerOfertas=()=>{};uidOfertas=null;ofertasActuales=[];ofertasConfirmadas=false;$('lista-ofertas').replaceChildren();$('estado-ofertas').textContent='Ponte Online para recibir ofertas.';}
+  function mostrarOfertas(){
+    const lista=$('lista-ofertas'),estado=$('estado-ofertas');lista.replaceChildren();
+    if(!onlineRider){estado.textContent='Ponte Online para recibir ofertas.';return;}
+    if(!ofertasConfirmadas)return;
+    estado.textContent=ofertasActuales.length?'Ofertas disponibles: '+ofertasActuales.length:'No hay ofertas disponibles.';
+    for(const oferta of ofertasActuales){
+      const card=document.createElement('article');card.className='caja';
+      texto(card,'🛵 Pedido #'+oferta.id.slice(0,8).toUpperCase(),'etiqueta');
+      texto(card,'Municipio: '+(oferta.d.municipio||'Por confirmar'));
+      texto(card,'Los datos del cliente estarán disponibles al aceptar.','ayuda');
+      const b=document.createElement('button');b.type='button';b.className='principal';b.textContent='✅ Aceptar oferta';b.disabled=aceptandoOferta;
+      b.addEventListener('click',()=>aceptarOferta(oferta.id));card.append(b);lista.append(card);
+    }
+  }
+  async function aceptarOferta(id){
+    const user=auth.currentUser;if(!user||!onlineRider||aceptandoOferta)return;
+    aceptandoOferta=true;mostrarOfertas();$('estado-ofertas').textContent='Confirmando aceptación…';
+    try{
+      await runTransaction(db,async tx=>{
+        const refOferta=doc(db,'ofertasDomicilio',id),refPedido=doc(db,'pedidos',id);
+        const oferta=await tx.get(refOferta),acceso=await tx.get(doc(db,'accesosDomiciliarios',user.uid)),disponibilidad=await tx.get(doc(db,'disponibilidadRiders',user.uid));
+        const o=oferta.data(),a=acceso.data();
+        if(!o||o.estado!=='abierta'||!o.uids.includes(user.uid))throw Error('La oferta ya no está disponible.');
+        if(a?.activo!==true||a.rol!=='domiciliario'||!a.personalId||typeof a.nombre!=='string'||disponibilidad.data()?.online!==true)throw Error('Debes estar Online y autorizado.');
+        tx.update(refOferta,{estado:'aceptada',ganadorUid:user.uid,cierreEn:serverTimestamp()});
+        tx.update(refPedido,{ofertaActiva:false,domiciliarioUid:user.uid,domiciliarioId:a.personalId,domiciliarioNombre:a.nombre,estadoEntrega:'aceptado',domiciliarioAsignadoEn:serverTimestamp(),entregaActualizadaEn:serverTimestamp()});
+      });
+      if(auth.currentUser?.uid===user.uid)$('estado-ofertas').textContent='✅ Entrega aceptada. Consulta Mis entregas asignadas.';
+    }catch(error){if(auth.currentUser?.uid===user.uid)$('estado-ofertas').textContent=error?.code==='permission-denied'?'No se pudo aceptar: la oferta cambió o faltan permisos.':error.message||'No se pudo aceptar la oferta.';}
+    finally{aceptandoOferta=false;for(const b of $('lista-ofertas').querySelectorAll('button'))b.disabled=false;}
+  }
+  function sincronizarOfertas(){
+    const user=auth.currentUser;
+    if(!user||!onlineRider||!estadoDisponible){if(uidOfertas)cerrarOfertas();return;}
+    if(uidOfertas===user.uid)return;
+    cerrarOfertas();uidOfertas=user.uid;$('estado-ofertas').textContent='Buscando ofertas…';
+    detenerOfertas=onSnapshot(query(collection(db,'ofertasDomicilio'),where('uids','array-contains',user.uid)),{includeMetadataChanges:true},snap=>{
+      if(uidOfertas!==user.uid||!onlineRider)return;
+      if(snap.metadata.fromCache||snap.metadata.hasPendingWrites){ofertasConfirmadas=false;$('lista-ofertas').replaceChildren();$('estado-ofertas').textContent='Confirmando ofertas con el servidor…';return;}
+      ofertasConfirmadas=true;ofertasActuales=snap.docs.filter(x=>x.data().estado==='abierta').map(x=>({id:x.id,d:x.data()}));mostrarOfertas();
+    },error=>{if(uidOfertas!==user.uid)return;ofertasConfirmadas=false;$('lista-ofertas').replaceChildren();$('estado-ofertas').textContent=error?.code==='permission-denied'?'Ofertas pendientes de habilitar en Firebase.':'No se pudieron consultar las ofertas. Vuelve a entrar a Rider.';});
+  }
   let pedidosPropios=[];
   let escuchandoPedidos=false;
   let mensajeBloqueo='';
@@ -422,6 +467,7 @@
     $('texto-online').textContent=onlineRider?'Online':'Offline';
     $('estado-disponibilidad').textContent=mensaje;
     $('estado-disponibilidad').hidden=!mensaje;
+    sincronizarOfertas();
   }
   function mostrarCabeceraSesion(visible){
     $('nav-rider').hidden=!visible;
