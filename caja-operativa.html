@@ -46,7 +46,6 @@ details.detallesInternos{margin-top:14px;padding:12px;border:1px solid var(--lin
 details.detallesInternos>summary{font-size:16px}
 details.card[open]>summary{margin-bottom:12px}
 .caja-info-tecnica{padding:10px 14px;margin-top:12px}.caja-info-tecnica>summary{font-size:13px;color:#b8c1cc;font-weight:normal;padding:2px 0}.caja-info-tecnica .banner{font-size:13px;line-height:1.5}
-.caja-conexion.conexion-al-pie{padding:8px 12px;margin:12px 0}.caja-conexion.conexion-al-pie #conexion{font-size:12px;color:#b8c1cc;padding:0;min-height:0;margin:0}
 [hidden]{display:none!important}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid white;outline-offset:3px}
 @media(max-width:640px){.metricaGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.fila2{grid-template-columns:1fr}header{padding:17px 10px}h1{font-size:24px}}
@@ -229,9 +228,8 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
   const estadoConexion=document.getElementById('conexion');
   function ubicarConexion(){
     const conectado=!estadoConexion.classList.contains('error')&&estadoConexion.textContent.trim().startsWith('✅ Conectado a Firebase.');
-    panelConexion.classList.toggle('conexion-al-pie',conectado);
-    if(conectado){if(principal.lastElementChild!==panelConexion)principal.append(panelConexion);}
-    else if(principal.firstElementChild!==panelConexion)principal.prepend(panelConexion);
+    // Ocultar únicamente la confirmación de conexión normal; conservar avisos y errores.
+    panelConexion.hidden=conectado;
   }
   new MutationObserver(ubicarConexion).observe(estadoConexion,{childList:true,characterData:true,subtree:true,attributes:true,attributeFilter:['class']});
   ubicarConexion();
