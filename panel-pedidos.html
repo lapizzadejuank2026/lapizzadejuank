@@ -2100,7 +2100,14 @@
                 const disponibilidad=await tx.get(refEstado);
                 if(!disponibilidad.exists()||disponibilidad.data().online!==true)throw Error('El domiciliario está Offline. Selecciona otro.');
               }
+              if(actual.ofertaActiva===true){
+                const refOferta=doc(db,'ofertasDomicilio',id);
+                const oferta=await tx.get(refOferta);
+                if(!oferta.exists()||oferta.data().estado!=='abierta')throw Error('La oferta cambió. Actualiza el pedido.');
+                tx.update(refOferta,{estado:'cancelada',cierreEn:serverTimestamp()});
+              }
               tx.update(refPedido,{
+                ...(actual.ofertaActiva===true?{ofertaActiva:false}:{}),
                 domiciliarioId:repartidor.id,
                 domiciliarioUid:repartidor.authUid,
                 domiciliarioNombre:persona.nombre||repartidor.nombre,
@@ -2121,16 +2128,53 @@
           asignacion.append(dibujarSeguimiento(d));
         }
         mostrarCobroAdmin(asignacion,id,d,db);
-        // Función preparada visualmente. No enviar ofertas hasta autorizar a cada
-        // domiciliario y garantizar una única aceptación por pedido en Firebase.
-        const botonTodos = document.createElement('button');
-        botonTodos.type = 'button';
-        botonTodos.className = 'secundario';
-        botonTodos.disabled = true;
-        botonTodos.textContent = '📣 Enviar a todos (próximamente)';
-        const avisoTodos = document.createElement('p');
-        avisoTodos.className = 'ayuda';
-        avisoTodos.textContent = 'Próximamente: ofrecer a todos los domiciliarios activos. El primero que acepte se lo queda y la oferta se cierra para los demás.';
+        // Oferta sin datos personales. El primer Rider que confirme gana en una transacción.
+        const botonTodos=document.createElement('button');
+        botonTodos.type='button';botonTodos.className='secundario';
+        const ofertaAbierta=d.ofertaActiva===true;
+        const online=candidatos.filter(p=>estadoRiders.get(p.authUid)==='online');
+        const ofertable=!d.domiciliarioUid&&!d.domiciliarioId&&!d.cobroReportado&&puedeReasignar&&
+          ['nuevo','recibido'].includes(String(d.estado||'nuevo').toLowerCase());
+        botonTodos.disabled=!ofertaAbierta&&(!personalDisponible||!online.length||!ofertable);
+        botonTodos.textContent=ofertaAbierta?'Cancelar oferta a todos':'📣 Enviar a todos';
+        const avisoTodos=document.createElement('p');avisoTodos.className='ayuda';avisoTodos.setAttribute('role','status');
+        avisoTodos.textContent=ofertaAbierta?'Oferta abierta · esperando que un Rider acepte.':
+          online.length+' domiciliario(s) Online. El primero que acepte recibe la entrega.';
+        botonTodos.addEventListener('click',async()=>{
+          if(!auth.currentUser)return;
+          botonTodos.disabled=true;
+          avisoTodos.textContent=ofertaAbierta?'Cancelando oferta…':'Enviando oferta…';
+          try{
+            const refPedido=doc(db,'pedidos',id),refOferta=doc(db,'ofertasDomicilio',id);
+            await runTransaction(db,async tx=>{
+              const pedido=await tx.get(refPedido),actual=pedido.data();
+              if(!actual)throw Error('El pedido ya no existe.');
+              if(ofertaAbierta){
+                const oferta=await tx.get(refOferta);
+                if(actual.ofertaActiva!==true||!oferta.exists()||oferta.data().estado!=='abierta')throw Error('La oferta ya cambió.');
+                tx.update(refOferta,{estado:'cancelada',cierreEn:serverTimestamp()});
+                tx.update(refPedido,{ofertaActiva:false});return;
+              }
+              if(actual.ofertaActiva===true||actual.domiciliarioUid||actual.domiciliarioId||actual.cobroReportado||
+                 !['nuevo','recibido'].includes(String(actual.estado||'nuevo').toLowerCase())||
+                 !['pendiente','asignado'].includes(String(actual.estadoEntrega||'pendiente').toLowerCase()))throw Error('El pedido ya no está disponible.');
+              const uids=[];
+              for(const p of online){
+                const estado=await tx.get(doc(db,'disponibilidadRiders',p.authUid));
+                const acceso=await tx.get(doc(db,'accesosDomiciliarios',p.authUid));
+                if(estado.data()?.online===true&&acceso.data()?.activo===true&&acceso.data()?.rol==='domiciliario'&&acceso.data()?.personalId===p.id&&!uids.includes(p.authUid))uids.push(p.authUid);
+              }
+              if(!uids.length)throw Error('No hay domiciliarios Online autorizados.');
+              tx.set(refOferta,{estado:'abierta',uids,municipio:String(actual.municipio||'').slice(0,80),
+                creadaEn:serverTimestamp()});
+              tx.update(refPedido,{ofertaActiva:true});
+            });
+            avisoTodos.textContent=ofertaAbierta?'Oferta cancelada.':'✅ Oferta enviada.';
+          }catch(error){
+            avisoTodos.textContent=error?.code==='permission-denied'?'Falta habilitar las reglas de ofertas en Firebase.':error.message||'No se pudo guardar la oferta.';
+            botonTodos.disabled=false;
+          }
+        });
         asignacion.append(botonTodos,avisoTodos);
         if (!personalDisponible || !disponibles.length) {
           const ayuda = document.createElement('p');
