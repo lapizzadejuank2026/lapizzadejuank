@@ -11,13 +11,25 @@
   modo.addEventListener?.('change',pintar);
   for(const g of grupos)g.querySelector('button').addEventListener('click',async()=>{
     if(esInstalada())return;
+    // Si Chrome ofrece la API de instalación directa, solicitar el manifest de recepción.
+    // Mantener el botón disponible si el navegador no admite o cancela la instalación.
+    if(typeof navigator.install==='function'){
+      try{
+        await navigator.install();
+        ayuda('Chrome procesó la solicitud. Comprueba que el icono Pulso Food abre recepción.');
+      }catch(e){
+        if(e.name==='AbortError'){ayuda('La instalación no se completó. Puedes intentarlo de nuevo.');}
+        else{ayuda('No se pudo iniciar la instalación directa. Si Chrome abre Pizza Juan K, su instalación anterior puede estar abarcando recepción. Prueba reinstalar la aplicación de clientes con su configuración actual. No borres los datos de Chrome.');}
+      }
+      return;
+    }
     if(evento){
       const e=evento;evento=null;
       try{await e.prompt();const r=await e.userChoice;if(r.outcome==='dismissed')ayuda('Puedes instalarla después desde el menú de Chrome.');}
       catch(_){ayuda('En Chrome abre el menú ⋮ y elige Instalar aplicación.');}
     }else{
       const ios=/iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-      ayuda(ios?'En Safari toca Compartir y Añadir a pantalla de inicio.':'En Chrome toca ⋮ y elige Instalar aplicación o Añadir a pantalla de inicio.');
+      ayuda(ios?'En Safari toca Compartir y Añadir a pantalla de inicio.':'En Chrome toca ⋮ y elige Instalar aplicación o Añadir a pantalla de inicio. Si solo aparece Abrir aplicación y abre Pizza Juan K, puede ser necesario reinstalar la aplicación de clientes con su configuración actual. No borres los datos de Chrome.');
     }
   });
   // El editor es parte del centro de trabajo. Rider y la vista previa pública siguen separados.
