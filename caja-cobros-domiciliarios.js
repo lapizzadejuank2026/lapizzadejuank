@@ -81,7 +81,8 @@ function dibujar(){
   const pendientes=reportados.filter(p=>!p.d.cajaMovimientoId);
   const anotados=reportados.filter(p=>p.d.cajaMovimientoId);
   const ordenados=[...pendientes.sort((a,b)=>numFecha(b.d.cobroReportadoEn)-numFecha(a.d.cobroReportadoEn)),
-    ...anotados.sort((a,b)=>numFecha(b.d.cajaRegistradoEn)-numFecha(a.d.cajaRegistradoEn)).slice(0,12)];
+    ...anotados.filter(p=>p.d.cobroVerificado!==true).sort((a,b)=>numFecha(b.d.cajaRegistradoEn)-numFecha(a.d.cajaRegistradoEn)),
+    ...anotados.filter(p=>p.d.cobroVerificado===true).sort((a,b)=>numFecha(b.d.cajaRegistradoEn)-numFecha(a.d.cajaRegistradoEn)).slice(0,12)];
   actualizarEstado(errorRegistro || (cajaAbierta
     ? '✅ Cobros sincronizados. Los del turno se registran automáticamente.'
     : 'ℹ️ Los cobros se pueden revisar, pero no registrar hasta que exista una caja abierta.'),!!errorRegistro);
