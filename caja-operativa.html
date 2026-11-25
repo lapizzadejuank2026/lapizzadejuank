@@ -119,7 +119,7 @@ body > header.pulso-cabecera .pulso-turno:empty{display:none}
 
 <section class="card" id="seccionMovimiento" hidden>
 <h2>➕ Registrar entrada o salida</h2>
-<p class="pequeno">Para ventas, registra el cobro una sola vez usando el número del pedido o de la cuenta. No registres pedidos que todavía no se han pagado.</p>
+<p class="pequeno">Registra aquí otros ingresos, gastos, pagos a personal y retiros. Los cobros de ventas se gestionan desde sus respectivos módulos.</p>
 <form id="formMovimientoCaja">
 <div class="fila2">
 <label>Tipo de movimiento<select id="categoriaCaja">
@@ -135,7 +135,7 @@ body > header.pulso-cabecera .pulso-turno:empty{display:none}
 <p class="pequeno" id="tipoDescripcion"></p>
 <div class="fila2">
 <label>Valor total (COP)<input id="montoCaja" type="number" min="1" max="100000000" step="1" inputmode="numeric" required></label>
-<label id="labelReferencia">Referencia de la operación<input id="referenciaCaja" maxlength="80" placeholder="ID del pedido o cuenta"></label>
+<label id="labelReferencia">Referencia de la operación<input id="referenciaCaja" maxlength="80" placeholder="Referencia del movimiento"></label>
 </div>
 <p class="pequeno" id="notaReferencia"></p>
 <div class="fila2">
@@ -146,7 +146,7 @@ body > header.pulso-cabecera .pulso-turno:empty{display:none}
 <div class="verificado" id="verificarTransferenciaCaja" hidden>
 <label><input type="checkbox" id="confirmoTransferenciaCaja">He comprobado personalmente que la transferencia llegó a la cuenta del negocio.</label>
 </div>
-<label>Concepto o detalle<input id="conceptoCaja" maxlength="140" placeholder="Ejemplo: venta pedido ABC12345" required></label>
+<label>Concepto o detalle<input id="conceptoCaja" maxlength="140" placeholder="Ejemplo: compra de insumos" required></label>
 <button type="submit" id="guardarMovimiento" disabled>💾 Registrar movimiento</button>
 </form>
 <p id="estadoMovimientoCaja" class="estado" role="status"></p>
