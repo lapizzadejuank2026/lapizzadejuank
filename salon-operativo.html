@@ -25,6 +25,7 @@ label{display:block;font-weight:bold;margin:10px 0}
 label input[type=checkbox]{width:auto;margin:0 8px 0 0}
 .mensaje{font-size:15px;color:#fada8f;min-height:15px}
 .mensaje.error{color:#ffaaa3}
+.informacion-tecnica-salon{padding:10px 14px}.informacion-tecnica-salon>summary{cursor:pointer;font-size:13px;color:#b8c1cc}.informacion-tecnica-salon .nota{font-size:13px}
 .pequeno{font-size:13px;color:#ddd}
 .salas-salon{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.salas-salon button{width:auto;flex:1 1 110px;min-height:44px;padding:10px 8px}.salas-salon button[aria-pressed='true']{background:#f6bd42;color:#18130b;border-color:#f6bd42}
 .mesas{display:grid;grid-template-columns:repeat(auto-fit,minmax(123px,1fr));gap:10px;margin:14px 0}
@@ -83,7 +84,6 @@ body > header.pulso-cabecera .pulso-seccion{font-size:13px;color:#e5edf8;margin:
 </head>
 <body><header class="cabecera-fija-app pulso-cabecera"><div class="pulso-inner"><div class="pulso-marca"><img class="pulso-logo" src="Logo-Pulso-Food.png" alt="Pulso Food — Tu herramienta, tu control"><p id="panel-nombre">La Pizza de Juanca</p></div><h1 id="pulso-seccion" class="pulso-seccion">Mesas y barra</h1></div></header>
 <main>
-<p class="nota"><strong>Fase de pruebas con Firebase.</strong> Aquí las comandas y los pagos sí se enviarán a Firestore cuando estén autorizadas las reglas. Todavía no está validado para ventas reales. Prueba con valores ficticios, revisa los permisos y no mezcles los movimientos de prueba con las ventas del negocio.</p>
 <section id="vistaLogin" class="caja">
 <h2>🔒 Ingreso del administrador</h2>
 <p>El salón conectado requiere el usuario administrador. El personal no autorizado no podrá modificar cuentas ni caja.</p>
@@ -93,7 +93,7 @@ body > header.pulso-cabecera .pulso-seccion{font-size:13px;color:#e5edf8;margin:
 <button type="submit" id="entrar">Entrar a mesas</button>
 </form><p id="estadoLogin" class="mensaje" role="status"></p></section>
 <section id="pantallaAdmin" hidden>
-<div class="caja"><div class="fila" hidden aria-hidden="true"><div>Sesión: <strong id="usuario"></strong></div><button class="secundario" type="button" id="salir" hidden aria-hidden="true" tabindex="-1">Cerrar sesión</button></div>
+<div class="caja" id="panelMensajeSalon" hidden><div class="fila" hidden aria-hidden="true"><div>Sesión: <strong id="usuario"></strong></div><button class="secundario" type="button" id="salir" hidden aria-hidden="true" tabindex="-1">Cerrar sesión</button></div>
 <p id="mensaje" class="mensaje" role="status"></p></div>
 <section id="vistaMesas">
  <div class="caja"><h2>🪑 Distribución del salón</h2>
@@ -174,7 +174,22 @@ body > header.pulso-cabecera .pulso-seccion{font-size:13px;color:#e5edf8;margin:
 <p id="errorCobro" class="mensaje" role="status"></p>
 <div class="fila"><button id="cancelarCobro" class="secundario" type="button">Cancelar</button><button id="confirmarCobro" type="button">✅ Cobrar y liberar mesa</button></div>
 </dialog>
+<details class="caja informacion-tecnica-salon"><summary>Información técnica de mesas</summary>
+<p class="nota"><strong>Fase de pruebas con Firebase.</strong> Aquí las comandas y los pagos sí se enviarán a Firestore cuando estén autorizadas las reglas. Todavía no está validado para ventas reales. Prueba con valores ficticios, revisa los permisos y no mezcles los movimientos de prueba con las ventas del negocio.</p>
+</details>
 </main>
+<script>
+(function(){
+ const panel=document.getElementById("panelMensajeSalon");
+ const estado=document.getElementById("mensaje");
+ function actualizarAviso(){
+  const texto=estado.textContent.trim();
+  panel.hidden=!texto||(!estado.classList.contains("error")&&texto==="✅ Mesas sincronizadas con Firebase.");
+ }
+ new MutationObserver(actualizarAviso).observe(estado,{childList:true,characterData:true,subtree:true,attributes:true,attributeFilter:["class"]});
+ actualizarAviso();
+})();
+</script>
 <script src="impresion-ticket.js"></script>
 <script type="module" src="salon-operativo.js?v=salas-20261124"></script>
 <nav class="nav-admin-fija" aria-label="Navegación fija del administrador">
