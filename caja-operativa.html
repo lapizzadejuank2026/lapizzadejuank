@@ -45,6 +45,7 @@ details>summary:focus-visible{outline:3px solid white;outline-offset:3px}
 details.detallesInternos{margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:10px}
 details.detallesInternos>summary{font-size:16px}
 details.card[open]>summary{margin-bottom:12px}
+.caja-info-tecnica{padding:10px 14px;margin-top:12px}.caja-info-tecnica>summary{font-size:13px;color:#b8c1cc;font-weight:normal;padding:2px 0}.caja-info-tecnica .banner{font-size:13px;line-height:1.5}
 [hidden]{display:none!important}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid white;outline-offset:3px}
 @media(max-width:640px){.metricaGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.fila2{grid-template-columns:1fr}header{padding:17px 10px}h1{font-size:24px}}
@@ -79,8 +80,7 @@ body > header.pulso-cabecera .pulso-turno:empty{display:none}
 <body>
 <header class="cabecera-fija-app pulso-cabecera"><div class="pulso-inner"><div class="pulso-marca"><img class="pulso-logo" src="Logo-Pulso-Food.png" alt="Pulso Food — Tu herramienta, tu control"><p id="panel-nombre">La Pizza de Juanca</p></div><div class="pulso-caja-destacada"><h1 id="pulso-seccion" class="pulso-seccion" aria-label="Caja">💰</h1><div id="pulsoVentas" class="pulso-ventas" hidden title="Ingresos en efectivo + transferencias netas del turno"><span class="pulso-ventas-etiqueta">Total venta</span><strong id="resumenVentasDia" aria-live="polite">—</strong><span id="notaVentasDia" hidden>Ingresos en efectivo + transferencias netas del turno</span></div></div></div><p id="controlActivo" class="pulso-turno" hidden aria-live="polite"></p></header>
 <main>
-<div class="banner"><strong>Versión conectada a Firebase — fase de pruebas.</strong>
-Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase de pruebas: verifica los resultados antes de usar dinero real. Los cobros de mesas y para llevar se registran al cobrar; los domicilios se registran al reportar el pago y completar la entrega con una sesión administrativa conectada. La conciliación física es independiente. Un pedido sin cobrar no es ingreso de caja.</div>
+
 <section class="card" id="vistaAcceso">
 <h2>🔐 Acceso del administrador</h2>
 <p class="pequeno">Usa la cuenta administrativa de Firebase. Ningún domiciliario debe tener acceso a esta caja.</p>
@@ -200,6 +200,11 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
 </div>
 </section>
 </section>
+<details class="card caja-info-tecnica">
+<summary>Información técnica de caja</summary>
+<div class="banner"><strong>Versión conectada a Firebase — fase de pruebas.</strong>
+Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase de pruebas: verifica los resultados antes de usar dinero real. Los cobros de mesas y para llevar se registran al cobrar; los domicilios se registran al reportar el pago y completar la entrega con una sesión administrativa conectada. La conciliación física es independiente. Un pedido sin cobrar no es ingreso de caja.</div>
+</details>
 </main>
 <nav class="nav-admin-fija" aria-label="Navegación fija del administrador">
 <a href="panel-pedidos.html#panel-inicio" aria-label="Inicio del centro de control"><span class="nav-admin-icono" aria-hidden="true">🏠</span><span>Inicio</span></a>
