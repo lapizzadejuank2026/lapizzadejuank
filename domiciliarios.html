@@ -86,7 +86,10 @@
     .instalar-rider{margin-top:12px;text-align:center}
     .instalar-rider button{width:100%;background:#163b5d;border:1px solid #49769a;color:#fff;padding:12px 10px;font-size:14px}
     .instalar-rider p{font-size:13px;color:#d3d3d3;margin:8px 0 0}
-    .ofertas-cabecera{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:22px}.ofertas-cabecera h2{margin:0}.ofertas-cabecera button{width:auto;min-height:40px;padding:7px 11px;font-size:13px}.ofertas-cabecera button[aria-pressed="true"]{background:#208b4d;color:#fff}
+    .rider-acciones{display:flex;align-items:center;justify-content:flex-end;gap:4px;white-space:nowrap}
+    .timbre-cabecera{display:inline-flex;align-items:center;justify-content:center;flex:none;width:40px;height:40px;padding:0;background:#163b5d;color:#e5edf8;border:1px solid #49769a;border-radius:10px;font-size:21px;line-height:1}
+    .timbre-cabecera[aria-pressed="true"]{background:#208b4d;border-color:#54c582;color:#fff}
+    @media(max-width:340px){.rider-acciones{gap:2px}.timbre-cabecera{width:36px;height:36px;font-size:19px}}
   </style>
 </head>
 <body>
@@ -98,7 +101,10 @@
     </div>
     <div class="pulso-derecha">
       <h1 id="rider-titulo" class="pulso-rider">Rider</h1>
-      <button id="tab-cuenta" class="pulso-rider-btn" type="button" aria-label="Rider: mi cuenta" aria-controls="vista-cuenta" aria-pressed="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg>Rider</button>
+      <div class="rider-acciones">
+        <button id="tab-cuenta" class="pulso-rider-btn" type="button" aria-label="Rider: mi cuenta" aria-controls="vista-cuenta" aria-pressed="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg>Rider</button>
+        <button id="timbre-ofertas" class="timbre-cabecera" type="button" aria-label="Timbre de ofertas" aria-pressed="false" title="Activar timbre" hidden>🔕</button>
+      </div>
       <section id="recaudo-cabecera" class="efectivo-diario" aria-live="polite" aria-atomic="true" aria-describedby="detalle-efectivo" hidden>
         <p class="titulo-efectivo">Efectivo hoy</p>
         <p class="valor-efectivo" id="efectivo-hoy">Calculando…</p>
@@ -136,7 +142,7 @@
       <p class="ayuda">Los pedidos aparecen en tiempo real mientras la aplicación esté abierta. No se mostrarán entregas de otros domiciliarios.</p>
       <p id="estado-entregas" class="estado" role="status">Conectando...</p>
       <div id="lista-entregas"><div class="vacio">Aún no tienes entregas asignadas.</div></div>
-      <div class="ofertas-cabecera"><h2>📣 Ofertas para todos</h2><button id="timbre-ofertas" class="secundario" type="button" aria-pressed="false">🔕 Activar timbre</button></div>
+      <h2 style="margin-top:22px">📣 Ofertas para todos</h2>
       <p id="estado-ofertas" class="ayuda" role="status">Ponte Online para recibir ofertas.</p>
       <div id="lista-ofertas"></div>
     </section>
@@ -196,7 +202,8 @@
   function pintarTimbre(){
     const activo=timbrePreferido&&audioOfertas?.state==='running';
     $('timbre-ofertas').setAttribute('aria-pressed',String(activo));
-    $('timbre-ofertas').textContent=activo?'🔔 Timbre activo':'🔕 Activar timbre';
+    $('timbre-ofertas').textContent=activo?'🔔':'🔕';
+    $('timbre-ofertas').title=activo?'Desactivar timbre':'Activar timbre';
   }
   function detenerTimbre(){
     if(intervaloOfertas!==null){clearInterval(intervaloOfertas);intervaloOfertas=null;}
@@ -518,6 +525,7 @@
   function mostrarCabeceraSesion(visible){
     $('nav-rider').hidden=!visible;
     $('tab-cuenta').hidden=!visible;
+    $('timbre-ofertas').hidden=!visible;
     $('rider-titulo').hidden=visible;
     $('recaudo-cabecera').hidden=!visible;
   }
