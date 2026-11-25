@@ -86,6 +86,7 @@
     .instalar-rider{margin-top:12px;text-align:center}
     .instalar-rider button{width:100%;background:#163b5d;border:1px solid #49769a;color:#fff;padding:12px 10px;font-size:14px}
     .instalar-rider p{font-size:13px;color:#d3d3d3;margin:8px 0 0}
+    .ofertas-cabecera{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:22px}.ofertas-cabecera h2{margin:0}.ofertas-cabecera button{width:auto;min-height:40px;padding:7px 11px;font-size:13px}.ofertas-cabecera button[aria-pressed="true"]{background:#208b4d;color:#fff}
   </style>
 </head>
 <body>
@@ -137,7 +138,7 @@
       <p class="ayuda">Los pedidos aparecen en tiempo real mientras la aplicación esté abierta. No se mostrarán entregas de otros domiciliarios.</p>
       <p id="estado-entregas" class="estado" role="status">Conectando...</p>
       <div id="lista-entregas"><div class="vacio">Aún no tienes entregas asignadas.</div></div>
-      <h2 style="margin-top:22px">📣 Ofertas para todos</h2>
+      <div class="ofertas-cabecera"><h2>📣 Ofertas para todos</h2><button id="timbre-ofertas" class="secundario" type="button" aria-pressed="false">🔕 Activar timbre</button></div>
       <p id="estado-ofertas" class="ayuda" role="status">Ponte Online para recibir ofertas.</p>
       <div id="lista-ofertas"></div>
     </section>
@@ -191,7 +192,54 @@
   let detenerVerificacion=()=>{};
   let detenerPedidos=()=>{};
   let detenerOfertas=()=>{},uidOfertas=null,ofertasActuales=[],aceptandoOferta=false,ofertasConfirmadas=false;
-  function cerrarOfertas(){detenerOfertas();detenerOfertas=()=>{};uidOfertas=null;ofertasActuales=[];ofertasConfirmadas=false;$('lista-ofertas').replaceChildren();$('estado-ofertas').textContent='Ponte Online para recibir ofertas.';}
+  let audioOfertas=null,intervaloOfertas=null,timbrePreferido=true;
+  try{timbrePreferido=localStorage.getItem('pulso-rider-timbre')!=='off';}catch(_){}
+  const tonosOfertas=new Set();
+  function pintarTimbre(){
+    const activo=timbrePreferido&&audioOfertas?.state==='running';
+    $('timbre-ofertas').setAttribute('aria-pressed',String(activo));
+    $('timbre-ofertas').textContent=activo?'🔔 Timbre activo':'🔕 Activar timbre';
+  }
+  function detenerTimbre(){
+    if(intervaloOfertas!==null){clearInterval(intervaloOfertas);intervaloOfertas=null;}
+    for(const tono of tonosOfertas){try{tono.stop();}catch(_){}}tonosOfertas.clear();
+  }
+  function hayOfertaSonora(){return !!auth.currentUser&&onlineRider&&estadoDisponible&&ofertasConfirmadas&&ofertasActuales.length>0&&timbrePreferido&&audioOfertas?.state==='running';}
+  function sonarOferta(){
+    if(!hayOfertaSonora())return;
+    try{
+      const t=audioOfertas.currentTime;
+      for(const [frecuencia,inicio] of [[660,0],[880,.18],[1046,.36]]){
+        const o=audioOfertas.createOscillator(),g=audioOfertas.createGain();
+        o.type='sine';o.frequency.value=frecuencia;
+        g.gain.setValueAtTime(.001,t+inicio);g.gain.exponentialRampToValueAtTime(.18,t+inicio+.025);g.gain.exponentialRampToValueAtTime(.001,t+inicio+.16);
+        o.connect(g);g.connect(audioOfertas.destination);tonosOfertas.add(o);
+        o.onended=()=>{tonosOfertas.delete(o);o.disconnect();g.disconnect();};
+        o.start(t+inicio);o.stop(t+inicio+.17);
+      }
+    }catch(error){console.warn('Timbre de ofertas:',error);}
+  }
+  function sincronizarTimbre(){
+    pintarTimbre();
+    if(!hayOfertaSonora()){detenerTimbre();return;}
+    if(intervaloOfertas===null){sonarOferta();intervaloOfertas=setInterval(sonarOferta,5000);}
+  }
+  async function activarTimbre(){
+    if(!timbrePreferido)return;
+    try{
+      if(!audioOfertas){const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;audioOfertas=new Audio();audioOfertas.onstatechange=sincronizarTimbre;}
+      if(audioOfertas.state!=='running')await audioOfertas.resume();
+    }catch(error){console.warn('Activa el timbre tocando su botón:',error);}
+    sincronizarTimbre();
+  }
+  $('timbre-ofertas').addEventListener('click',()=>{
+    if(timbrePreferido&&audioOfertas?.state==='running'){timbrePreferido=false;detenerTimbre();}
+    else{timbrePreferido=true;void activarTimbre();}
+    try{localStorage.setItem('pulso-rider-timbre',timbrePreferido?'on':'off');}catch(_){}
+    pintarTimbre();
+  });
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)sincronizarTimbre();});
+  function cerrarOfertas(){detenerOfertas();detenerOfertas=()=>{};uidOfertas=null;ofertasActuales=[];ofertasConfirmadas=false;detenerTimbre();$('lista-ofertas').replaceChildren();$('estado-ofertas').textContent='Ponte Online para recibir ofertas.';}
   function mostrarOfertas(){
     const lista=$('lista-ofertas'),estado=$('estado-ofertas');lista.replaceChildren();
     if(!onlineRider){estado.textContent='Ponte Online para recibir ofertas.';return;}
@@ -225,14 +273,14 @@
   }
   function sincronizarOfertas(){
     const user=auth.currentUser;
-    if(!user||!onlineRider||!estadoDisponible){if(uidOfertas)cerrarOfertas();return;}
+    if(!user||!onlineRider||!estadoDisponible){if(uidOfertas)cerrarOfertas();detenerTimbre();return;}
     if(uidOfertas===user.uid)return;
     cerrarOfertas();uidOfertas=user.uid;$('estado-ofertas').textContent='Buscando ofertas…';
     detenerOfertas=onSnapshot(query(collection(db,'ofertasDomicilio'),where('uids','array-contains',user.uid)),{includeMetadataChanges:true},snap=>{
       if(uidOfertas!==user.uid||!onlineRider)return;
-      if(snap.metadata.fromCache||snap.metadata.hasPendingWrites){ofertasConfirmadas=false;$('lista-ofertas').replaceChildren();$('estado-ofertas').textContent='Confirmando ofertas con el servidor…';return;}
-      ofertasConfirmadas=true;ofertasActuales=snap.docs.filter(x=>x.data().estado==='abierta').map(x=>({id:x.id,d:x.data()}));mostrarOfertas();
-    },error=>{if(uidOfertas!==user.uid)return;ofertasConfirmadas=false;$('lista-ofertas').replaceChildren();$('estado-ofertas').textContent=error?.code==='permission-denied'?'Ofertas pendientes de habilitar en Firebase.':'No se pudieron consultar las ofertas. Vuelve a entrar a Rider.';});
+      if(snap.metadata.fromCache||snap.metadata.hasPendingWrites){ofertasConfirmadas=false;detenerTimbre();$('lista-ofertas').replaceChildren();$('estado-ofertas').textContent='Confirmando ofertas con el servidor…';return;}
+      ofertasConfirmadas=true;ofertasActuales=snap.docs.filter(x=>x.data().estado==='abierta').map(x=>({id:x.id,d:x.data()}));mostrarOfertas();sincronizarTimbre();
+    },error=>{if(uidOfertas!==user.uid)return;ofertasConfirmadas=false;detenerTimbre();$('lista-ofertas').replaceChildren();$('estado-ofertas').textContent=error?.code==='permission-denied'?'Ofertas pendientes de habilitar en Firebase.':'No se pudieron consultar las ofertas. Vuelve a entrar a Rider.';});
   }
   let pedidosPropios=[];
   let escuchandoPedidos=false;
@@ -512,6 +560,7 @@
     if(!estadoDisponible||guardandoDisponibilidad)return;
     const token=cambioSesionDisponibilidad;
     const siguiente=!onlineRider;
+    if(siguiente&&timbrePreferido)void activarTimbre();
     guardandoDisponibilidad=true;mostrarDisponibilidad('Guardando disponibilidad…');
     try{
       await guardarDisponibilidad(siguiente);
@@ -544,6 +593,7 @@
   $('login').addEventListener('submit',async e=>{
     e.preventDefault();
     $('entrar').disabled=true;
+    if(timbrePreferido)void activarTimbre();
     mensajeBloqueo='';
     $('mensaje-acceso').textContent='Verificando correo, contraseña y autorización...';
     try{
