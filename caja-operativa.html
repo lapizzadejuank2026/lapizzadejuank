@@ -107,7 +107,7 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
 <div class="metrica"><strong id="resumenEfectivoEntradas">$0</strong><span>Ingresos en efectivo</span></div>
 <div class="metrica"><strong id="resumenTransferencias">$0</strong><span>Transferencias netas registradas</span></div>
 <div class="metrica"><strong id="resumenSalidas">$0</strong><span>Total salidas / gastos</span></div>
-<div class="metrica ventas-dia"><strong id="resumenVentasDia">—</strong><span>Total ventas del día</span><span id="notaVentasDia" class="nota-ventas">Efectivo + transferencias · todos los turnos de hoy</span></div>
+<div class="metrica ventas-dia"><strong id="resumenVentasDia">—</strong><span>Total ventas del turno</span><span id="notaVentasDia" class="nota-ventas">Ingresos en efectivo + transferencias netas del turno</span></div>
 </div>
 <p class="pequeno">Movimientos registrados: <strong id="resumenMovimientos">0</strong>. Este resumen refleja los cobros registrados y los gastos. El efectivo esperado incluye el dinero de ventas que aún tengan los domiciliarios; concílialo antes del arqueo físico. Las transferencias reportadas no son confirmación bancaria.</p>
 </section>
@@ -204,7 +204,7 @@ Los movimientos se guardan en Firestore si las reglas lo permiten. Sigue en fase
 <a href="caja-operativa.html" aria-label="Resumen de caja" aria-current="page"><span class="nav-admin-icono" aria-hidden="true">💰</span><span>Caja</span></a>
 <a href="caja-operativa.html#seccionMovimiento" aria-label="Registro de entradas y salidas"><span class="nav-admin-icono" aria-hidden="true">🧾</span><span>Entradas /<br>salidas</span></a>
 </nav>
-<script type="module" src="caja-operativa.js?v=ventas-dia-20261125"></script>
+<script type="module" src="caja-operativa.js?v=ventas-turno-20261125-2"></script>
 <script type="module" src="caja-cobros-domiciliarios.js?v=20261124auto"></script>
 <script type="module" src="caja-historial-dia.js"></script>
 <script>
