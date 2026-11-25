@@ -1796,10 +1796,19 @@
   }
   // No ocultar pedidos antiguos si aún requieren atención del restaurante.
   function pendienteAnterior(p){
-    const estado=String(p.d.estado||'nuevo').toLowerCase();
+    const d=p.d;
+    const estado=String(d.estado||'nuevo').trim().toLowerCase();
+    if(['prueba','cancelado','cancelada','anulado','anulada'].includes(estado))return false;
+    const canal=canalDePedido(d);
+    if(canal==='domicilio'){
+      if(entregaFinalizada(estadoDe(d))||['entregado','entregada','finalizado','finalizada','completado','completada'].includes(estado))return false;
+      // Un domicilio recibido sin Rider, o con oferta abierta, sigue pendiente tras medianoche.
+      return true;
+    }
     if(estado==='nuevo')return true;
-    if(!p.d.domiciliarioUid)return false;
-    return !entregaFinalizada(estadoDe(p.d));
+    if(canal==='llevar')return !d.cajaMovimientoId&&!['entregado','entregada','finalizado','finalizada','completado','completada'].includes(estado);
+    // Las cuentas de mesa se gestionan por separado en Mesas y barra.
+    return false;
   }
   document.getElementById('filtro-hoy').addEventListener('click',()=>{
     pedidoAbierto='';filtroPedidos='hoy';if(pedidosCargados)pintar(pedidosCache);
